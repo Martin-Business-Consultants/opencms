@@ -1,0 +1,25 @@
+<% @page_title = "Plugins" %>
+
+<%= render "layouts/shared/page_header", title: "Plugins" %>
+
+<section class="panel shadow settings-page txt-align-start">
+  <section class="settings__section flex flex-column gap">
+    <p class="txt-small txt-subtle margin-none">
+      What this install adds to the core. Bundled plugins ship with the CMS; installed ones were added with
+      <code>bin/rails "plugins:install[…]"</code>. Switching one off hides it and keeps its data.
+    </p>
+
+    <% if @plugins.any? %>
+      <ul class="flex flex-column gap margin-none settings-plugins">
+        <% @plugins.each do |plugin| %>
+          <%# herb:key plugin.key %>
+          <%= render "settings/plugins/plugin", plugin: plugin %>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="txt-small margin-none">No plugins are installed.</p>
+    <% end %>
+
+    <p class="txt-x-small txt-subtle margin-none">CMS <%= cms_version %></p>
+  </section>
+</section>

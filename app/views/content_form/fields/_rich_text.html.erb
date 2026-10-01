@@ -1,0 +1,16 @@
+<%# locals: (field:, value:, scope:, markdown: false) %>
+<%# The hidden field is what posts. It holds the stored HTML until the editor
+    changes, so rich text nobody touched is saved back exactly as it was.
+    markdown: the value may be Markdown (an entry's body, written before it
+    was rich text), which the editor opens rendered; edited, it saves as HTML. %>
+<% html = if value.to_s.include?("<") then value.to_s
+          elsif markdown then sanitize(Markdown.to_html(value), tags: Markdown::TAGS, attributes: Markdown::ATTRIBUTES)
+          else simple_format(value.to_s)
+          end %>
+<%= render "content_form/label", field: field, for_id: nil %>
+<div class="content-rich-text" data-controller="rich-text">
+  <%= hidden_field_tag scope.name, value, id: scope.dom_id, data: { rich_text_target: "input" } %>
+  <%= content_tag "lexxy-editor", "", class: "lexxy-content", attachments: "false",
+        value: html,
+        placeholder: "Write…", data: { rich_text_target: "editor", action: "lexxy:change->rich-text#change" } %>
+</div>

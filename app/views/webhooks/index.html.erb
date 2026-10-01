@@ -1,0 +1,68 @@
+<% @page_title = "Webhooks" %>
+
+<%# The webhooks as a list table. New and Edit open in a half-width sheet
+    (webhooks/sheet, into the webhook_sheet frame); at their own addresses,
+    and after a save, test or rotation, the list opens with it. The sheet
+    wraps the whole page, as the New button sits in the title row. %>
+<% content_for :page_actions do %>
+  <% if Current.user.can?("webhooks:write") %>
+    <%= link_to new_webhook_path, class: "btn btn--labelled btn--circle-mobile", data: { keys: "n", turbo_frame: "webhook_sheet", action: "dialog#open" } do %>
+      <%= icon_tag "add" %>
+      <span class="overflow-ellipsis">New webhook</span>
+      <kbd class="hide-on-touch">N</kbd>
+    <% end %>
+  <% end %>
+<% end %>
+<div class="display-contents" data-controller="dialog" data-dialog-modal-value="true" data-dialog-auto-open-value="<%= @sheet_webhook.present? %>"
+     data-action="keydown.esc->dialog#close:stop">
+<%= render "layouts/shared/page_header", title: @page_title, description: "URLs the CMS calls when content changes, signed so the receiver can tell it’s us." %>
+
+<% if @webhooks.any? %>
+  <section class="panel shadow center index-table">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>URL</th>
+          <th class="data-table__number">Events</th>
+          <th>Health</th>
+          <th>Last delivery</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @webhooks.each do |webhook| %>
+          <%# herb:key webhook.id %>
+          <tr id="<%= dom_id(webhook) %>" data-filter-target="item">
+            <td>
+              <% if Current.user.can?("webhooks:write") %>
+                <%= link_to webhook.name, edit_webhook_path(webhook), class: "txt-ink font-weight-bold", data: { turbo_frame: "webhook_sheet", action: "dialog#open" } %>
+              <% else %>
+                <%= link_to webhook.name, webhook_path(webhook), class: "txt-ink font-weight-bold" %>
+              <% end %>
+              <%= render "layouts/shared/row_links", name: webhook.name,
+                  delete_path: (webhook_path(webhook) if Current.user.can?("webhooks:delete")),
+                  delete_message: "Its receiver stops hearing about changes. Its delivery log goes too." %>
+            </td>
+            <td class="txt-subtle font-mono txt-small overflow-ellipsis"><%= webhook.url %></td>
+            <td class="data-table__number" title="<%= Array(webhook.events).join(", ") %>"><%= Array(webhook.events).size %></td>
+            <td><%= webhook_health(webhook) %></td>
+            <td class="txt-subtle txt-small"><%= time_ago_tag webhook.last_delivery_at %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+<% else %>
+  <div class="panel panel--centered center">
+    <p class="txt-medium margin-none">No webhooks yet.</p>
+  </div>
+<% end %>
+
+<dialog class="dialog dialog--sheet dialog--sheet-half panel fill-white shadow gap flex-column txt-align-start" data-dialog-target="dialog" aria-label="Webhook" closedby="any">
+  <% if @sheet_webhook %>
+    <%= render "webhooks/sheet", webhook: @sheet_webhook, deliveries: @sheet_deliveries || [] %>
+  <% else %>
+    <turbo-frame id="webhook_sheet"><p class="txt-small txt-subtle">Loading…</p></turbo-frame>
+  <% end %>
+</dialog>
+</div>

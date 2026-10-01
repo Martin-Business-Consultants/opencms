@@ -1,0 +1,30 @@
+@layer components {
+  /* Tools pages: a panel of rows (Schedules, the automatic backups). */
+  .tool-list {
+    list-style: none;
+    padding-inline: 0;
+  }
+
+  .tool-list__item {
+    border-block-end: 1px solid var(--color-ink-lighter);
+    padding-block: var(--block-space);
+
+    &:last-child {
+      border-block-end: 0;
+    }
+  }
+
+  .tool-list__edit[open] {
+    padding-block-end: var(--block-space-half);
+  }
+
+  .panel.tool-list {
+    --panel-size: min(80ch, 100%);
+
+    padding-block: 0;
+  }
+
+  .tool-page {
+    --panel-size: min(80ch, 100%);
+  }
+}

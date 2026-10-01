@@ -1,0 +1,84 @@
+<% @page_title = "Block types" %>
+<% can_write = Current.user.can?("block_types:write") %>
+<% can_delete = Current.user.can?("block_types:delete") %>
+
+<% content_for :page_actions do %>
+  <% if can_write %>
+    <%= render "layouts/shared/new_link", text: "New block type", path: new_block_type_path %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title, description: "The blocks pages are built from, and the fields each one asks for." %>
+
+<% if @categories.many? %>
+  <div class="filters flex flex-wrap gap-half margin-block-end">
+    <%= render "layouts/shared/quick_filter", title: "Category", param: :category, current: @category.to_s,
+          options: [ [ "Every category", "" ] ] + @categories.map { [ it.humanize, it ] } %>
+  </div>
+<% end %>
+
+<% if can_delete && @block_types.any? %>
+  <%= render "layouts/shared/bulk_actions", id: "block_types_bulk", noun: "block type", deletion_path: block_types_bulk_deletions_path,
+        delete_message: "Pages using them keep their blocks, which stop validating until the type is back. This can’t be undone." %>
+<% end %>
+
+<% if @block_types.any? %>
+  <section class="panel shadow center index-table" data-controller="select-all">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <% if can_delete %>
+            <th class="data-table__check"><input type="checkbox" aria-label="Select every row" data-select-all-target="all" data-action="select-all#toggle"></th>
+          <% end %>
+          <th>Label</th>
+          <th>Slug</th>
+          <th>Category</th>
+          <th class="data-table__number">Fields</th>
+          <th>Source</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @block_types.each do |block_type| %>
+          <%# herb:key block_type.id %>
+          <tr id="<%= dom_id(block_type) %>" data-filter-target="item">
+            <% if can_delete %>
+              <td class="data-table__check"><input type="checkbox" data-select-all-target="box" data-action="select-all#sync" name="slugs[]" value="<%= block_type.slug %>" form="block_types_bulk" aria-label="Select <%= block_type.label %>"></td>
+            <% end %>
+            <td>
+              <% if can_write %>
+                <%= link_to block_type.label, edit_block_type_path(block_type.slug), class: "txt-ink font-weight-bold" %>
+              <% else %>
+                <span class="font-weight-bold"><%= block_type.label %></span>
+              <% end %>
+              <% if block_type.deprecated %>
+                <span class="txt-x-small txt-subtle">(deprecated)</span>
+              <% end %>
+  <%= render "layouts/shared/row_links", name: block_type.label,
+                  edit_path: (edit_block_type_path(block_type.slug) if can_write),
+                  delete_path: (block_type_path(block_type.slug) if can_delete),
+                  delete_message: "Pages using it keep their blocks, which stop validating. This can’t be undone." %>
+            </td>
+            <td class="txt-subtle font-mono"><%= block_type.slug %></td>
+            <td class="txt-subtle"><%= block_type.category.presence || "—" %></td>
+            <td class="data-table__number"><%= Array(block_type.fields).size %></td>
+            <td class="txt-small"><%= block_type.built_in ? "Built-in" : "Custom" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+<% elsif @category %>
+  <div class="blank-slate">
+    No block types in <%= @category %>.
+    <%= link_to "Show all", block_types_path, class: "txt-link" %>
+  </div>
+<% else %>
+  <div class="panel panel--centered center flex flex-column gap-half">
+    <p class="txt-medium">No block types yet. The starter pack covers a hero, text, media, calls to action and more.</p>
+    <% if can_write %>
+      <%= button_to block_types_seeding_path, class: "btn btn--link center", form_class: "center" do %>
+        <span>Install the starter block types</span>
+        <%= icon_tag "arrow-right" %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

@@ -1,0 +1,46 @@
+<%# locals: (swarm:) %>
+<%= render "layouts/shared/errors", record: swarm %>
+
+<%= form_with model: swarm, class: "flex flex-column gap txt-medium", data: { controller: "form", action: "keydown.esc->form#cancel" } do |form| %>
+  <%= form.hidden_field :icon %>
+
+  <label class="flex flex-column gap-half txt-align-start">
+    <span class="txt-small font-weight-bold">Name</span>
+    <%= form.text_field :name, required: true, class: "input full-width", autofocus: swarm.new_record?, autocomplete: "off", placeholder: "SEO" %>
+  </label>
+
+  <label class="flex flex-column gap-half txt-align-start">
+    <span class="txt-small font-weight-bold">Description</span>
+    <%= form.text_field :description, class: "input full-width", autocomplete: "off" %>
+  </label>
+
+  <%= render "agents/scopes", form: "swarm", record: swarm %>
+
+  <fieldset class="flex flex-column gap-half txt-align-start schema-list" data-controller="schema-editor" data-prefix="swarm">
+    <legend class="txt-small font-weight-bold">Seats</legend>
+    <p class="txt-x-small txt-subtle margin-none">Each seat runs its agent on a rota — daily at an hour, weekly on a day (1 is Monday), or monthly on a date.</p>
+    <div class="schema-list__fields flex flex-column gap-half">
+      <% swarm.swarm_members.each_with_index do |member, index| %>
+        <%# herb:key member.id || index %>
+        <%= render "swarms/seat_fields", key: index, member: member %>
+      <% end %>
+    </div>
+    <template data-schema-editor-target="template">
+      <%= render "swarms/seat_fields", key: "__KEY__" %>
+    </template>
+    <div><button type="button" class="btn txt-small" data-action="schema-editor#add">Add a seat</button></div>
+  </fieldset>
+
+  <label class="flex align-center gap-half txt-align-start">
+    <%= form.check_box :enabled %>
+    <span class="txt-small font-weight-bold">Enabled</span>
+    <span class="txt-x-small txt-subtle">Seats run on their rota. Run every seat now works either way.</span>
+  </label>
+
+  <button type="submit" class="btn btn--link center" data-form-target="submit">
+    <span><%= swarm.new_record? ? "Add swarm" : "Save changes" %></span>
+    <%= icon_tag "arrow-right" %>
+  </button>
+
+  <%= link_to "Cancel and go back", (swarm.new_record? ? swarms_path : swarm_path(swarm)), data: { form_target: "cancel" }, hidden: true %>
+<% end %>

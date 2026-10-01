@@ -1,0 +1,47 @@
+<%# locals: (service_token:, can_manage:) %>
+<li id="<%= dom_id(service_token) %>" class="flex flex-column gap-half">
+  <div class="flex align-center justify-space-between gap flex-wrap">
+    <div class="flex flex-column min-width">
+      <span class="flex align-center gap-half">
+        <span class="font-weight-bold"><%= service_token.name %></span>
+        <% if service_token.role %>
+          <%= status_tag service_token.role.name %>
+        <% end %>
+        <% if service_token.revoked? %>
+          <%= status_tag "Revoked" %>
+        <% end %>
+      </span>
+      <% if service_token.description.present? %>
+        <span class="txt-x-small txt-subtle"><%= service_token.description %></span>
+      <% end %>
+      <span class="txt-x-small txt-subtle">
+        <% if service_token.last_used_at %>
+          Last used <%= time_ago_tag service_token.last_used_at %><% if service_token.last_used_ip.present? %> from <%= service_token.last_used_ip %><% end %>
+        <% else %>
+          Never used
+        <% end %>
+        · created <%= time_ago_tag service_token.created_at %><% if service_token.created_by %> by <%= service_token.created_by.email %><% end %>
+      </span>
+    </div>
+    <% if can_manage && !service_token.revoked? %>
+      <div class="flex gap-half">
+        <%= render "layouts/shared/confirm_dialog", label: "Rotate", title: "Rotate “" + service_token.name + "”?",
+              message: "The current secret stops working immediately.", path: settings_service_token_rotation_path(service_token), button: "Rotate" %>
+        <%= render "layouts/shared/confirm_dialog", label: "Revoke", title: "Revoke “" + service_token.name + "”?",
+              message: "Anything using it stops working immediately.", path: settings_service_token_revocation_path(service_token),
+              button: "Revoke", negative: true %>
+      </div>
+    <% end %>
+  </div>
+
+  <% if can_manage && !service_token.revoked? %>
+    <%= render "settings/secret", frame_id: dom_id(service_token, :secret), masked: service_token.masked,
+          visible: service_token.visible?, reveal_path: settings_service_token_reveal_path(service_token) %>
+  <% else %>
+    <code class="settings-code"><%= service_token.masked %></code>
+  <% end %>
+
+  <% if service_token.capabilities.any? %>
+    <p class="txt-x-small txt-subtle font-mono margin-none"><%= service_token.capabilities.join(", ") %></p>
+  <% end %>
+</li>

@@ -1,0 +1,92 @@
+<% @page_title = "Forms" %>
+<% can_write = Current.user.can?("forms:write") %>
+<% can_delete = Current.user.can?("forms:delete") %>
+
+<% content_for :page_actions do %>
+  <% if can_write %>
+    <%= form_with url: forms_import_path, class: "display-contents", data: { controller: "form" } do |form| %>
+      <label class="btn txt-small" title="Import forms from an export">
+        <span>Import JSON</span>
+        <%= form.file_field :file, accept: ".json,application/json", hidden: true, data: { action: "change->form#submit" } %>
+      </label>
+    <% end %>
+  <% end %>
+  <%= link_to "Export", forms_export_path, class: "btn txt-small", data: { turbo: false } %>
+  <% if Current.user.can?("forms:read") %>
+    <%= link_to "Settings", settings_forms_path, class: "btn txt-small" %>
+  <% end %>
+  <% if can_write %>
+    <%= render "forms/new_form", form_record: @new_form || Form.new(status: "draft", submit_label: "Submit"), open: @new_form.present? %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title, description: "The forms the site renders. Submissions post to /api/forms/<slug>/submissions and land in the Submissions inbox." %>
+
+<% if can_delete && @forms.any? %>
+  <%= render "layouts/shared/bulk_actions", id: "forms_bulk", noun: "form", deletion_path: forms_bulk_deletions_path %>
+<% end %>
+
+<% if @forms.any? %>
+  <section class="panel shadow center index-table" data-controller="select-all">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <% if can_delete %>
+            <th class="data-table__check"><input type="checkbox" aria-label="Select every row" data-select-all-target="all" data-action="select-all#toggle"></th>
+          <% end %>
+          <th class="form-list__active">Active</th>
+          <th>Title</th>
+          <th class="data-table__number">ID</th>
+          <th class="data-table__number">Fields</th>
+          <th class="data-table__number">Entries</th>
+          <th>Last entry</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @forms.each do |form| %>
+          <%# herb:key form.id %>
+          <tr id="<%= dom_id(form) %>" data-filter-target="item">
+            <% if can_delete %>
+              <td class="data-table__check"><input type="checkbox" data-select-all-target="box" data-action="select-all#sync" name="slugs[]" value="<%= form.slug %>" form="forms_bulk" aria-label="Select <%= form.title %>"></td>
+            <% end %>
+            <td class="form-list__active">
+              <%= render "forms/activation", form: form, can_write: can_write %>
+            </td>
+            <td>
+              <%= link_to form.title, (can_write ? edit_form_path(form.slug) : form_path(form.slug)), class: "txt-ink font-weight-bold" %>
+              <% if form.status == "archived" %>
+                <%= status_tag "archived" %>
+              <% end %>
+              <div class="txt-x-small txt-subtle font-mono"><%= form.slug %></div>
+              <%= render "layouts/shared/row_links", name: form.title,
+                  edit_path: (edit_form_path(form.slug) if can_write),
+                  links: [ [ "Entries", form_path(form.slug) ] ],
+                  buttons: ([ [ "Duplicate", form_duplication_path(form.slug), "Make a draft copy of this form" ] ] if can_write),
+                  delete_path: (form_path(form.slug) if can_delete), delete_label: "Trash",
+                  delete_message: "It goes to the trash, where it can be restored. The site’s posts to it fail until then." %>
+            </td>
+            <td class="data-table__number txt-subtle"><%= form.id %></td>
+            <td class="data-table__number"><%= Array(form.fields).size %></td>
+            <td class="data-table__number"><%= link_to @submission_counts.fetch(form.id, 0), form_path(form.slug), class: "txt-link" %></td>
+            <td class="txt-subtle txt-small">
+              <% if (last = @last_submissions[form.id]) %>
+                <%= time_ago_tag last %>
+              <% else %>
+                Never
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+<% else %>
+  <div class="panel panel--centered center flex flex-column gap-half">
+    <p class="txt-medium">No forms yet. Start from a template — contact, catering, careers — or from nothing.</p>
+    <% if can_write %>
+      <%= link_to new_form_path, class: "btn btn--link center" do %>
+        <span>Add a form</span>
+        <%= icon_tag "arrow-right" %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

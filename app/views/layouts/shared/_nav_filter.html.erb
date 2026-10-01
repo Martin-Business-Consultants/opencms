@@ -1,0 +1,10 @@
+<%# locals: () %>
+<%# "/" filters the rows of the current page (Fizzy's filter controller on #global-container).
+    It sits in the nav beside the ? button as just the key, and opens into a field while
+    focused or holding text. It hides on pages with nothing to filter (page-filter.css). %>
+<label class="nav-filter btn btn--plain" title="Filter this page (/)">
+  <kbd class="nav-filter__key txt-x-small" aria-hidden="true">/</kbd>
+  <input type="search" class="nav-filter__input" placeholder="Filter this page…" autocomplete="off" autocorrect="off" data-1p-ignore="true" aria-label="Filter this page"
+    data-filter-target="input" data-keys="/" data-keys-focus
+    data-action="input->filter#filter keydown.esc->filter#clearInput keydown.esc->filter#filter:stop">
+</label>

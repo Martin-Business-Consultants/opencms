@@ -1,0 +1,78 @@
+<% title = @email.notification? ? "Notification email" : "Confirmation email" %>
+<% @page_title = @form.title + " — " + title %>
+<%= parent_page @form.title, edit_form_path(@form.slug) %>
+<% email_fields = Array(@form.fields).select { |f| f.is_a?(Hash) && f["type"] == "email" } %>
+<% sibling = @email.notification? ? "confirmation" : "notification" %>
+
+<% content_for :page_actions do %>
+  <%= link_to (sibling == "confirmation" ? "Confirmation email" : "Notification email"), edit_form_email_path(form_slug: @form.slug, kind: sibling), class: "btn txt-small" %>
+<% end %>
+<%= render "layouts/shared/page_header", title: title,
+      description: (@email.notification? ? "Sent to your people on each new submission to “#{@form.title}”." : "An automatic reply to whoever submitted “#{@form.title}”, at the address they gave.") %>
+<%= render "layouts/shared/errors", record: @email %>
+
+<%# The email as content: its subject and blocks in the main column (the
+    content editor, with FormEmail::BlockTypes); sending, the Astro site's
+    template and the placeholders down the side. %>
+<%= form_with model: @email, url: form_email_path(form_slug: @form.slug, kind: @email.kind), method: :patch, scope: :form_email,
+      id: "form_email_form", class: "content-form content-form--thirds" do |form| %>
+  <div class="content-form__main flex flex-column gap">
+    <div class="editor-title">
+      <label class="for-screen-reader" for="form_email_subject">Subject</label>
+      <%= form.text_field :subject, class: "input editor-title__input", placeholder: "Subject line" %>
+    </div>
+
+    <section class="editor-box">
+      <h2 class="editor-box__header">Content</h2>
+      <div class="editor-box__body">
+        <%= with_content_block_types(FormEmail::BlockTypes.all) do %>
+          <%= render "content_form/blocks", blocks: @email.content_blocks, scope: content_scope("form_email")["blocks"], depth: 1,
+                record: @email, new_block_url: new_form_email_block_path %>
+        <% end %>
+      </div>
+    </section>
+  </div>
+
+  <aside class="content-form__aside flex flex-column gap">
+    <%= postbox "form-email-send", "Send" do %>
+      <div class="flex flex-column gap">
+        <label class="flex align-center gap-half txt-small">
+          <%= form.check_box :enabled %>
+          <span class="font-weight-bold">Send this email</span>
+        </label>
+        <% if @email.notification? %>
+          <%= settings_field "Recipients", hint: "Comma-separated." do %>
+            <%= form.text_field :recipients, class: "input full-width", placeholder: "alice@example.com, bob@example.com" %>
+          <% end %>
+        <% else %>
+          <%= settings_field "Send to the address in", hint: "Blank uses the form’s first email field." do %>
+            <%= form.select :from_field, email_fields.map { |f| [f["label"].to_s + " (" + f["name"].to_s + ")", f["name"]] }, { include_blank: "The first email field" }, class: "input input--select full-width" %>
+          <% end %>
+        <% end %>
+        <div class="flex gap-half flex-wrap">
+          <%= render "form_emails/preview", email: @email %>
+          <button type="submit" form="form_email_test_form" class="btn txt-small" title="Send the saved email, for a made-up submission, to <%= Current.user.email %>">Send me a test</button>
+        </div>
+        <%= form.button "Save email", class: "btn btn--link" %>
+      </div>
+    <% end %>
+
+    <%= postbox "form-email-site-template", "Site template" do %>
+      <%= render "form_emails/site_template", email: @email %>
+    <% end %>
+
+    <%= postbox "form-email-placeholders", "Placeholders" do %>
+      <p class="txt-x-small txt-subtle margin-none">Any text in a block can take these.</p>
+      <ul class="margin-none flex flex-column gap-half txt-small form-email-tokens">
+        <% Array(@form.fields).each_with_index do |field, index| %>
+          <%# herb:key index %>
+          <li><code>{{<%= field["name"] %>}}</code> <span class="txt-subtle"><%= field["label"] %></span></li>
+        <% end %>
+        <li><code>{{form_title}}</code> <code>{{submission_id}}</code> <code>{{submitted_at}}</code> <code>{{ip}}</code></li>
+      </ul>
+    <% end %>
+  </aside>
+<% end %>
+<%= form_with url: form_email_test_path(form_slug: @form.slug, email_kind: @email.kind), id: "form_email_test_form", hidden: true do %><% end %>
+<%= render "content_form/asset_picker" %>
+<%= render "content_form/postbox_state" %>

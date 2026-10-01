@@ -1,0 +1,83 @@
+@layer components {
+  /* The schema editor (app/views/schemas): one row per field. A row's type
+     decides which of its settings show, read straight off its own select —
+     the direct-child combinators keep a nested row's type from deciding for
+     its parent. */
+  .schema-list__fields {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .schema-field {
+    background: var(--color-canvas);
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space-half);
+    padding: var(--block-space-half) var(--inline-space);
+    text-align: start;
+  }
+
+  .schema-field__main {
+    align-items: end;
+    display: grid;
+    gap: var(--inline-space-half) var(--inline-space);
+    grid-template-columns: minmax(10ch, 1fr) minmax(10ch, 1fr) minmax(12ch, 1fr) auto auto;
+  }
+
+  @media (max-width: 720px) {
+    .schema-field__main {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .schema-field__control,
+  .schema-field__setting {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25em;
+    min-inline-size: 0;
+  }
+
+  .schema-field__check {
+    align-items: center;
+    display: flex;
+    gap: 0.4em;
+    white-space: nowrap;
+  }
+
+  .schema-field__down .icon {
+    rotate: 180deg;
+  }
+
+  fieldset.schema-field__setting {
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .schema-field__children {
+    border-inline-start: 2px solid var(--color-ink-lighter);
+    padding-inline-start: var(--inline-space);
+  }
+
+  .schema-field__more-body {
+    display: grid;
+    gap: var(--inline-space-half) var(--inline-space);
+    grid-template-columns: repeat(auto-fit, minmax(18ch, 1fr));
+    padding-block-start: var(--block-space-half);
+  }
+
+  .schema-field > [data-for] {
+    display: none;
+  }
+
+  .schema-field:has(> .schema-field__main .schema-field__type option[value="select"]:checked) > [data-for="select"],
+  .schema-field:has(> .schema-field__main .schema-field__type :is(option[value="record_ref"], option[value="record_refs"]):checked) > [data-for="reference"],
+  .schema-field:has(> .schema-field__main .schema-field__type option[value="blocks"]:checked) > [data-for="blocks"],
+  .schema-field:has(> .schema-field__main .schema-field__type :is(option[value="repeater"], option[value="group"]):checked) > [data-for="nested"] {
+    display: flex;
+  }
+}

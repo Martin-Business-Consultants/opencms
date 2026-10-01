@@ -1,0 +1,12 @@
+#!/bin/bash -e
+
+# If running the rails server then back up the data directory when this
+# release has migrations to run (cms:backup_if_pending; a plain restart takes
+# none), and create or migrate the database. A fresh data directory gets the
+# site's starter content and no demo (db/seeds.rb).
+if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
+  ./bin/rails cms:backup_if_pending
+  ./bin/rails db:prepare
+fi
+
+exec "${@}"

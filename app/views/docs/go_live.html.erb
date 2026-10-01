@@ -1,0 +1,19 @@
+<% @page_title = "Before going live" %>
+<%= parent_page "Docs", docs_path %>
+<%= render "layouts/shared/page_header", title: "Before going live",
+      description: "What to have in place before the site goes live, checked against the site as it is now. Fix one, and it passes here." %>
+
+<div class="content-form content-form--thirds">
+  <div class="content-form__main flex flex-column gap">
+    <%= render "docs/checklist", checks: @checks, groups: GoLiveChecklist::GROUPS, key: "go-live" %>
+  </div>
+  <aside class="content-form__aside flex flex-column gap">
+    <%= postbox "go-live-summary", "Readiness" do %>
+      <p class="txt-medium font-weight-bold margin-none">
+        <%= @summary[:ready] ? "Ready to go live" : "#{pluralize(@summary[:failing], "thing")} to do" %>
+      </p>
+      <p class="txt-small txt-subtle margin-none"><%= @summary[:passing] %> of <%= @summary[:total] %> checks pass. The ones marked ? are yours to judge.</p>
+    <% end %>
+    <%= render "docs/nav", guides: @guides, current: :go_live %>
+  </aside>
+</div>

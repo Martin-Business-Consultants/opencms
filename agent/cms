@@ -1,0 +1,1650 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# cms — a CLI over the LibrePublish CMS API, for agents (Claude Code, Codex,
+# opencode, …) and for people, working on a site from a local machine.
+#
+# Everything the admin UI can do to content, structure and site operations is
+# reachable here. The curated commands are shortcuts; `cms get|post|patch|delete
+# <path>` reaches anything they don't cover, against the same API.
+#
+# Every call is authenticated as the user (or service token) behind the
+# credential, and authorized against that role — a 403 means "your role can't do
+# that", not "the API can't".
+#
+# Three things make this usable by an agent rather than merely callable:
+#
+#   --agent / --json   ask the server for the {status, summary, data,
+#                      breadcrumbs} envelope, so every answer says what it is
+#                      and what to do next.
+#   cms commands --json    the whole surface, with flags and gotchas, in one
+#                      call — no usage screen to parse.
+#   cms doctor         whether this machine can actually do useful work, which
+#                      is otherwise the hardest question to ask.
+#
+# Ruby stdlib only.
+
+require "net/http"
+require "uri"
+require "json"
+require "socket"
+require "fileutils"
+require "stringio"
+require "openssl"
+
+VERSION = "2.0.0"
+
+# String#presence without ActiveSupport — used while resolving credentials below,
+# so it has to be defined before that runs.
+class String
+  def presence = empty? ? nil : self
+end
+
+class NilClass
+  def presence = nil
+end
+
+# --- profiles ---------------------------------------------------------------
+#
+# A PROFILE is one identity: a URL and a token. Usually that is you on one site,
+# and the profile is named after it. They come apart the moment a machine holds
+# more than one — you and a service token, or two sites — so a profile is what
+# picks between them:
+#
+#   --profile acme      explicit, wins over everything
+#   CMS_PROFILE         for a shell or a service that always means one identity
+#   CMS_URL / USER_AGENT_TOKEN   set directly in the environment (CI, one-offs)
+#   the default         named in ~/.config/cms/default, else the only one there
+#
+# The single-file config the shell CLI wrote (~/.config/cms/config) is still
+# read, as the profile named "default" — an existing install keeps working.
+CONFIG_DIR = File.join(ENV["XDG_CONFIG_HOME"] || File.join(Dir.home, ".config"), "cms")
+LEGACY_CONFIG = ENV["CMS_CONFIG"] || File.join(CONFIG_DIR, "config")
+
+def die(message)
+  warn "cms: #{message}"
+  exit 1
+end
+
+def profiles
+  named = Dir.glob(File.join(CONFIG_DIR, "*.env")).map { |f| File.basename(f, ".env") }
+  named << "default" if named.empty? && File.readable?(LEGACY_CONFIG)
+  named.sort
+end
+
+def default_profile
+  named = begin
+    File.read(File.join(CONFIG_DIR, "default")).strip
+  rescue StandardError
+    nil
+  end
+  return named if named && !named.empty? && profiles.include?(named)
+
+  profiles.first if profiles.size == 1
+end
+
+# Both files are shell-sourceable `export KEY="value"` lines, so one reader does
+# for the legacy single config and the per-profile ones.
+def read_env_file(path)
+  return {} unless File.readable?(path)
+
+  File.readlines(path, chomp: true).each_with_object({}) do |line, env|
+    match = line.match(/\A(?:export\s+)?([A-Z_]+)="?(.*?)"?\z/) or next
+    env[match[1]] = match[2]
+  end
+end
+
+# A named profile that doesn't exist yet is not an error here. `cms login
+# --profile acme` is how it comes to exist, and dying while resolving it would
+# make the only command that can fix the problem impossible to run. The
+# complaint belongs at the point of use, in require_credentials!.
+def load_profile(name)
+  file = File.join(CONFIG_DIR, "#{name}.env")
+  return read_env_file(file) if File.readable?(file)
+  return read_env_file(LEGACY_CONFIG) if name == "default" && File.readable?(LEGACY_CONFIG)
+
+  {}
+end
+
+def write_profile(name, url, token)
+  FileUtils.mkdir_p(CONFIG_DIR)
+  file = File.join(CONFIG_DIR, "#{name}.env")
+  File.write(file, %(export CMS_URL="#{url}"\nexport USER_AGENT_TOKEN="#{token}"\n))
+  File.chmod(0o600, file)
+
+  default_file = File.join(CONFIG_DIR, "default")
+  File.write(default_file, "#{name}\n") unless File.exist?(default_file)
+end
+
+# --- argument plumbing ------------------------------------------------------
+
+def flag?(name) = ARGV.delete(name) ? true : false
+
+def opt!(name)
+  index = ARGV.index(name) or return nil
+  ARGV.delete_at(index)
+  ARGV.delete_at(index)
+end
+
+RAW       = flag?("--raw")
+JSON_OUT  = flag?("--json")
+AGENT_OUT = flag?("--agent")
+HELP_WANTED = flag?("--help") || flag?("-h")
+
+env_profile = [ENV["CMS_PROFILE"]].find { |v| !v.to_s.empty? }
+PROFILE = opt!("--profile") || env_profile || default_profile
+
+config = PROFILE ? load_profile(PROFILE) : {}
+# The environment wins over a file: CI and one-offs should not need a profile.
+# USER_AGENT_TOKEN is the name; CMS_TOKEN is honoured for installs predating it.
+BASE  = (ENV["CMS_URL"].presence || config["CMS_URL"]).to_s.chomp("/")
+TOKEN = (ENV["USER_AGENT_TOKEN"].presence || ENV["CMS_TOKEN"].presence ||
+         config["USER_AGENT_TOKEN"].presence || config["CMS_TOKEN"]).to_s
+
+# --- talking to the API -----------------------------------------------------
+
+class ApiError < StandardError; end
+
+# Everything that can go wrong on the wire. Read timeouts and resets belong here
+# alongside DNS failures: from the caller's side they are all "the site did not
+# answer", and none of them are worth a backtrace.
+NETWORK_ERRORS = [
+  SocketError, EOFError, IOError, Errno::ECONNREFUSED, Errno::ECONNRESET,
+  Errno::EHOSTUNREACH, Errno::ENETUNREACH, Errno::EPIPE, Errno::ETIMEDOUT,
+  Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError
+].freeze
+
+def require_credentials!
+  return unless BASE.empty? || TOKEN.empty?
+
+  if PROFILE && !profiles.include?(PROFILE)
+    die "no profile named '#{PROFILE}'. Configured: #{profiles.join(", ").presence || "none"}. " \
+        "Create it: cms login --url https://<site> --profile #{PROFILE}"
+  end
+  die "no credentials. Run: cms login --url https://<site>"
+end
+
+# The envelope is opt-in per request; asking for it is what turns a bare payload
+# into one that says what it is and what to do next.
+# $mcp is set while serving a tool call: over MCP there is no human reading
+# the output and no stderr channel back to the caller, so the envelope (which
+# carries the summary and the next steps in-band) is always what is wanted.
+def envelope_wanted? = JSON_OUT || AGENT_OUT || $mcp
+
+def api(method, path, body = nil, content_type: "application/json", binary: false,
+        envelope: envelope_wanted?)
+  require_credentials!
+
+  # "/api/…" is already absolute; "/pages" and "pages" are shorthand. The test is
+  # for the trailing slash — "/api_tokens/me" starts with "/api" and is shorthand.
+  unless path.start_with?("/api/")
+    path = path.start_with?("/") ? "/api#{path}" : "/api/#{path}"
+  end
+  uri = URI("#{BASE}#{path}")
+
+  klass = {get: Net::HTTP::Get, post: Net::HTTP::Post,
+            patch: Net::HTTP::Patch, delete: Net::HTTP::Delete}[method] or
+    raise ApiError, "unsupported method: #{method}"
+
+  request = klass.new(uri)
+  request["Authorization"] = "Bearer #{TOKEN}"
+  request["Accept"] = "application/json"
+  request["X-Agent-Envelope"] = "1" if envelope
+  if body
+    request["Content-Type"] = content_type
+    request.body = body.is_a?(String) ? body : JSON.generate(body)
+  end
+
+  response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == "https",
+    open_timeout: 10, read_timeout: 120) do |http|
+    http.request(request)
+  end
+
+  [response, binary]
+rescue *NETWORK_ERRORS => e
+  # Guarded here rather than only at the dispatcher, because `work` and `doctor`
+  # call this directly and read the response themselves.
+  die "cannot reach #{BASE}: #{e.message} (#{e.class})"
+end
+
+# Runs a call and prints it the way the caller asked for.
+def call(method, path, body = nil, hint: nil, content_type: "application/json", binary: false)
+  response, = api(method, path, body, content_type: content_type, binary: binary)
+  handle(response, hint: hint, binary: binary)
+end
+
+def handle(response, hint: nil, binary: false)
+  code = response.code.to_i
+
+  case code
+  when 200..299
+    if binary
+      $stdout.binmode
+      $stdout.write(response.body)
+      return
+    end
+
+    # A 204 has no body. Printing nothing would make a success indistinguishable
+    # from a command that died before it spoke, so say so explicitly.
+    if response.body.to_s.strip.empty?
+      emit(status: "ok", summary: "Done (HTTP #{code}).", data: {}, breadcrumbs: []) if envelope_wanted?
+      warn "Done." if !envelope_wanted? && $stderr.tty?
+      return
+    end
+
+    print_body(response.body)
+    warn "Next: #{hint}" if hint && !envelope_wanted? && $stderr.tty?
+  when 401
+    die "401 unauthorized — the token is wrong, or it was rotated. Run: cms login --url #{BASE}"
+  when 403
+    warn response.body
+    die "403 forbidden — this role doesn't grant that capability. Ask a human to widen the role; don't work around it."
+  when 404
+    die "404 not found — #{response.uri&.path}"
+  else
+    warn response.body
+    die "HTTP #{code}"
+  end
+end
+
+def print_body(body)
+  return puts(body) if RAW || body.to_s.empty?
+
+  parsed = begin
+    JSON.parse(body)
+  rescue JSON::ParserError
+    return puts(body)
+  end
+
+  puts(AGENT_OUT || $mcp ? JSON.generate(parsed) : JSON.pretty_generate(parsed))
+end
+
+def emit(payload)
+  puts(AGENT_OUT || $mcp ? JSON.generate(payload) : JSON.pretty_generate(payload))
+end
+
+# The device-login legs, which are unauthenticated by design — `api` sends a
+# bearer token, and not having one is the reason we are here.
+def post_raw(url, payload)
+  uri = URI(url)
+  request = Net::HTTP::Post.new(uri)
+  request["Content-Type"] = "application/json"
+  request["Accept"] = "application/json"
+  request.body = JSON.generate(payload)
+
+  Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == "https",
+                  open_timeout: 10, read_timeout: 30) { |http| http.request(request) }
+rescue SocketError, Errno::ECONNREFUSED => e
+  die "cannot reach #{uri.host}: #{e.message}"
+end
+
+def post_json(url, payload)
+  response = post_raw(url, payload)
+  unless response.code.to_i.between?(200, 299)
+    warn response.body
+    die "HTTP #{response.code} from #{url}"
+  end
+  JSON.parse(response.body)
+end
+
+def read_stdin(message)
+  die message if $stdin.tty?
+  $stdin.read
+end
+
+# `--status draft --page 2` → "?status=draft&page=2"
+def query_from(args)
+  pairs = []
+  until args.empty?
+    flag = args.shift
+    die "unexpected argument: #{flag}" unless flag.start_with?("--")
+    pairs << [flag.sub(/\A--/, ""), args.shift.to_s]
+  end
+  return "" if pairs.empty?
+
+  "?" + pairs.map { |k, v| "#{URI.encode_www_form_component(k)}=#{URI.encode_www_form_component(v)}" }.join("&")
+end
+
+# --- the command catalogue --------------------------------------------------
+#
+# One table, two readers: the dispatcher runs from it and `cms commands --json`
+# prints it. That is the point — a surface described in a comment drifts from
+# the surface that runs, and an agent reading the drifted one wastes a call
+# finding out. Anything here is callable; anything callable is here.
+COMMANDS = []
+
+# The body is installed as a real method rather than kept as a block, so that a
+# `return` inside one returns from that command instead of raising LocalJumpError.
+def command(name, group:, summary:, usage:, aliases: [], flags: [], notes: nil, nexts: [], &run)
+  runner = "run_#{name.gsub(/\W/, "_")}"
+  Object.send(:define_method, runner, &run)
+  COMMANDS << {name: name, group: group, summary: summary, usage: usage, aliases: aliases,
+                flags: flags, notes: notes, next: nexts, runner: runner}
+end
+
+def find_command(name)
+  COMMANDS.find { |c| c[:name] == name || c[:aliases].include?(name) }
+end
+
+def need!(args, count, usage)
+  die "usage: #{usage}" if args.size < count
+end
+
+# ----- getting connected -----
+
+command("login", group: "Setup",
+  summary: "Connect this machine to a site, in a browser, without pasting a token",
+  usage: "cms login [--url https://site] [--profile NAME]",
+  flags: [{flag: "--url URL", description: "the site to connect to; asked for if omitted"},
+           {flag: "--profile NAME", description: "what to call this identity locally (default: the site's host)"}],
+  notes: "Prints a short code, waits while you approve it in the browser, then writes " \
+         "~/.config/cms/<profile>.env. The token is minted for the person who approves — " \
+         "the CLI never sees a password and nobody pastes a secret into a terminal.",
+  nexts: ["cms doctor", "cms manifest"]) do |args|
+  url = nil
+  profile = PROFILE
+  until args.empty?
+    case (arg = args.shift)
+    when "--url" then url = args.shift
+    when "--profile" then profile = args.shift
+    else die "unexpected argument: #{arg}"
+    end
+  end
+
+  url ||= ENV["CMS_URL"].presence
+  if url.nil?
+    die "no --url given, and nothing to guess from. Run: cms login --url https://<site>" unless $stdin.tty?
+    $stderr.print "Site URL: "
+    url = $stdin.gets.to_s.strip
+  end
+  url = "https://#{url}" unless url.start_with?("http")
+  url = url.chomp("/")
+  die "a URL is required" if url.empty?
+
+  start = post_json("#{url}/api/device/code", {hostname: Socket.gethostname})
+  profile ||= URI(url).host.split(".").first
+
+  warn ""
+  warn "  Open:  #{start["verification_url"]}"
+  warn "  Code:  #{start["user_code"]}"
+  warn ""
+  warn "Waiting for you to approve it…"
+
+  interval = start["interval"].to_i.clamp(1, 30)
+  deadline = Time.now + start["expires_in"].to_i.clamp(60, 3600)
+
+  loop do
+    die "the code expired before it was approved. Run cms login again." if Time.now > deadline
+    sleep interval
+
+    response = post_raw("#{url}/api/device/token", {device_code: start["device_code"]})
+    case response.code.to_i
+    when 200
+      body = JSON.parse(response.body)
+      # Save the URL that just worked from this machine, not the one the server
+      # believes it lives at — behind a tunnel, a port-forward or a dev proxy those
+      # differ, and only one of them is reachable from here.
+      write_profile(profile, url, body["token"])
+      who = body.dig("user", "name") || body.dig("user", "email")
+      warn "Connected as #{who} on #{body["account"] || url}."
+      warn "Saved as profile '#{profile}'. Next: cms doctor"
+      return
+    when 202 then next
+    when 403 then die "the request was declined in the browser."
+    when 410 then die "the code expired. Run cms login again."
+    else die "HTTP #{response.code} while waiting for approval"
+    end
+  end
+end
+
+command("profiles", group: "Setup",
+  summary: "List the identities configured on this machine",
+  usage: "cms profiles",
+  notes: "A profile is one URL plus one token. --profile NAME or CMS_PROFILE picks between them; " \
+         "with one configured it is used automatically.") do |_args|
+  names = profiles
+  if envelope_wanted?
+    emit(status: "ok",
+         summary: names.empty? ? "No profiles configured." : "#{names.size} profile(s); active: #{PROFILE || "none"}.",
+         data: {active: PROFILE, profiles: names.map { |n| {name: n, url: load_profile(n)["CMS_URL"]} }},
+         breadcrumbs: [{description: "Connect another site", command: "cms login --url https://<site>"}])
+  elsif names.empty?
+    warn "No profiles yet. Run: cms login --url https://<site>"
+  else
+    names.each do |name|
+      marker = name == PROFILE ? "*" : " "
+      puts "#{marker} #{name.ljust(16)} #{load_profile(name)["CMS_URL"]}"
+    end
+  end
+end
+
+command("config", group: "Setup",
+  summary: "Show the URL, token and profile this invocation would use",
+  usage: "cms config") do |_args|
+  masked = TOKEN.empty? ? "not set" : "#{TOKEN[0, 12]}••••••••"
+  if envelope_wanted?
+    emit(status: TOKEN.empty? ? "error" : "ok",
+         summary: TOKEN.empty? ? "No credentials resolved." : "Configured for #{BASE}.",
+         data: {profile: PROFILE, url: BASE.presence, token: masked, config_dir: CONFIG_DIR},
+         breadcrumbs: [{description: "Check this machine can work", command: "cms doctor --agent"}])
+  else
+    puts "profile           #{PROFILE || "none"}"
+    puts "CMS_URL           #{BASE.presence || "not set"}"
+    puts "USER_AGENT_TOKEN  #{masked}"
+    puts "config dir        #{CONFIG_DIR}"
+  end
+end
+
+command("doctor", group: "Setup",
+  summary: "Say whether this machine can actually do work, and what is stopping it",
+  usage: "cms doctor [--agent]",
+  notes: "Exits non-zero when something is broken, so a provisioning script can gate on it. " \
+         "The capability check is the one that catches the quiet failure: a token whose role " \
+         "lacks agents:run polls forever and is handed nothing, which looks exactly like an idle queue.",
+  nexts: ["cms work", "cms manifest"]) do |_args|
+  checks = []
+  ok = true
+
+  add = lambda do |name, status, detail, fix = nil|
+    ok = false if status == "fail"
+    checks << {check: name, status: status, detail: detail, fix: fix}.compact
+  end
+
+  if PROFILE
+    add.call("profile", "ok", "using profile '#{PROFILE}'")
+  elsif !BASE.empty?
+    add.call("profile", "ok", "no profile; CMS_URL is set in the environment")
+  else
+    add.call("profile", "fail", "no profile and no CMS_URL", "cms login --url https://<site>")
+  end
+
+  if BASE.empty? || TOKEN.empty?
+    add.call("credentials", "fail", "URL or token missing", "cms login --url https://<site>")
+    return report_doctor(checks, ok)
+  end
+  add.call("credentials", "ok", "credentials for #{BASE}")
+
+  identity = begin
+    response, = api(:get, "/api_tokens/me", envelope: false)
+    case response.code.to_i
+    when 200 then JSON.parse(response.body)
+    when 401
+      add.call("connection", "fail", "the site answered, but rejected the token",
+               "cms login --url #{BASE}")
+      nil
+    else
+      add.call("connection", "fail", "HTTP #{response.code} from #{BASE}")
+      nil
+    end
+  rescue StandardError => e
+    add.call("connection", "fail", "cannot reach #{BASE}: #{e.class}", "check the URL and the network")
+    nil
+  end
+  return report_doctor(checks, ok) unless identity
+
+  add.call("connection", "ok", "#{BASE} answered")
+
+  who = identity.dig("user", "name") || identity.dig("user", "email") ||
+        identity.dig("service", "name") || "unknown"
+  kind = identity["user"] ? "person" : "service token"
+  add.call("identity", "ok", "#{who} (#{kind})")
+
+  capabilities = Array(identity["capabilities"])
+  add.call("capabilities", "ok", "#{capabilities.size} capabilities")
+
+  if capabilities.include?("agents:run")
+    add.call("can claim work", "ok", "the role grants agents:run")
+  else
+    add.call("can claim work", "fail",
+             "the role does not grant agents:run — `cms work` will be handed nothing, forever",
+             "ask a human to add agents:run to this role")
+  end
+
+  writable = capabilities.grep(/:write\z/)
+  if writable.any?
+    add.call("can write", "ok", writable.sort.join(", "))
+  else
+    add.call("can write", "warn", "read-only — every write will 403")
+  end
+
+  begin
+    response, = api(:get, "/agent_runs?status=queued", envelope: false)
+    if response.code.to_i == 200
+      body = JSON.parse(response.body)
+      runs = body.is_a?(Hash) ? (body["agent_runs"] || body["data"] || []) : body
+      count = runs.is_a?(Array) ? runs.size : 0
+      add.call("work", "ok", count.zero? ? "nothing queued" : "#{count} run(s) queued")
+    else
+      add.call("work", "warn", "could not read the queue (HTTP #{response.code})")
+    end
+  rescue StandardError => e
+    add.call("work", "warn", "could not read the queue: #{e.class}")
+  end
+
+  harness = %w[claude codex opencode].select { |bin| system("command -v #{bin} >/dev/null 2>&1") }
+  if harness.any?
+    add.call("harness", "ok", "found on PATH: #{harness.join(", ")}")
+  else
+    add.call("harness", "warn", "no claude/codex/opencode on PATH — fine for a person, not for a worker loop")
+  end
+
+  report_doctor(checks, ok)
+end
+
+def report_doctor(checks, ok)
+  if envelope_wanted?
+    failed = checks.select { |c| c[:status] == "fail" }
+    emit(status: ok ? "ok" : "error",
+         summary: ok ? "Ready to work." : "Not ready: #{failed.map { |c| c[:check] }.join(", ")}.",
+         data: {healthy: ok, checks: checks},
+         breadcrumbs: failed.filter_map { |c| c[:fix] && {description: "Fix #{c[:check]}", command: c[:fix]} })
+  else
+    checks.each do |check|
+      mark = {"ok" => "✓", "warn" => "!", "fail" => "✗"}[check[:status]]
+      puts "#{mark} #{check[:check].ljust(16)} #{check[:detail]}"
+      puts "  #{" " * 16} → #{check[:fix]}" if check[:fix]
+    end
+    puts(ok ? "\nReady to work." : "\nNot ready.")
+  end
+  exit(ok ? 0 : 1)
+end
+
+command("commands", group: "Setup",
+  summary: "Print every command, with its flags and the traps, in one call",
+  usage: "cms commands [--json]",
+  notes: "Written for an agent: read this once instead of discovering the surface " \
+         "one usage error at a time.") do |_args|
+  if JSON_OUT || AGENT_OUT
+    emit(status: "ok",
+         summary: "#{COMMANDS.size} commands.",
+         data: {version: VERSION,
+                 global_flags: GLOBAL_FLAGS,
+                 commands: COMMANDS.map { |c| c.reject { |k, _| k == :run } }},
+         breadcrumbs: [{description: "Check this machine can work", command: "cms doctor --agent"}])
+  else
+    COMMANDS.group_by { |c| c[:group] }.each do |group, entries|
+      puts "\n#{group}"
+      entries.each { |c| puts "  #{c[:name].ljust(16)} #{c[:summary]}" }
+    end
+    puts "\ncms <command> --help for one, cms commands --json for all of it at once."
+  end
+end
+
+command("version", group: "Setup", aliases: ["--version"],
+  summary: "Print the CLI version",
+  usage: "cms version") do |_args|
+  envelope_wanted? ? emit(status: "ok", summary: "cms #{VERSION}", data: {version: VERSION}) : puts("cms #{VERSION}")
+end
+
+# ----- identity and shape -----
+
+command("whoami", group: "Orientation",
+  summary: "Who this credential is, and what its role lets it do",
+  usage: "cms whoami",
+  nexts: ["cms manifest"]) do |_args|
+  call(:get, "/api_tokens/me", hint: "cms manifest — the shape of this CMS")
+end
+
+command("manifest", group: "Orientation",
+  summary: "The shape of this CMS: collections, schemas, block types, brand",
+  usage: "cms manifest",
+  notes: "Read this before writing anything. A field name guessed from the front end " \
+         "is the usual cause of a 422.",
+  nexts: ["cms pages", "cms entries <collection>"]) do |_args|
+  call(:get, "/manifest", hint: "cms pages / cms entries <collection> — the content itself")
+end
+
+command("brand", group: "Orientation",
+  summary: "The brand brief on its own — voice, audience, what not to say",
+  usage: "cms brand",
+  notes: "The `brand` key of the manifest, pulled out because it is what you want in " \
+         "front of you before writing a word of copy.") do |_args|
+  response, = api(:get, "/manifest", envelope: false)
+  unless response.code.to_i == 200
+    handle(response)
+    return
+  end
+  body = JSON.parse(response.body)
+  brand = body["brand"] || body.dig("data", "brand")
+  if envelope_wanted?
+    emit(status: "ok", summary: brand ? "The brand brief." : "This CMS has no brand brief.",
+         data: {brand: brand}, breadcrumbs: [{description: "The full shape", command: "cms manifest"}])
+  else
+    puts JSON.pretty_generate(brand)
+  end
+end
+
+# ----- content: read -----
+
+command("pages", group: "Content",
+  summary: "Every page, filterable",
+  usage: "cms pages [--status draft|published] [--page N]",
+  flags: [{flag: "--status S", description: "draft, published, scheduled"},
+           {flag: "--page N", description: "page through longer lists"}],
+  nexts: ["cms page <path>"]) do |args|
+  call(:get, "/pages#{query_from(args)}", hint: "cms page <path> — one page with its blocks expanded")
+end
+
+command("page", group: "Content",
+  summary: "One page, with its blocks and assets resolved",
+  usage: "cms page <path>",
+  notes: "The path is the site path without a leading slash: `cms page about/team`.") do |args|
+  need!(args, 1, "cms page <path>")
+  call(:get, "/pages/#{args[0]}?resolve=assets")
+end
+
+command("collections", group: "Content",
+  summary: "Every collection and its schema",
+  usage: "cms collections",
+  nexts: ["cms entries <collection>"]) do |_args|
+  call(:get, "/collections", hint: "cms entries <collection> — the entries in one collection")
+end
+
+command("collection", group: "Content",
+  summary: "One collection with its fields",
+  usage: "cms collection <slug>") do |args|
+  need!(args, 1, "cms collection <slug>")
+  call(:get, "/collections/#{args[0]}")
+end
+
+command("entries", group: "Content",
+  summary: "The entries in one collection",
+  usage: "cms entries <collection> [--status S] [--page N]",
+  flags: [{flag: "--status S", description: "draft, published, scheduled"},
+           {flag: "--page N", description: "page through longer lists"}],
+  nexts: ["cms entry <collection> <slug>"]) do |args|
+  need!(args, 1, "cms entries <collection> [--status S] [--page N]")
+  collection = args.shift
+  call(:get, "/collections/#{collection}/entries#{query_from(args)}",
+       hint: "cms entry #{collection} <slug> — one entry in full")
+end
+
+command("entry", group: "Content",
+  summary: "One entry, with its assets resolved",
+  usage: "cms entry <collection> <slug>") do |args|
+  need!(args, 2, "cms entry <collection> <slug>")
+  call(:get, "/collections/#{args[0]}/entries/#{args[1]}?resolve=assets")
+end
+
+command("globals", group: "Content",
+  summary: "Site-wide content: nav, footer, brand",
+  usage: "cms globals",
+  notes: "Globals have no draft state — a change is in front of visitors immediately, " \
+         "which is why writing a live one is gated on globals:publish.") do |_args|
+  call(:get, "/globals")
+end
+
+command("global", group: "Content",
+  summary: "One global",
+  usage: "cms global <slug>") do |args|
+  need!(args, 1, "cms global <slug>")
+  call(:get, "/globals/#{args[0]}")
+end
+
+command("blocks", group: "Content", aliases: ["block_types"],
+  summary: "The block types a page can be built from",
+  usage: "cms blocks") do |_args|
+  call(:get, "/block_types")
+end
+
+command("forms", group: "Content",
+  summary: "Every form and its fields",
+  usage: "cms forms",
+  nexts: ["cms submissions"]) do |_args|
+  call(:get, "/forms")
+end
+
+command("assets", group: "Content",
+  summary: "The media library",
+  usage: "cms assets [--page N] [--kind image]",
+  flags: [{flag: "--page N", description: "page through"},
+           {flag: "--kind K", description: "narrow by kind"}]) do |args|
+  call(:get, "/assets#{query_from(args)}")
+end
+
+command("asset", group: "Content",
+  summary: "One file in the media library; or change its title, alt text, caption, description or folder",
+  usage: "cms asset <id> [set name=value ...]",
+  notes: "Fields: name (its title), alt, caption, description, folder (\"/logos\"), focal_x, focal_y. " \
+         "Write alt text for every image the site shows.") do |args|
+  need!(args, 1, "cms asset <id> [set name=value ...]")
+  id = args.shift
+  if args.shift == "set"
+    fields = args.to_h { |pair| pair.split("=", 2) }
+    die "usage: cms asset <id> set name=value ..." if fields.empty?
+    call(:patch, "/assets/#{id}", fields)
+  else
+    call(:get, "/assets/#{id}", hint: "cms asset #{id} set alt=\"…\" — change its metadata")
+  end
+end
+
+command("sitemap", group: "Content",
+  summary: "Every public URL this site serves",
+  usage: "cms sitemap") do |_args|
+  call(:get, "/sitemap")
+end
+
+command("search", group: "Content",
+  summary: "Search across pages, entries and globals",
+  usage: "cms search <query...>") do |args|
+  need!(args, 1, "cms search <query...>")
+  call(:post, "/search", {q: args.join(" ")})
+end
+
+command("refs", group: "Content", aliases: ["references"],
+  summary: "What points at a thing — check before deleting it",
+  usage: "cms refs <ref_type> <ref_id>",
+  notes: "The one call worth making before a delete: a page nothing links to is safe " \
+         "to remove, and one that three others link to is not.") do |args|
+  need!(args, 2, "cms refs <ref_type> <ref_id>")
+  call(:get, "/references?ref_type=#{args[0]}&ref_id=#{args[1]}")
+end
+
+# ----- content: status -----
+
+command("publish", group: "Publishing",
+  summary: "Publish one or more pages",
+  usage: "cms publish <path...>",
+  notes: "Needs pages:publish. A role with pages:write but not pages:publish can edit " \
+         "a page and cannot make it live — that is deliberate, not a bug to route around.") do |args|
+  need!(args, 1, "cms publish <path...>")
+  call(:post, "/pages/bulk_update_status", {status: "published", paths: args})
+end
+
+command("unpublish", group: "Publishing",
+  summary: "Return one or more pages to draft",
+  usage: "cms unpublish <path...>") do |args|
+  need!(args, 1, "cms unpublish <path...>")
+  call(:post, "/pages/bulk_update_status", {status: "draft", paths: args})
+end
+
+command("status", group: "Publishing",
+  summary: "Set any status on one or more pages",
+  usage: "cms status <status> <path...>") do |args|
+  need!(args, 2, "cms status <status> <path...>")
+  status = args.shift
+  call(:post, "/pages/bulk_update_status", {status: status, paths: args})
+end
+
+command("entry-status", group: "Publishing",
+  summary: "Set a status on one or more entries",
+  usage: "cms entry-status <collection> <status> <slug...>") do |args|
+  need!(args, 3, "cms entry-status <collection> <status> <slug...>")
+  collection = args.shift
+  status = args.shift
+  call(:post, "/collections/#{collection}/entries/bulk_update_status", {status: status, slugs: args})
+end
+
+# ----- structure -----
+
+command("schema", group: "Structure",
+  summary: "Replace the field list of a page, collection or global",
+  usage: "cms schema page|collection|global <slug> < fields.json",
+  notes: "Reads the field list from stdin, and REPLACES what is there — a field left " \
+         "out of the list is a field removed, along with the content in it. Read the " \
+         "current one from `cms manifest` and edit that, rather than writing a list from scratch.") do |args|
+  need!(args, 2, "cms schema page|collection|global <slug> < fields.json")
+  kind, slug = args
+  fields = read_stdin("cms schema reads the field list from stdin: cms schema #{kind} #{slug} < fields.json")
+  path, wrapper = case kind
+  when "page"       then ["/pages/#{slug}/schema", "page"]
+  when "collection" then ["/collections/#{slug}/schema", "collection"]
+  when "global"     then ["/globals/#{slug}/schema", "global"]
+  else die "unknown schema kind: #{kind} (page|collection|global)"
+  end
+  call(:patch, path, %({"#{wrapper}":{"fields":#{fields}}}))
+end
+
+command("seed-blocks", group: "Structure",
+  summary: "Install the standard block types on a new site",
+  usage: "cms seed-blocks") do |_args|
+  call(:post, "/block_types/seed", {})
+end
+
+# ----- trash -----
+
+command("trash", group: "Trash",
+  summary: "What has been deleted and can still be brought back",
+  usage: "cms trash [--kind K] [--page N]",
+  nexts: ["cms restore <kind> <id>"]) do |args|
+  call(:get, "/trash#{query_from(args)}", hint: "cms restore <kind> <id> — put one back")
+end
+
+command("restore", group: "Trash",
+  summary: "Put a deleted thing back",
+  usage: "cms restore <kind> <id>") do |args|
+  need!(args, 2, "cms restore <kind> <id>")
+  call(:post, "/trash/#{args[0]}/#{args[1]}/restore", {})
+end
+
+command("purge", group: "Trash",
+  summary: "Delete something permanently",
+  usage: "cms purge <kind> <id>",
+  notes: "There is nothing after this. `cms refs` first if anything might still point at it.") do |args|
+  need!(args, 2, "cms purge <kind> <id>")
+  call(:delete, "/trash/#{args[0]}/#{args[1]}")
+end
+
+# ----- service tokens -----
+#
+# A service token belongs to the site, not to a person, and carries the role
+# named on it. The list never contains a secret; create, reveal and rotate
+# each return one, once, and each is audited.
+
+command("service-tokens", group: "Service tokens",
+  summary: "Every token, and the roles you can issue against",
+  usage: "cms service-tokens",
+  notes: "The list never contains a secret. create, reveal and rotate each return one, once. " \
+         "Print a secret for the person who asked; never write one into a file, a repo, or a commit.",
+  nexts: ["cms service-token reveal <id>"]) do |_args|
+  call(:get, "/service_tokens", hint: "cms service-token reveal <id> — show that token's secret again")
+end
+
+command("service-token", group: "Service tokens",
+  summary: "Issue, reveal, rotate, revoke, or show one service token",
+  usage: "cms service-token create --name NAME --role ROLE [--description TEXT] | " \
+         "cms service-token reveal|rotate|revoke <id> | cms service-token <id>",
+  flags: [{flag: "--name NAME", description: "what the token is for, e.g. PRODUCTION"},
+          {flag: "--role ROLE", description: "role name or id, e.g. 'Production site'"},
+          {flag: "--description TEXT", description: "optional note"}],
+  notes: "Only create, reveal and rotate return a secret, and only once each. " \
+         "Issuing or revealing needs settings:write. Alias: create also accepts 'new'.") do |args|
+  need!(args, 1, "cms service-token create --name NAME --role ROLE [--description TEXT] | " \
+                 "cms service-token reveal|rotate|revoke <id> | cms service-token <id>")
+  action = args.shift
+  case action
+  when "create", "new"
+    name = role = desc = nil
+    until args.empty?
+      case (arg = args.shift)
+      when "--name" then name = args.shift
+      when "--role" then role = args.shift
+      when "--description" then desc = args.shift
+      else die "unexpected argument: #{arg}"
+      end
+    end
+    die "--name is required — say what the token is for, e.g. --name PRODUCTION" if name.to_s.empty?
+    die "--role is required — e.g. --role 'Production site'. 'cms service-tokens' lists the roles." if role.to_s.empty?
+    body = {"name" => name, "role" => role}
+    body["description"] = desc unless desc.to_s.empty?
+    call(:post, "/service_tokens", body)
+  when "reveal", "rotate", "revoke"
+    need!(args, 1, "cms service-token #{action} <id>")
+    call(:post, "/service_tokens/#{args[0]}/#{action}", {})
+  else
+    call(:get, "/service_tokens/#{action}")
+  end
+end
+
+# ----- review -----
+
+command("reviews", group: "Review",
+  summary: "Open review requests",
+  usage: "cms reviews [--status S]",
+  nexts: ["cms review approve <id>"]) do |args|
+  call(:get, "/review_requests#{query_from(args)}")
+end
+
+command("review", group: "Review",
+  summary: "Ask for a review, or answer one",
+  usage: "cms review request <Page|CollectionEntry> <path-or-slug> [comment...] | " \
+         "cms review approve|changes <id> [comment...] | cms review cancel <id>",
+  notes: "A role without publish capability files a review instead of going live. " \
+         "That is the intended route for an agent: propose, and let a person approve.") do |args|
+  need!(args, 1, "cms review request|approve|changes|cancel …")
+  case (action = args.shift)
+  when "request"
+    need!(args, 2, "cms review request <Page|CollectionEntry> <path-or-slug> [comment...]")
+    type = args.shift
+    slug = args.shift
+    call(:post, "/review_requests", {reviewable_type: type, slug: slug, comment: args.join(" ")})
+  when "approve"
+    need!(args, 1, "cms review approve <id> [comment...]")
+    id = args.shift
+    call(:post, "/review_requests/#{id}/approve", {comment: args.join(" ")})
+  when "changes"
+    need!(args, 1, "cms review changes <id> [comment...]")
+    id = args.shift
+    call(:post, "/review_requests/#{id}/request_changes", {comment: args.join(" ")})
+  when "cancel"
+    need!(args, 1, "cms review cancel <id>")
+    call(:post, "/review_requests/#{args[0]}/cancel", {})
+  else die "unknown review action: #{action} (request|approve|changes|cancel)"
+  end
+end
+
+# ----- forms -----
+
+command("submissions", group: "Forms",
+  summary: "What people have sent through the forms",
+  usage: "cms submissions [--form F] [--page N]",
+  nexts: ["cms submission <id>"]) do |args|
+  call(:get, "/submissions#{query_from(args)}", hint: "cms submission <id> — one submission with its data and files")
+end
+
+command("submission", group: "Forms",
+  summary: "One submission with its data and files",
+  usage: "cms submission <id>") do |args|
+  need!(args, 1, "cms submission <id>")
+  call(:get, "/submissions/#{args[0]}")
+end
+
+command("emails", group: "Forms",
+  summary: "The emails a form sends",
+  usage: "cms emails <form>") do |args|
+  need!(args, 1, "cms emails <form>")
+  call(:get, "/forms/#{args[0]}/emails")
+end
+
+command("email", group: "Forms",
+  summary: "One of a form's emails (its subject and blocks); or change it",
+  usage: "cms email <form> <notification|confirmation> [set < email.json]",
+  notes: "`set` reads {\"form_email\": {\"subject\", \"enabled\", \"recipients\", \"blocks\": [...]}} from stdin. " \
+         "Blocks are the email block types (email_heading, email_text, email_button, email_image, " \
+         "email_submission, email_divider, email_spacer); read one first for the shape. Changing " \
+         "blocks schedules a site rebuild, which builds the email's template.") do |args|
+  need!(args, 2, "cms email <form> <notification|confirmation> [set < email.json]")
+  if args[2] == "set"
+    call(:patch, "/forms/#{args[0]}/emails/#{args[1]}", $stdin.read)
+  else
+    call(:get, "/forms/#{args[0]}/emails/#{args[1]}", hint: "cms email #{args[0]} #{args[1]} set < email.json — change it")
+  end
+end
+
+# ----- commerce: quotes and invoices -----
+
+command("quotes", group: "Commerce",
+  summary: "Quote requests sent in from the site, newest first",
+  usage: "cms quotes [--status new|quoted|invoiced|won|lost|archived] [--since DATE] [--page N]",
+  notes: "A quote request is a lead: who asked, which products (title, SKU, listed price, URL as the " \
+         "visitor saw them) and their message. Work it with quote-status, bill it with invoice-create.",
+  nexts: ["cms quote <id>", "cms invoice-create --from-quote <id>"]) do |args|
+  call(:get, "/quotes#{query_from(args)}", hint: "cms quote <id> — the full request")
+end
+
+command("quote", group: "Commerce",
+  summary: "One quote request in full: items, message, notes, invoices",
+  usage: "cms quote <id>",
+  nexts: ["cms quote-status <id> quoted", "cms invoice-create --from-quote <id>"]) do |args|
+  need!(args, 1, "cms quote <id>")
+  call(:get, "/quotes/#{args[0]}")
+end
+
+command("quote-status", group: "Commerce",
+  summary: "Move a quote request along: new → quoted → invoiced → won | lost | archived",
+  usage: "cms quote-status <id> <status> [--notes \"…\"]",
+  flags: [{flag: "--notes TEXT", description: "staff-only working notes, replaces what is there"}]) do |args|
+  need!(args, 2, "cms quote-status <id> <status>")
+  id, status = args.shift, args.shift
+  body = {status: status}
+  until args.empty?
+    case (flag = args.shift)
+    when "--notes" then body[:notes] = args.shift.to_s
+    else die "unexpected argument: #{flag}"
+    end
+  end
+  call(:patch, "/quotes/#{id}", {quote: body})
+end
+
+command("invoices", group: "Commerce",
+  summary: "Invoices, newest first",
+  usage: "cms invoices [--status draft|sent|paid|void] [--page N]",
+  nexts: ["cms invoice <id>"]) do |args|
+  call(:get, "/invoices#{query_from(args)}", hint: "cms invoice <id> — one invoice with its lines and public link")
+end
+
+command("invoice", group: "Commerce",
+  summary: "One invoice: lines, totals, payment link, the customer's hosted URL",
+  usage: "cms invoice <id>",
+  nexts: ["cms invoice-send <id>", "cms invoice-paid <id>"]) do |args|
+  need!(args, 1, "cms invoice <id>")
+  call(:get, "/invoices/#{args[0]}")
+end
+
+command("invoice-create", group: "Commerce",
+  summary: "Draft an invoice, prefilled from a quote request or from a JSON body",
+  usage: "cms invoice-create --from-quote <id> [--payment-link URL] | cms invoice-create - < invoice.json",
+  flags: [{flag: "--from-quote ID", description: "copy the customer and items from that quote request"},
+           {flag: "--payment-link URL", description: "where the customer pays; can be added later with cms patch"}],
+  notes: "Amounts are integer cents. The JSON body is {\"invoice\": {customer_name, customer_email, line_items: " \
+         "[{description, sku, quantity, unit_price_cents}], tax_cents, shipping_cents, payment_link, due_on, notes}}. " \
+         "Nothing is emailed until cms invoice-send.",
+  nexts: ["cms invoice-send <id>"]) do |args|
+  body = {}
+  if args.first == "-"
+    args.shift
+    body = JSON.parse(read_stdin("usage: cms invoice-create - < invoice.json"))
+  end
+  until args.empty?
+    case (flag = args.shift)
+    when "--from-quote" then body["quote_request_id"] = args.shift
+    when "--payment-link" then (body["invoice"] ||= {})["payment_link"] = args.shift.to_s
+    else die "unexpected argument: #{flag}"
+    end
+  end
+  die "usage: cms invoice-create --from-quote <id> | cms invoice-create - < invoice.json" if body.empty?
+  call(:post, "/invoices", body, hint: "cms invoice-send <id> — email it to the customer")
+end
+
+command("invoice-send", group: "Commerce",
+  summary: "Email the invoice to its customer, with the hosted page and payment link",
+  usage: "cms invoice-send <id>",
+  notes: "Needs invoices:send. Re-sending a sent invoice is allowed — a customer who lost the email gets it again.",
+  nexts: ["cms invoice-paid <id>"]) do |args|
+  need!(args, 1, "cms invoice-send <id>")
+  call(:post, "/invoices/#{args[0]}/send")
+end
+
+command("invoice-paid", group: "Commerce",
+  summary: "Record that an invoice was paid; the quote request behind it becomes won",
+  usage: "cms invoice-paid <id>") do |args|
+  need!(args, 1, "cms invoice-paid <id>")
+  call(:post, "/invoices/#{args[0]}/mark_paid")
+end
+
+command("invoice-void", group: "Commerce",
+  summary: "Void an invoice that should not be paid; sent invoices are voided, never deleted",
+  usage: "cms invoice-void <id>") do |args|
+  need!(args, 1, "cms invoice-void <id>")
+  call(:post, "/invoices/#{args[0]}/void")
+end
+
+# ----- redirects -----
+
+command("redirects", group: "Redirects",
+  summary: "The redirect rules, or the whole table as CSV",
+  usage: "cms redirects [all|export|import]",
+  notes: "`export` and `import` are CSV on stdout/stdin — `cms redirects export > r.csv`, " \
+         "`cms redirects import < r.csv`.") do |args|
+  case (sub = args.shift.to_s)
+  when "all"    then call(:get, "/redirects/all")
+  when "export" then call(:get, "/redirects/export", binary: true)
+  when "import"
+    csv = read_stdin("cms redirects import reads CSV from stdin: cms redirects import < redirects.csv")
+    call(:post, "/redirects/import", csv, content_type: "text/csv")
+  when ""       then call(:get, "/redirects", hint: "cms redirects all — every rule, including inactive ones, with hit counts")
+  else die "unknown redirects subcommand: #{sub} (all|export|import)"
+  end
+end
+
+command("redirect", group: "Redirects",
+  summary: "Add or remove one redirect",
+  usage: "cms redirect add <source> <destination> [status] | cms redirect rm <id>") do |args|
+  need!(args, 1, "cms redirect add <source> <destination> [status] | cms redirect rm <id>")
+  case (action = args.shift)
+  when "add"
+    need!(args, 2, "cms redirect add <source> <destination> [status]")
+    call(:post, "/redirects", {redirect: {source_path: args[0], destination_url: args[1],
+                                            status_code: (args[2] || 301).to_i}})
+  when "rm", "delete"
+    need!(args, 1, "cms redirect rm <id>")
+    call(:delete, "/redirects/#{args[0]}")
+  else die "unknown redirect action: #{action} (add|rm)"
+  end
+end
+
+# ----- webhooks -----
+
+command("webhooks", group: "Webhooks",
+  summary: "Every webhook and where it points",
+  usage: "cms webhooks") do |_args|
+  call(:get, "/webhooks")
+end
+
+command("webhook", group: "Webhooks",
+  summary: "One webhook; create or change one, fire a test, or rotate its signing secret",
+  usage: "cms webhook <id> | cms webhook test|rotate <id> | cms webhook create|update [id] < webhook.json",
+  notes: "create and update read {\"webhook\": {\"name\", \"url\", \"active\", \"events\": [...]}} from stdin.") do |args|
+  need!(args, 1, "cms webhook <id> | cms webhook test|rotate <id> | cms webhook create|update [id] < webhook.json")
+  case args[0]
+  when "create"
+    call(:post, "/webhooks", $stdin.read)
+  when "update"
+    need!(args, 2, "cms webhook update <id> < webhook.json")
+    call(:patch, "/webhooks/#{args[1]}", $stdin.read)
+  when "test"
+    need!(args, 2, "cms webhook test <id>")
+    call(:post, "/webhooks/#{args[1]}/test", {})
+  when "rotate"
+    need!(args, 2, "cms webhook rotate <id>")
+    call(:post, "/webhooks/#{args[1]}/rotate_secret", {})
+  else call(:get, "/webhooks/#{args[0]}")
+  end
+end
+
+# ----- site operations -----
+
+command("deploy", group: "Site",
+  summary: "Deploy state; trigger, pause or resume a build",
+  usage: "cms deploy [now|pause|resume]") do |args|
+  case (sub = args.shift.to_s)
+  when "now", "trigger" then call(:post, "/deploy/trigger", {})
+  when "pause"  then call(:patch, "/deploy", {deploy: {paused: true}})
+  when "resume" then call(:patch, "/deploy", {deploy: {paused: false}})
+  when ""       then call(:get, "/deploy", hint: "cms deploy now — trigger a build")
+  else die "unknown deploy subcommand: #{sub} (now|pause|resume)"
+  end
+end
+
+command("updates", group: "Site",
+  summary: "The version this install runs, the newest CMS release, and past updates",
+  usage: "cms updates [check]",
+  notes: "check asks GitHub now instead of waiting for the daily check. Starting an update restarts " \
+         "the whole install, so it is an admin's click in Settings › Updates: there is no command for it.",
+  nexts: ["cms updates check"]) do |args|
+  case (sub = args.shift.to_s)
+  when "check" then call(:post, "/updates/check", {})
+  when ""      then call(:get, "/updates", hint: "cms updates check — ask GitHub now")
+  else die "unknown updates subcommand: #{sub} (check)"
+  end
+end
+
+command("docs", group: "Site",
+  summary: "The CMS's guides: how it works, an Astro site, AI agents",
+  usage: "cms docs [slug]",
+  notes: "Without a slug, the list. A guide comes back as Markdown, written for this install.",
+  nexts: ["cms docs astro", "cms docs ai", "cms go-live"]) do |args|
+  if args.empty?
+    call(:get, "/docs", hint: "cms docs <slug> — one guide")
+  elsif !envelope_wanted?
+    response, = api(:get, "/docs/#{args[0]}", envelope: false)
+    next handle(response) unless response.code.to_i == 200
+
+    puts JSON.parse(response.body).dig("guide", "markdown")
+  else
+    call(:get, "/docs/#{args[0]}")
+  end
+end
+
+# A checklist (GET /api/go_live, /api/site_health) as a person reads it: its
+# checks by group, each passing (✓), to do (✗) or yours to judge (?), with the
+# command that fixes one still to do.
+def print_checklist(path, ready_words)
+  if envelope_wanted?
+    call(:get, path)
+    return
+  end
+
+  response, = api(:get, path, envelope: false)
+  return handle(response) unless response.code.to_i == 200
+
+  body = JSON.parse(response.body)
+  body["checks"].group_by { it["group"] }.each do |group, checks|
+    puts "\n#{group}"
+    checks.each do |check|
+      mark = check["ok"].nil? ? "?" : (check["ok"] ? "✓" : "✗")
+      puts "  #{mark} #{check["title"]}"
+      puts "      #{check["detail"]}" if check["ok"] == false
+      puts "      #{check["cli"]}" if check["ok"] == false && check["cli"]
+    end
+  end
+  summary = body["summary"]
+  puts "\n#{summary["passing"]} of #{summary["total"]} pass#{summary["ready"] ? " — #{ready_words}." : "."}"
+end
+
+command("go-live", group: "Site",
+  summary: "What to have in place before the site goes live, checked against it now",
+  usage: "cms go-live",
+  notes: "Each check says whether it passes (ok: true/false, or null when it's yours to judge), " \
+         "and the command or admin page that fixes it.",
+  nexts: ["cms site-health", "cms frontend", "cms deploy"]) do |_args|
+  print_checklist("/go_live", "ready to go live")
+end
+
+command("site-health", group: "Site",
+  summary: "Whether the site is in good order: NAP, tracking, spam protection, search, required pages, backups",
+  usage: "cms site-health",
+  notes: "Checked against the site as it is, always (cms go-live is the launch list). Each check " \
+         "says whether it passes (ok: true/false, or null when it's yours to judge), and the command " \
+         "or admin page that fixes it.",
+  nexts: ["cms go-live"]) do |_args|
+  print_checklist("/site_health", "everything checks out")
+end
+
+command("frontend", group: "Site",
+  summary: "The site this headless CMS serves: where it lives, its repo, its last build",
+  usage: "cms frontend",
+  notes: "The site is an Astro app that fetches this CMS's JSON and renders it. Connect one by " \
+         "running the `connect.install` command in its project; its own AGENTS.md then explains the " \
+         "JSON and the rest.",
+  nexts: ["cms deploy", "cms manifest"]) do |_args|
+  call(:get, "/frontend", hint: "cms deploy — rebuild it")
+end
+
+command("audit", group: "Site",
+  summary: "Who changed what, and when",
+  usage: "cms audit [--actor A] [--action X] [--page N]") do |args|
+  call(:get, "/audit_log#{query_from(args)}")
+end
+
+command("schedules", group: "Site",
+  summary: "The recurring tasks this site runs",
+  usage: "cms schedules",
+  nexts: ["cms run-task <key>"]) do |_args|
+  call(:get, "/tools/recurring_tasks", hint: "cms run-task <key> — queue one immediately")
+end
+
+command("schedule", group: "Site",
+  summary: "Switch a recurring task on or off, or change its cron or settings",
+  usage: "cms schedule <key> [--on|--off] [--cron \"0 3 * * *\"] [--set name=value ...]",
+  flags: [{flag: "--on / --off", description: "run it on its schedule, or not"},
+           {flag: "--cron EXPR", description: "a standard cron expression"},
+           {flag: "--set name=value", description: "one of the recipe's settings (cms schedules lists them)"}],
+  nexts: ["cms run-task <key>"]) do |args|
+  need!(args, 1, "cms schedule <key> [--on|--off] [--cron EXPR] [--set name=value]")
+  key = args.shift
+  task = {}
+  settings = {}
+  until args.empty?
+    case (flag = args.shift)
+    when "--on" then task[:enabled] = true
+    when "--off" then task[:enabled] = false
+    when "--cron" then task[:cron] = args.shift
+    when "--set"
+      name, value = args.shift.to_s.split("=", 2)
+      settings[name] = value.to_s.match?(/\A-?\d+\z/) ? value.to_i : value
+    else die "unknown flag: #{flag}"
+    end
+  end
+  task[:params] = settings if settings.any?
+  die "nothing to change: pass --on, --off, --cron or --set" if task.empty?
+  call(:patch, "/tools/recurring_tasks/#{key}", {task: task})
+end
+
+command("run-task", group: "Site",
+  summary: "Queue one recurring task to run now",
+  usage: "cms run-task <key>") do |args|
+  need!(args, 1, "cms run-task <key>")
+  call(:post, "/tools/recurring_tasks/#{args[0]}/run_now", {})
+end
+
+command("backup", group: "Site",
+  summary: "Write a full backup archive to stdout",
+  usage: "cms backup > backup.tar.gz",
+  notes: "Binary on stdout — redirect it, or it fills the terminal.") do |_args|
+  die "cms backup writes a .tar.gz to stdout — redirect it: cms backup > backup.tar.gz" if $stdout.tty?
+  call(:post, "/tools/backup", {}, binary: true)
+end
+
+# ----- agent work -----
+#
+# The run loop, in the order you call it:
+#
+#   cms work                claim one queued run (exit 3 = nothing queued)
+#   cms run-start <id>      say you've begun
+#   cms run-step <id> …     narrate as you go; also the heartbeat
+#   cms run-ping <id>       heartbeat with nothing to say
+#   cms run-done <id> …     finished, with a summary
+#   cms run-fail <id> …     didn't finish, with the reason
+#
+# A run whose lease lapses goes back on the queue for someone else, so the
+# heartbeat is not optional in a long run.
+
+command("agents", group: "Agent work",
+  summary: "The agent roster: who is defined and what they do",
+  usage: "cms agents [--status S]") do |args|
+  call(:get, "/agents#{query_from(args)}")
+end
+
+command("work", group: "Agent work", aliases: ["claim"],
+  summary: "Claim one queued run and get its instructions",
+  usage: "cms work [--worker NAME] [--lease SECONDS]",
+  flags: [{flag: "--worker NAME", description: "who is claiming (default: this hostname)"},
+           {flag: "--lease SECONDS", description: "how long before it returns to the queue (default 600)"}],
+  notes: "Exits 3 when nothing is queued — distinct from 1, so a polling loop can tell " \
+         "\"idle\" from \"broken\". Needs agents:run; a role without it is handed nothing " \
+         "and looks exactly like an empty queue. `cms doctor` checks for that.",
+  nexts: ["cms run-start <id>"]) do |args|
+  worker = nil
+  lease = nil
+  until args.empty?
+    case (arg = args.shift)
+    when "--worker" then worker = args.shift
+    when "--lease"  then lease = args.shift
+    else die "unexpected argument: #{arg}"
+    end
+  end
+
+  # The generic handler treats every non-2xx as fatal and cannot say anything
+  # useful about a 204, so claiming does its own thing with the response.
+  response, = api(:post, "/agent_runs/claim",
+                  {worker: worker || Socket.gethostname, lease_seconds: (lease || 600).to_i})
+
+  case response.code.to_i
+  when 204
+    if envelope_wanted?
+      emit(status: "empty", summary: "Nothing queued.", data: {},
+           breadcrumbs: [{description: "Poll again shortly", command: "cms work --agent"}])
+    else
+      warn "Nothing queued."
+    end
+    exit 3
+  when 200..299
+    print_body(response.body)
+    warn "Next: cms run-start <id>, then run-step / run-ping as you go, then run-done" if !envelope_wanted? && $stderr.tty?
+  when 403
+    die "403 — this token's role is missing 'agents:run'. Ask a human to widen it; run `cms doctor` to confirm."
+  else
+    handle(response)
+  end
+end
+
+command("runs", group: "Agent work",
+  summary: "Agent runs, filterable by status",
+  usage: "cms runs [--status queued|running|completed|failed]") do |args|
+  call(:get, "/agent_runs#{query_from(args)}")
+end
+
+command("run", group: "Agent work",
+  summary: "One run in full, with its steps",
+  usage: "cms run <id>") do |args|
+  need!(args, 1, "cms run <id>")
+  call(:get, "/agent_runs/#{args[0]}")
+end
+
+command("run-start", group: "Agent work",
+  summary: "Mark a claimed run as started",
+  usage: "cms run-start <id>") do |args|
+  need!(args, 1, "cms run-start <id>")
+  call(:post, "/agent_runs/#{args[0]}/start", {})
+end
+
+command("run-ping", group: "Agent work",
+  summary: "Renew the lease on a run you are still working",
+  usage: "cms run-ping <id>",
+  notes: "Send one at least every lease period. A lapsed lease puts the run back on the " \
+         "queue and someone else picks it up alongside you.") do |args|
+  need!(args, 1, "cms run-ping <id>")
+  call(:post, "/agent_runs/#{args[0]}/heartbeat", {})
+end
+
+command("run-step", group: "Agent work",
+  summary: "Report progress on a run — this also renews the lease",
+  usage: "cms run-step <id> <message...>") do |args|
+  need!(args, 2, "cms run-step <id> <message>")
+  id = args.shift
+  call(:post, "/agent_runs/#{id}/report", {message: args.join(" ")})
+end
+
+command("run-done", group: "Agent work",
+  summary: "Finish a run successfully, with a summary",
+  usage: "cms run-done <id> <summary...>") do |args|
+  need!(args, 2, "cms run-done <id> <summary>")
+  id = args.shift
+  call(:post, "/agent_runs/#{id}/complete", {summary: args.join(" ")})
+end
+
+command("run-fail", group: "Agent work",
+  summary: "End a run that didn't finish, with the reason",
+  usage: "cms run-fail <id> <error...>",
+  notes: "Say what actually stopped you. Being blocked and saying so is a result; " \
+         "a run that quietly stops is one a person has to reconstruct.") do |args|
+  need!(args, 2, "cms run-fail <id> <error>")
+  id = args.shift
+  call(:post, "/agent_runs/#{id}/fail", {error: args.join(" ")})
+end
+
+command("recommend", group: "Agent work",
+  summary: "File a finding for a human to decide on",
+  usage: "cms recommend <kind> <title> [--body T] [--impact N] [--subject page:/pricing]",
+  flags: [{flag: "--body TEXT", description: "the detail"},
+           {flag: "--impact N", description: "how much it matters, as a number"},
+           {flag: "--subject REF", description: "page:<path> or <collection>:<slug>"}],
+  notes: "The right move when you find something outside the run's remit: file it rather " \
+         "than widening the run. Picks up CMS_AGENT_RUN_ID from the environment to attach " \
+         "the finding to the run that produced it.") do |args|
+  need!(args, 2, "cms recommend <kind> <title> [--body T] [--impact N] [--subject page:<path>]")
+  kind = args.shift
+  title = args.shift
+  body = impact = subject = nil
+  until args.empty?
+    case (arg = args.shift)
+    when "--body"    then body = args.shift
+    when "--impact"  then impact = args.shift
+    when "--subject" then subject = args.shift
+    else die "unexpected argument: #{arg}"
+    end
+  end
+
+  payload = {kind: kind, title: title}
+  payload[:body] = body if body
+  payload[:impact] = impact.to_i if impact
+
+  if subject
+    kind_part, ref_part = subject.split(":", 2)
+    die "--subject looks like page:/pricing or posts:my-entry" if ref_part.nil?
+    payload[:subject] = if kind_part == "page"
+      {type: "Page", path: ref_part}
+    else
+      {type: "CollectionEntry", collection: kind_part, slug: ref_part}
+    end
+  end
+
+  payload[:agent_run_id] = ENV["CMS_AGENT_RUN_ID"].to_i if ENV["CMS_AGENT_RUN_ID"].presence
+
+  call(:post, "/recommendations", {recommendation: payload})
+end
+
+command("findings", group: "Agent work",
+  summary: "Findings already filed",
+  usage: "cms findings [--status open|resolved]") do |args|
+  call(:get, "/recommendations#{query_from(args)}")
+end
+
+# ----- reporting -----
+
+command("reports", group: "Reporting",
+  summary: "The latest snapshot of every report, with how each figure moved",
+  usage: "cms reports",
+  notes: "What search, Google Maps, reviews and the AI assistants show about this " \
+         "business, one line per report: the headline figures now and at the run before. " \
+         "Read this first; open a report in full with `cms report <kind>`. Reading is free — " \
+         "running a report spends money and is a person's decision, not yours.",
+  nexts: ["cms report <kind>", "cms report <kind> --previous", "cms recommend <kind> <title>"]) do |args|
+  call(:get, "/reports#{query_from(args)}")
+end
+
+command("report", group: "Reporting",
+  summary: "One report in full",
+  usage: "cms report <kind> [--previous]",
+  flags: [{flag: "--previous", description: "the snapshot before the latest, to compare"}],
+  notes: "Kinds are the `kind` values `cms reports` lists — ranked_keywords, local_rankings, " \
+         "google_reviews, ai_answers and so on. The data is the normalized result as the " \
+         "reporting page shows it.") do |args|
+  need!(args, 1, "cms report <kind> [--previous]")
+  kind = args.shift
+  call(:get, "/reports/#{kind}#{query_from(args)}")
+end
+
+# ----- escape hatch -----
+
+command("get", group: "Raw", aliases: ["GET"],
+  summary: "GET any API path the curated commands don't cover",
+  usage: "cms get <path>") do |args|
+  need!(args, 1, "cms get <path>")
+  call(:get, args[0])
+end
+
+%w[post patch delete].each do |verb|
+  command(verb, group: "Raw", aliases: [verb.upcase, *(verb == "patch" ? %w[put PUT] : [])],
+    summary: "#{verb.upcase} any API path, with a JSON body",
+    usage: "cms #{verb} <path> [json|-]",
+    notes: "`-` reads the body from stdin. This is how writes that have no curated " \
+           "command are made — `cms manifest` first, so the field names are right.") do |args|
+    need!(args, 1, "cms #{verb} <path> [json|-]")
+    path = args.shift
+    body = args.shift
+    body = $stdin.read if body == "-"
+    call(verb.to_sym, path, body)
+  end
+end
+
+# ----- the MCP server -----
+
+command("mcp", group: "Setup",
+  summary: "Speak MCP on stdio, so an editor can call the CMS directly",
+  usage: "cms mcp",
+  notes: "Wire it up once: `claude mcp add cms -- #{$PROGRAM_NAME} mcp`. Every curated " \
+         "command becomes a tool, with the same catalogue behind it, so the two never drift.") do |_args|
+  require_credentials!
+  run_mcp_server
+end
+
+# Deliberately small: MCP over stdio is newline-delimited JSON-RPC, and the whole
+# server is "expose the catalogue as tools". Anything cleverer would be a second
+# description of the same surface, which is the thing this file exists to avoid.
+def run_mcp_server
+  $stdout.sync = true
+
+  tools = COMMANDS.reject { |c| %w[mcp login help commands version].include?(c[:name]) }.map do |c|
+    {name: c[:name].tr("-", "_"),
+      description: [c[:summary], c[:notes]].compact.join(" — "),
+      inputSchema: {type: "object",
+                     properties: {args: {type: "array", items: {type: "string"},
+                                           description: "Arguments, as you would type them: #{c[:usage]}"}}}}
+  end
+
+  while (line = $stdin.gets)
+    request = begin
+      JSON.parse(line)
+    rescue JSON::ParserError
+      next
+    end
+    id = request["id"]
+
+    result = case request["method"]
+    when "initialize"
+      {protocolVersion: "2024-11-05", capabilities: {tools: {}},
+        serverInfo: {name: "cms", version: VERSION}}
+    when "tools/list" then {tools: tools}
+    when "tools/call"
+      name = request.dig("params", "name").to_s.tr("_", "-")
+      args = Array(request.dig("params", "arguments", "args")).map(&:to_s)
+      {content: [{type: "text", text: capture_command(name, args)}]}
+    when "notifications/initialized" then nil
+    else {error: "unknown method"}
+    end
+
+    next if id.nil?
+
+    puts JSON.generate({jsonrpc: "2.0", id: id, result: result})
+  end
+end
+
+# Runs a command with stdout captured, so MCP can return what it printed as the
+# tool result rather than leaking it into the JSON-RPC stream.
+def capture_command(name, args)
+  entry = find_command(name) or return "unknown command: #{name}"
+
+  out_was, err_was = $stdout, $stderr
+  out, err = StringIO.new, StringIO.new
+  $stdout, $stderr = out, err
+  $mcp = true
+  begin
+    send(entry[:runner], args)
+    out.string.presence || err.string
+  rescue SystemExit
+    # `die` writes the reason to stderr and exits. That reason is the answer.
+    [out.string, err.string].reject(&:empty?).join("\n").presence || "the command exited"
+  rescue StandardError => e
+    "#{e.class}: #{e.message}"
+  ensure
+    $stdout, $stderr = out_was, err_was
+    $mcp = nil
+  end
+end
+
+# --- help -------------------------------------------------------------------
+
+GLOBAL_FLAGS = [
+  {flag: "--agent", description: "compact JSON, and ask the server for the {status, summary, data, breadcrumbs} envelope"},
+  {flag: "--json", description: "the envelope, pretty-printed — the same thing for human eyes"},
+  {flag: "--raw", description: "the response body exactly as it came, unformatted"},
+  {flag: "--profile NAME", description: "which configured identity to use"},
+  {flag: "--help", description: "usage for one command; add --agent for it as JSON"}
+].freeze
+
+def command_help(entry)
+  if envelope_wanted?
+    emit(status: "ok", summary: entry[:summary],
+         data: entry.reject { |k, _| k == :runner },
+         breadcrumbs: entry[:next].map { |c| {description: "Then", command: c} })
+  else
+    puts entry[:usage]
+    puts
+    puts entry[:summary]
+    if entry[:flags].any?
+      puts
+      entry[:flags].each { |f| puts "  #{f[:flag].ljust(20)} #{f[:description]}" }
+    end
+    if entry[:notes]
+      puts
+      puts entry[:notes]
+    end
+    if entry[:next].any?
+      puts
+      puts "Next: #{entry[:next].join(" · ")}"
+    end
+  end
+end
+
+def usage
+  puts <<~TEXT
+    cms #{VERSION} — the CMS from a terminal, for people and for agents.
+
+    Usage: cms <command> [args] [flags]
+
+    Start here
+      cms login --url https://<site>   connect this machine, in a browser
+      cms doctor                       can this machine actually do work?
+      cms manifest                     the shape of this CMS, before you write to it
+      cms commands --json              the whole surface at once
+
+  TEXT
+
+  COMMANDS.group_by { |c| c[:group] }.each do |group, entries|
+    puts group
+    entries.each { |c| puts "  #{c[:name].ljust(16)} #{c[:summary]}" }
+    puts
+  end
+
+  puts "Flags"
+  GLOBAL_FLAGS.each { |f| puts "  #{f[:flag].ljust(20)} #{f[:description]}" }
+  puts
+  puts "cms <command> --help for one command. Configuration lives in #{CONFIG_DIR}."
+end
+
+# --- dispatch ---------------------------------------------------------------
+
+name = ARGV.shift
+
+if name.nil? || %w[help -h].include?(name)
+  # `cms --help` with no command is the usage screen; `cms <command> --help` is
+  # that command. HELP_WANTED has already eaten the flag by this point.
+  if HELP_WANTED && name.nil?
+    usage
+  elsif name == "help" && (target = find_command(ARGV.first.to_s))
+    command_help(target)
+  else
+    usage
+  end
+  exit 0
+end
+
+entry = find_command(name) or
+  die "unknown command: #{name}. Try `cms commands` for the whole surface."
+
+if HELP_WANTED
+  command_help(entry)
+  exit 0
+end
+
+begin
+  send(entry[:runner], ARGV)
+rescue Interrupt
+  exit 130
+rescue Errno::EPIPE
+  exit 0
+rescue *NETWORK_ERRORS => e
+  die "cannot reach #{BASE.presence || "the site"}: #{e.message} (#{e.class})"
+end

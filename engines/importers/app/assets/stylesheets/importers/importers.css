@@ -1,0 +1,16 @@
+@layer components {
+  .import-page {
+    --panel-size: min(80ch, 100%);
+  }
+
+  .import-tabs__tab[aria-current="page"] {
+    --btn-background: var(--color-selected);
+    --btn-border-color: var(--color-selected-dark);
+  }
+
+  .import-fields {
+    display: grid;
+    gap: var(--block-space);
+    grid-template-columns: repeat(auto-fit, minmax(20ch, 1fr));
+  }
+}

@@ -1,0 +1,67 @@
+/* Keyboard navigation (keyboard_controller): the item j / k landed on, and the ? sheet.
+/* Fizzy shows a selected list row with --color-selected; the ring is its focus ring. */
+@layer components {
+  [data-keyboard-current] {
+    outline: var(--focus-ring-size) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  tr[data-keyboard-current],
+  li[data-keyboard-current] {
+    background-color: var(--color-selected-light);
+    outline-offset: calc(-1 * var(--focus-ring-size));
+  }
+
+  .shortcuts {
+    --panel-size: 72ch;
+
+    max-block-size: calc(100dvh - var(--block-space-double) * 2);
+    overflow: auto;
+
+    /* A closed dialog stays display: none; only an open one lays out as a column. */
+    &[open] {
+      display: flex;
+      flex-direction: column;
+      gap: var(--block-space);
+    }
+  }
+
+  .shortcuts__groups {
+    display: grid;
+    gap: var(--block-space) var(--block-space-double);
+    grid-template-columns: repeat(auto-fit, minmax(28ch, 1fr));
+  }
+
+  .shortcut-list {
+    display: grid;
+    gap: 0.35em var(--inline-space);
+    grid-template-columns: max-content minmax(0, 1fr);
+    margin: 0;
+
+    dt {
+      align-content: start;
+      align-items: start;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25em;
+      justify-content: end;
+      white-space: nowrap;
+    }
+
+    dd {
+      margin: 0;
+    }
+
+    /* Case matters here: h and H are different keys. */
+    kbd {
+      line-height: 1.4;
+      opacity: 1;
+      text-transform: none;
+    }
+  }
+
+  .shortcut-list__then {
+    color: var(--color-ink-light);
+    font-size: var(--text-x-small);
+  }
+}

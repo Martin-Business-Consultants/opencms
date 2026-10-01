@@ -1,0 +1,34 @@
+<%# locals: (key:, button:, title: nil, lines: nil, extra: nil, trash_name: nil, trash_path: nil, trash_form: nil, trash_label: nil, trash_message: nil) %>
+<%# The first box of an edit screen's sidebar, as the content editors' Publish
+    box is: facts about the record (lines: [[icon, label, value], …]), any
+    fields the screen adds (extra: captured HTML, such as a status), then the
+    delete on the left (confirmed in a dialog; trash_form names the delete form
+    rendered outside the editor form; trash_message what the dialog says) and
+    the one primary button on the right (none when button is nil). %>
+<%= postbox key, title || "Save", klass: "publish-box" do %>
+  <% if lines.present? || extra %>
+    <div class="publish-box__misc">
+      <% Array(lines).each do |icon, label, value| %>
+        <%# herb:key label %>
+        <div class="publish-box__line">
+          <%= icon_tag icon, class: "publish-box__icon" %>
+          <span><%= label %>: <strong><%= value %></strong></span>
+        </div>
+      <% end %>
+      <% if extra %>
+        <%= extra %>
+      <% end %>
+    </div>
+  <% end %>
+  <div class="publish-box__major">
+    <% if trash_path %>
+      <%= render "layouts/shared/delete_dialog", name: trash_name || "this", path: trash_path, trigger_text: trash_label || "Delete", form: trash_form,
+            message: trash_message %>
+    <% else %>
+      <span></span>
+    <% end %>
+    <% if button %>
+      <button type="submit" class="btn btn--link publish-box__primary"><%= button %></button>
+    <% end %>
+  </div>
+<% end %>

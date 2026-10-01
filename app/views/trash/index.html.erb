@@ -1,0 +1,61 @@
+<% @page_title = "Trash" %>
+<% can_write = Current.user.can?("trash:write") %>
+
+<%= render "layouts/shared/page_header", title: @page_title,
+      description: "Deleted pages, entries, globals and files, waiting to be restored or deleted for good. The trash purge schedule empties it after its retention window." %>
+
+<%= render "layouts/shared/status_links", param: :kind, current: @kind.to_s, options: trash_kind_links(@counts) %>
+
+<%# The trash as a list table; picking an item opens what it was in a sheet
+    (trash#show, into the trash_item frame), where it's restored or deleted. %>
+<div class="display-contents" data-controller="dialog" data-dialog-modal-value="true" data-action="keydown.esc->dialog#close:stop">
+  <% if @entries.any? %>
+    <section class="panel shadow center index-table">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Type</th>
+            <th>Details</th>
+            <th>Deleted</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @entries.each do |kind, record| %>
+            <%# herb:key "#{kind}-#{record.id}" %>
+            <% label = AuditLog.describe_target(record).to_s.presence || "Untitled " + kind %>
+            <tr id="trash_<%= kind %>_<%= record.id %>" data-filter-target="item">
+              <td>
+                <%= link_to label, trash_item_path(kind, record.id), class: "txt-ink font-weight-bold",
+                      data: { turbo_frame: "trash_item", action: "dialog#open" } %>
+                <%= render "layouts/shared/row_links",
+                      links: [ [ "View", trash_item_path(kind, record.id) ] ],
+                      buttons: ([ [ "Restore", trash_item_restoration_path(kind, record.id) ] ] if can_write),
+                      delete_path: (trash_item_path(kind, record.id) if can_write), delete_name: label,
+                      delete_label: "Delete permanently", delete_message: "It’s deleted for good. This can’t be undone." %>
+              </td>
+              <td><%= status_tag Trash.labels.fetch(kind, kind.humanize).singularize %></td>
+              <td class="txt-subtle font-mono txt-small"><%= trash_detail(kind, record) %></td>
+              <td class="txt-subtle txt-small"><%= time_ago_tag record.deleted_at %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </section>
+  <% else %>
+    <div class="panel panel--centered center">
+      <p class="txt-medium margin-none">Nothing in the trash.</p>
+    </div>
+  <% end %>
+
+  <dialog class="dialog dialog--sheet panel fill-white shadow flex-column gap txt-align-start" data-dialog-target="dialog"
+          aria-label="In the trash" closedby="any">
+    <header class="flex align-center justify-space-between gap">
+      <h2 class="txt-large font-weight-bold margin-none">In the trash</h2>
+      <button type="button" class="btn txt-small" data-action="dialog#close">Close</button>
+    </header>
+    <turbo-frame id="trash_item">
+      <p class="txt-small txt-subtle">Loading…</p>
+    </turbo-frame>
+  </dialog>
+</div>

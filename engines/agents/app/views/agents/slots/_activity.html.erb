@@ -1,0 +1,13 @@
+<%# locals: () %>
+<%# The header's line on what the agents are doing and what they've cost —
+    there on every page, because the point of a ticker is seeing it without
+    going looking. %>
+<% if Current.user&.can?("agents:read") %>
+  <% activity = Cms::Plugins.provided(:agent_activity) %>
+  <% if activity %>
+    <%= link_to agent_runs_live_path, class: "btn btn--plain txt-x-small agents-ticker", title: "What the agents are doing" do %>
+      <span><%= activity[:active].to_i.positive? ? activity[:active].to_s + " in flight" : "Idle" %></span>
+      <span class="txt-subtle">· <%= activity.dig(:spend, :today) || "$0.00" %> today</span>
+    <% end %>
+  <% end %>
+<% end %>

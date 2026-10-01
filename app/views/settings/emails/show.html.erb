@@ -1,0 +1,27 @@
+<% @page_title = "Email" %>
+
+<%= render "layouts/shared/page_header", title: "Email" %>
+
+<section class="panel shadow settings-page txt-align-start">
+  <section class="settings__section flex flex-column gap">
+    <p class="txt-small txt-subtle margin-none">The address you sign in with. A new address has to be verified.</p>
+    <%= render "layouts/shared/errors", record: @user %>
+
+    <%= form_with url: settings_email_path, method: :patch, class: "flex flex-column gap" do |form| %>
+      <%= settings_field "Email address" do %>
+        <%= form.email_field :email, value: @user.email, required: true, autocomplete: "email", class: "input full-width" %>
+      <% end %>
+      <%= settings_field "Current password", hint: "To confirm it’s you." do %>
+        <%= form.password_field :password_challenge, required: true, autocomplete: "current-password", class: "input full-width" %>
+      <% end %>
+      <button type="submit" class="btn btn--link">Save</button>
+    <% end %>
+
+    <% unless Current.user.verified? %>
+      <div class="flex align-center gap-half txt-small">
+        <span class="txt-subtle">Your email address isn’t verified yet.</span>
+        <%= button_to "Resend the verification email", identity_email_verification_path, class: "btn btn--plain txt-small txt-link" %>
+      </div>
+    <% end %>
+  </section>
+</section>

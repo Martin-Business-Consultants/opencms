@@ -1,0 +1,32 @@
+@layer components {
+  .dashboard {
+    inline-size: min(80ch, 100%);
+  }
+
+  .checklist {
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space);
+    list-style: decimal;
+    margin: 0;
+    padding-inline-start: 1.5em;
+  }
+
+  .checklist__progress {
+    accent-color: var(--color-link);
+    block-size: 0.35em;
+    inline-size: 100%;
+  }
+
+  .checklist__step--done {
+    text-decoration: line-through;
+  }
+
+  .dashboard-api-use {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35em;
+    list-style: none;
+    padding: 0;
+  }
+}

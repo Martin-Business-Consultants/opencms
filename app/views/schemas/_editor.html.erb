@@ -1,0 +1,14 @@
+<%# locals: (fields:, scope:, field_types:, collection_slugs:, block_slugs: nil) %>
+<%# The fields of a collection, page, global or block type, edited in place.
+    Posts `<scope>[fields][<row id>][…]` rows that SchemaFields reads back into
+    field definitions; the schema-editor controller adds, removes and reorders
+    rows, and each row's type decides which of its settings show (schemas.css). %>
+<div class="schema-editor flex flex-column gap" data-controller="schema-editor">
+  <%= render "schemas/list", fields: fields, prefix: scope + "[fields]", field_types: field_types,
+        collection_slugs: collection_slugs, block_slugs: block_slugs %>
+
+  <template data-schema-editor-target="template">
+    <%= render "schemas/field", field: { "type" => "string" }, prefix: "__PREFIX__", key: "__KEY__",
+          field_types: field_types, collection_slugs: collection_slugs, block_slugs: block_slugs %>
+  </template>
+</div>

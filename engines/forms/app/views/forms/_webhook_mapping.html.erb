@@ -1,0 +1,36 @@
+<%# locals: (mapping:, key:, record:) %>
+<%# One row of the webhook sheet's mapping: the key the webhook receives, and
+    what it takes (a field's value, a detail of the submission, or a custom
+    value). Posted as form[webhook_body][mappings][<row id>][…]. %>
+<% name = "form[webhook_body][mappings][" + key + "]" %>
+<% fields = Array(record.fields).select { it.is_a?(Hash) && it["name"].present? } %>
+<li class="webhook-map__row" data-sortable-list-target="item">
+  <label class="for-screen-reader" for="<%= "webhook_key_" + key %>">Key</label>
+  <%= text_field_tag name + "[key]", mapping["key"], id: "webhook_key_" + key, class: "input font-mono", placeholder: "email_address",
+        autocomplete: "off", spellcheck: false %>
+  <label class="for-screen-reader" for="<%= "webhook_source_" + key %>">Value</label>
+  <select name="<%= name %>[source]" id="<%= "webhook_source_" + key %>" class="input input--select">
+    <% if fields.any? %>
+      <optgroup label="Form fields">
+        <% fields.each do |field| %>
+          <%# herb:key field["name"] %>
+          <%= tag.option field["label"].presence || field["name"], value: "field:" + field["name"], selected: mapping["source"] == "field:" + field["name"] %>
+        <% end %>
+      </optgroup>
+    <% end %>
+    <optgroup label="Submission">
+      <% FormWebhookBody::META.each do |meta, label| %>
+        <%# herb:key meta %>
+        <%= tag.option label, value: "meta:" + meta, selected: mapping["source"] == "meta:" + meta %>
+      <% end %>
+    </optgroup>
+    <%= tag.option "Custom value…", value: "custom", selected: mapping["source"] == "custom" %>
+  </select>
+  <label class="for-screen-reader" for="<%= "webhook_value_" + key %>">Custom value</label>
+  <%= text_field_tag name + "[value]", mapping["value"], id: "webhook_value_" + key, class: "input webhook-map__custom",
+        placeholder: "Website: {{form_title}}", autocomplete: "off" %>
+  <button type="button" class="btn btn--circle btn--plain txt-negative" title="Remove this key" data-action="sortable-list#remove">
+    <%= icon_tag "trash" %>
+    <span class="for-screen-reader">Remove this key</span>
+  </button>
+</li>

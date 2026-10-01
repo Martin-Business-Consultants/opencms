@@ -1,0 +1,10 @@
+<%# locals: (fields:, values:, scope:, depth:) %>
+<%# One object's schema fields. show-if hides a field whose rule its siblings
+    don't meet; a hidden field still posts, so its value survives. %>
+<div class="content-fields flex flex-column gap" data-controller="show-if">
+  <% Array(fields).each do |field| %>
+    <%# herb:key field["name"] %>
+    <%= render "content_form/field", field: field, value: (values.is_a?(Hash) ? values[field["name"]] : nil),
+          scope: scope[field["name"]], depth: depth %>
+  <% end %>
+</div>

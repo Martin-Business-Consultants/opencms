@@ -1,0 +1,31 @@
+<%# locals: (links: nil, buttons: nil, note: nil, name: nil, edit_path: nil, delete_path: nil, delete_name: nil, delete_message: nil, delete_label: nil) %>
+<%# A list table row's actions, under its title as WordPress shows them
+    ("Edit | View | Delete"), revealed while the row is hovered or holds focus.
+    links: [[label, url], …] after Edit (edit_path). buttons: [[label, url,
+    title], …], actions that POST (Restore, Run), drawn as the same links.
+    note: a line of text in place of an action that isn't available.
+    delete_path: the record's delete, confirmed in a dialog. Pass nil for what
+    the record or the role doesn't allow. %>
+<% links = ([ ([ "Edit", edit_path ] if edit_path) ] + Array(links)).compact %>
+<% buttons = Array(buttons).compact %>
+<% if links.any? || buttons.any? || note || delete_path %>
+  <div class="row-actions">
+    <% links.each do |label, url| %>
+      <%# herb:key label %>
+      <span><%= link_to label, url, class: "row-actions__link" %></span>
+    <% end %>
+    <% buttons.each do |label, url, title| %>
+      <%# herb:key label %>
+      <span><%= button_to label, url, class: "row-actions__link", form_class: "row-actions__form", title: title %></span>
+    <% end %>
+    <% if note %>
+      <span class="txt-subtle"><%= note %></span>
+    <% end %>
+    <% if delete_path %>
+      <span>
+        <%= render "layouts/shared/delete_dialog", name: delete_name || name || "this", path: delete_path, message: delete_message,
+              trigger_text: delete_label || "Delete" %>
+      </span>
+    <% end %>
+  </div>
+<% end %>

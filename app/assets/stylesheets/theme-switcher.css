@@ -1,0 +1,51 @@
+@layer components {
+  .theme-switcher {
+    @media (max-width: 479px) {
+      --row-gap: 1ch;
+
+      flex-direction: column;
+    }
+  }
+
+  .theme-switcher__btn {
+    --btn-background: var(--color-ink-lightest);
+    --btn-border-radius: var(--radius);
+    --btn-border-size: 0;
+    --btn-gap: 0.1lh;
+    --btn-padding: 1em;
+    --icon-size: 2em;
+
+    column-gap: var(--inline-space);
+    flex: 1;
+    flex-direction: column;
+    position: relative;
+    white-space: nowrap;
+
+    &:has(input:checked) {
+      --btn-background: var(--color-selected);
+      --btn-color: var(--color-ink);
+    }
+
+    @media (max-width: 479px) {
+      flex-direction: row;
+    }
+  }
+
+  /* One-button toggle in the header: a moon while light, a sun while dark, whether the
+  /* look comes from the saved choice or the OS. */
+  .theme-toggle__sun {
+    display: none;
+  }
+
+  html[data-theme="dark"] .theme-toggle {
+    .theme-toggle__moon { display: none; }
+    .theme-toggle__sun { display: inline-block; }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme]) .theme-toggle {
+      .theme-toggle__moon { display: none; }
+      .theme-toggle__sun { display: inline-block; }
+    }
+  }
+}

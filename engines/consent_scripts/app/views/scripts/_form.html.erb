@@ -1,0 +1,35 @@
+<%# locals: (script:) %>
+<%# A script, laid out like the editors: its fields in two thirds; whether
+    it's on, what it loads, and saving (or removing it) in the other third. %>
+<% removable = Current.user.can?("scripts:delete") %>
+<%= render "layouts/shared/errors", record: script %>
+
+<%= form_with model: script, id: "script_form", class: "content-form content-form--thirds",
+      data: { controller: "form", action: "keydown.esc->form#cancel" } do |form| %>
+  <div class="content-form__main flex flex-column gap">
+    <%= postbox "script-details", "Script" do %>
+      <div class="flex flex-column gap txt-medium">
+        <%= render "scripts/fields", form: form, script: script %>
+      </div>
+    <% end %>
+  </div>
+
+  <aside class="content-form__aside flex flex-column gap">
+    <% active = capture do %>
+      <label class="flex align-center gap-half txt-small">
+        <%= form.check_box :active %>
+        <span class="font-weight-bold">Active</span>
+      </label>
+    <% end %>
+    <%= render "layouts/shared/save_box", key: "script-save", button: "Save changes",
+          lines: [ [ "bolt", "Loads", script_loads(script) ], [ "calendar", "Added", time_ago_tag(script.created_at) ] ], extra: active,
+          trash_name: script.name, trash_path: (script_path(script) if removable), trash_form: ("script_delete_form" if removable),
+          trash_message: "It stops being served with the next load of the public site. To pause it instead, switch it off." %>
+  </aside>
+
+  <%= link_to "Cancel and go back", scripts_path, data: { form_target: "cancel" }, hidden: true %>
+<% end %>
+<% if removable %>
+  <%= render "layouts/shared/delete_form", id: "script_delete_form", path: script_path(script) %>
+<% end %>
+<%= render "content_form/postbox_state" %>

@@ -1,0 +1,48 @@
+<%# locals: (key:, member: nil) %>
+<%# One seat: which agent, when, on which model. `key` is the
+    nested-attributes index; a saved seat carries its id and a remove box, a
+    new one a remove button (schema-editor controller). %>
+<% name = "swarm[swarm_members_attributes][" + key.to_s + "]" %>
+<% member ||= SwarmMember.new(frequency: "weekly", day: 1, hour: 9, enabled: true) %>
+<div class="schema-field panel swarm-seat-fields flex flex-wrap align-end gap-half">
+  <% if member.persisted? %>
+    <%= hidden_field_tag name + "[id]", member.id, id: nil %>
+  <% end %>
+  <label class="flex flex-column gap-half txt-x-small">
+    <span class="font-weight-bold">Agent</span>
+    <%= select_tag name + "[agent_id]", options_from_collection_for_select(Agent.ordered, :id, :name, member.agent_id), id: nil, class: "input input--select", include_blank: "Choose…" %>
+  </label>
+  <label class="flex flex-column gap-half txt-x-small">
+    <span class="font-weight-bold">Seat name</span>
+    <%= text_field_tag name + "[role]", member.role, id: nil, class: "input", placeholder: "Optional", autocomplete: "off" %>
+  </label>
+  <label class="flex flex-column gap-half txt-x-small">
+    <span class="font-weight-bold">Every</span>
+    <%= select_tag name + "[frequency]", options_for_select(SwarmMember::FREQUENCIES.map { [it.humanize, it] }, member.frequency), id: nil, class: "input input--select" %>
+  </label>
+  <label class="flex flex-column gap-half txt-x-small" title="Weekly: 1 is Monday … 7 Sunday. Monthly: the day of the month.">
+    <span class="font-weight-bold">Day</span>
+    <%= number_field_tag name + "[day]", member.day, id: nil, class: "input", min: 1, max: 31 %>
+  </label>
+  <label class="flex flex-column gap-half txt-x-small">
+    <span class="font-weight-bold">Hour</span>
+    <%= number_field_tag name + "[hour]", member.hour, id: nil, class: "input", min: 0, max: 23 %>
+  </label>
+  <label class="flex flex-column gap-half txt-x-small">
+    <span class="font-weight-bold">Model</span>
+    <%= select_tag name + "[model]", options_for_select(model_preference_options.map { |label, value| [value.blank? ? "The agent’s own" : label, value] }, member.model.to_s), id: nil, class: "input input--select" %>
+  </label>
+  <label class="flex align-center gap-half txt-x-small">
+    <%= hidden_field_tag name + "[enabled]", "0", id: nil %>
+    <%= check_box_tag name + "[enabled]", "1", member.enabled, id: nil %>
+    On
+  </label>
+  <% if member.persisted? %>
+    <label class="flex align-center gap-half txt-x-small txt-subtle">
+      <%= check_box_tag name + "[_destroy]", "1", false, id: nil %>
+      Remove
+    </label>
+  <% else %>
+    <button type="button" class="btn btn--plain txt-x-small" data-action="schema-editor#remove">Remove</button>
+  <% end %>
+</div>

@@ -1,0 +1,12 @@
+<% @page_title = AuditLog.describe_target(@record).to_s.presence || "In the trash" %>
+<%= parent_page "Trash", trash_path %>
+
+<%= render "layouts/shared/page_header", title: "In the trash" %>
+
+<%# The details alone, at the item's own address; picked in the trash's
+    list, the same frame loads into its sheet instead. %>
+<section class="panel shadow center txt-align-start trash-item-page">
+  <turbo-frame id="trash_item">
+    <%= render "trash/details", kind: @kind, record: @record, deletion: @deletion %>
+  </turbo-frame>
+</section>

@@ -1,0 +1,30 @@
+<% @page_title = "Profile" %>
+
+<%= render "layouts/shared/page_header", title: "Profile" %>
+
+<section class="panel shadow settings-page txt-align-start">
+  <section class="settings__section flex flex-column gap">
+    <%= render "layouts/shared/errors", record: @user %>
+
+    <%= form_with url: settings_profile_path, method: :patch, class: "flex flex-column gap" do |form| %>
+      <%= settings_field "Name" do %>
+        <%= form.text_field :name, value: @user.name, required: true, autocomplete: "name", placeholder: "Full name", class: "input full-width" %>
+      <% end %>
+      <button type="submit" class="btn btn--link">Save</button>
+    <% end %>
+  </section>
+
+  <section class="settings__section settings__section--negative flex flex-column gap">
+    <header><h2 class="divider">Delete account</h2></header>
+    <p class="txt-small txt-subtle margin-none">Deletes your account and everything that belongs to it. This can’t be undone.</p>
+    <details>
+      <summary class="btn txt-small txt-negative">Delete my account…</summary>
+      <%= form_with url: settings_profile_path, method: :delete, class: "flex flex-column gap margin-block-start" do |form| %>
+        <%= settings_field "Your password", hint: "To confirm it’s you." do %>
+          <%= form.password_field :password_challenge, required: true, autocomplete: "current-password", class: "input full-width" %>
+        <% end %>
+        <button type="submit" class="btn txt-negative">Delete account</button>
+      <% end %>
+    </details>
+  </section>
+</section>

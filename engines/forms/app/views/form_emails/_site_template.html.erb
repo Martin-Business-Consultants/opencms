@@ -1,0 +1,14 @@
+<%# locals: (email:) %>
+<%# Whether the Astro site has built this email's template
+    (FormEmail::SiteTemplate), and so which design goes out. %>
+<% case email.site_template_status %>
+<% when :current %>
+  <p class="txt-small margin-none"><%= status_tag "ready" %> The site’s design is sent.</p>
+  <p class="txt-x-small txt-subtle margin-none">Built from these blocks, received <%= time_ago_tag email.site_template_received_at %>.</p>
+<% when :stale %>
+  <p class="txt-small margin-none"><%= status_tag "pending" %> Waiting for the site to rebuild.</p>
+  <p class="txt-x-small txt-subtle margin-none">The site’s template is from earlier blocks, so the CMS’s layout is sent until the next build sends a new one. Saving a change schedules that build.</p>
+<% else %>
+  <p class="txt-small margin-none"><%= status_tag "none" %> No template from the site yet.</p>
+  <p class="txt-x-small txt-subtle margin-none">Sent in the CMS’s layout. Add the Astro integration’s email route and its build sends one (integrations/astro, “Form emails”).</p>
+<% end %>

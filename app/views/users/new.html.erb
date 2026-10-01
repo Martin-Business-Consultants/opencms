@@ -1,0 +1,6 @@
+<% @page_title = "New user" %>
+<%= parent_page "Users", users_path %>
+
+<%= render "layouts/shared/page_header", title: @page_title %>
+
+<%= render "users/form", user: @user %>

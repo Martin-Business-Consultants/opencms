@@ -1,0 +1,91 @@
+<% @page_title = "Templates" %>
+
+<% can_write = Current.user.can?("agents:write") %>
+<% content_for :page_actions do %>
+  <% if can_write %>
+    <%= button_to "Install swarm starters", swarm_templates_seeding_path, class: "btn txt-small" %>
+    <%= render "layouts/shared/new_link", text: "New template", path: new_agent_template_path %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title,
+      description: "Blueprints you stand up as agents and swarms. Shipped templates are updated in place on upgrade, so duplicate one before editing if you want to keep your version." %>
+
+<section class="flex flex-column gap margin-block-end">
+  <h2 class="txt-medium font-weight-bold margin-none">Agent templates (<%= @templates.size %>)</h2>
+  <% if @templates.any? %>
+    <div class="cards cards--grid">
+      <div class="cards__list">
+        <% @templates.each do |template| %>
+          <%# herb:key template.id %>
+          <article id="<%= dom_id(template) %>" class="panel shadow flex flex-column gap-half txt-align-start" data-filter-target="item">
+            <header class="flex align-center justify-space-between gap-half">
+              <strong><%= template.name %></strong>
+              <span class="flex gap-half">
+                <% if template.built_in? %>
+                  <%= status_tag "Shipped" %>
+                <% end %>
+                <% if template.installed? %>
+                  <%= status_tag "Installed", highlight: true %>
+                <% end %>
+              </span>
+            </header>
+            <% if template.category.present? %>
+              <span class="txt-x-small txt-subtle"><%= template.category %> · <%= template.cadence_label %></span>
+            <% end %>
+            <p class="txt-small margin-none"><%= template.description %></p>
+            <% if template.capability_labels.any? %>
+              <p class="txt-x-small txt-subtle margin-none"><%= template.capability_labels.join(" · ") %></p>
+            <% end %>
+            <% if can_write %>
+              <footer class="flex gap-half margin-block-start">
+                <%= button_to "Stand up an agent", agent_template_installation_path(template), class: "btn txt-small" %>
+                <%= link_to "Edit", edit_agent_template_path(template), class: "btn btn--plain txt-small" %>
+              </footer>
+            <% end %>
+          </article>
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+    <div class="panel panel--centered center flex flex-column gap-half">
+      <p class="txt-medium margin-none">Nothing installed yet.</p>
+      <% if can_write %>
+        <%= button_to "Install the starter set", agent_templates_seeding_path, class: "btn btn--link center" %>
+      <% end %>
+    </div>
+  <% end %>
+</section>
+
+<section class="flex flex-column gap">
+  <h2 class="txt-medium font-weight-bold margin-none">Swarm templates (<%= @swarm_templates.size %>)</h2>
+  <% if @swarm_templates.any? %>
+    <div class="cards cards--grid">
+      <div class="cards__list">
+        <% @swarm_templates.each do |template| %>
+          <%# herb:key template.id %>
+          <article id="<%= dom_id(template) %>" class="panel shadow flex flex-column gap-half txt-align-start" data-filter-target="item">
+            <header class="flex align-center justify-space-between gap-half">
+              <strong><%= template.name %></strong>
+              <% if template.installed? %>
+                <%= status_tag "Installed", highlight: true %>
+              <% end %>
+            </header>
+            <span class="txt-x-small txt-subtle"><%= pluralize(template.member_rows.size, "member") %></span>
+            <p class="txt-small margin-none"><%= template.description %></p>
+            <% if template.missing_template_keys.any? %>
+              <p class="txt-x-small txt-negative margin-none">Needs agent templates that aren’t installed.</p>
+            <% end %>
+            <% if can_write %>
+              <footer class="flex gap-half margin-block-start">
+                <%= button_to "Stand up a swarm", swarm_template_installation_path(template), class: "btn txt-small",
+                      disabled: template.missing_template_keys.any? %>
+              </footer>
+            <% end %>
+          </article>
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+    <p class="txt-small txt-subtle margin-none">None installed.</p>
+  <% end %>
+</section>

@@ -1,0 +1,22 @@
+<%# locals: (form:, record:) %>
+<%# What part of the site an agent or a swarm works. No rows is the whole site. %>
+<fieldset class="flex flex-column gap-half txt-align-start schema-list" data-controller="schema-editor" data-prefix="<%= form %>">
+  <legend class="txt-small font-weight-bold">Scope</legend>
+  <p class="txt-x-small txt-subtle margin-none">No rows means the whole site. A collection is its slug, a path starts with a slash, a locale is its code.</p>
+  <div class="schema-list__fields flex flex-column gap-half">
+    <% record.content_scopes.each_with_index do |scope, index| %>
+      <%# herb:key scope.id || index %>
+      <%= render "agents/scope_fields", form: form, kind: scope.scope_kind, value: scope.value, key: index, id: scope.id %>
+    <% end %>
+  </div>
+  <template data-schema-editor-target="template">
+    <%= render "agents/scope_fields", form: form, kind: "collection", value: "", key: "__KEY__" %>
+  </template>
+  <div><button type="button" class="btn txt-small" data-action="schema-editor#add">Add a scope</button></div>
+  <datalist id="agent_scope_values">
+    <% Collection.order(:slug).pluck(:slug).each do |slug| %>
+      <%# herb:key slug %>
+      <option value="<%= slug %>"></option>
+    <% end %>
+  </datalist>
+</fieldset>

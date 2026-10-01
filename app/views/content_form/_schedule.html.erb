@@ -1,0 +1,12 @@
+<%# locals: (record:, scope:) %>
+<%# publish_at / unpublish_at, shown and typed in the site's time zone
+    (Settings › General), inside the Publish box's "Publish … Edit". %>
+<% [ [ "publish_at", "Publish at", "The status flips to published when this time arrives. Leave blank to publish by hand." ],
+     [ "unpublish_at", "Unpublish at", "The status flips to archived when this time arrives, for time-limited content." ] ].each do |key, label, help| %>
+  <%# herb:key key %>
+  <div class="content-field flex flex-column gap-half">
+    <label class="content-field__label txt-small font-weight-bold" for="<%= scope + "_" + key %>"><%= label %></label>
+    <%= datetime_local_field_tag scope + "[" + key + "]", content_datetime_input(record.public_send(key)), id: scope + "_" + key, class: "input", step: 1, autocomplete: "off" %>
+    <p class="txt-x-small txt-subtle margin-none"><%= help %> Times are <%= Time.zone.tzinfo.name %>.</p>
+  </div>
+<% end %>

@@ -1,0 +1,4 @@
+<%# locals: (block:, scope:, depth:) %>
+<%= with_content_block_types(FormEmail::BlockTypes.all) do %>
+  <%= render "content_form/block", block: block, scope: content_scope(scope)[content_row_key], depth: depth, errors: [], open: true %>
+<% end %>

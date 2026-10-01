@@ -1,0 +1,73 @@
+<% @page_title = "Commerce" %>
+<% can_write = Current.user.can?("invoices:write") %>
+
+<%= render "layouts/shared/page_header", title: "Commerce" %>
+<% content_for :settings_aside do %>
+  <%= render "settings/save_box", form: "settings_form", capability: "invoices:write" %>
+<% end %>
+
+
+<section class="panel shadow settings-page txt-align-start">
+
+  <%= form_with url: settings_commerce_path, id: "settings_form", method: :patch, scope: :settings, class: "flex flex-column gap-double" do |form| %>
+    <%= tag.fieldset class: "settings-fieldset flex flex-column gap-double", disabled: !can_write do %>
+      <section class="settings__section flex flex-column gap">
+        <header><h2 class="divider">Quote requests</h2></header>
+        <p class="txt-small txt-subtle margin-none">The site’s “Request a quote” button posts to <code><%= @quote_endpoint %></code>. Requests land under Commerce › Quote requests, and these people are emailed.</p>
+        <%= settings_field "Notify", hint: "Comma-separated. Blank means nobody is emailed; the inbox still fills." do %>
+          <%= form.text_field :notification_recipients, value: @settings["notification_recipients"], placeholder: "sales@example.com, owner@example.com", class: "input full-width" %>
+        <% end %>
+        <%= settings_field "Thank-you message", hint: "Returned to the site after a successful request, for the form to show." do %>
+          <%= form.text_area :success_message, value: @settings["success_message"], rows: 2, placeholder: "Got it. We'll call you with a price within one business day.", class: "input full-width" %>
+        <% end %>
+      </section>
+
+      <section class="settings__section flex flex-column gap">
+        <header><h2 class="divider">Sender</h2></header>
+        <p class="txt-small txt-subtle margin-none">How quote notifications and invoices are signed. The envelope address is the platform’s; these set the display name and reply-to.</p>
+        <div class="settings-fields">
+          <%= settings_field "From name" do %>
+            <%= form.text_field :from_name, value: @settings["from_name"], placeholder: "Discount Bakery Equipment", class: "input full-width" %>
+          <% end %>
+          <%= settings_field "Reply-to", hint: "Where a customer’s reply to an invoice goes." do %>
+            <%= form.email_field :reply_to, value: @settings["reply_to"], placeholder: "sales@example.com", class: "input full-width" %>
+          <% end %>
+        </div>
+      </section>
+
+      <section class="settings__section flex flex-column gap">
+        <header><h2 class="divider">Invoices</h2></header>
+        <p class="txt-small txt-subtle margin-none">Printed on every invoice and its hosted page.</p>
+        <div class="settings-fields">
+          <%= settings_field "Business name" do %>
+            <%= form.text_field :business_name, value: @settings["business_name"], class: "input full-width" %>
+          <% end %>
+          <%= settings_field "Phone" do %>
+            <%= form.telephone_field :business_phone, value: @settings["business_phone"], class: "input full-width" %>
+          <% end %>
+        </div>
+        <%= settings_field "Address" do %>
+          <%= form.text_area :business_address, value: @settings["business_address"], rows: 2, class: "input full-width" %>
+        <% end %>
+        <div class="settings-fields">
+          <%= settings_field "Number prefix", hint: "Next: " + @next_number.to_s do %>
+            <%= form.text_field :invoice_prefix, value: @settings["invoice_prefix"], placeholder: "INV", class: "input full-width" %>
+          <% end %>
+          <%= settings_field "Start numbering at", hint: "Only raises the sequence; never reuses a number." do %>
+            <%= form.number_field :invoice_next_number, value: @settings["invoice_next_number"], placeholder: "1001", class: "input full-width" %>
+          <% end %>
+          <%= settings_field "Currency" do %>
+            <%= form.text_field :currency, value: @settings["currency"], placeholder: "USD", maxlength: 3, class: "input full-width" %>
+          <% end %>
+          <%= settings_field "Due in (days)" do %>
+            <%= form.number_field :due_days, value: @settings["due_days"], placeholder: "14", class: "input full-width" %>
+          <% end %>
+        </div>
+        <%= settings_field "Default terms", hint: "Prefilled on new invoices; editable per invoice." do %>
+          <%= form.text_area :default_terms, value: @settings["default_terms"], rows: 3, placeholder: "Payment due on receipt. A 4% convenience fee applies to credit card payments.", class: "input full-width" %>
+        <% end %>
+      </section>
+
+    <% end %>
+  <% end %>
+</section>

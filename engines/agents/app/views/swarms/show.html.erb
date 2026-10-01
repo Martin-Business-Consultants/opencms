@@ -1,0 +1,78 @@
+<% @page_title = @swarm.name %>
+<%= parent_page "Swarms", swarms_path %>
+
+<% content_for :page_actions do %>
+  <%= status_tag @swarm.enabled ? "On" : "Off", highlight: @swarm.enabled %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title %>
+
+<%= tag.div class: "panel shadow agents-page flex flex-column gap txt-align-start",
+      data: ({ controller: "refresh", refresh_interval_value: 10 } if @runs.any?(&:active?)) do %>
+  <div class="flex align-center justify-space-between gap">
+    <div class="flex align-center gap-half">
+      <% if Current.user.can?("agents:run") %>
+        <%= button_to "Run every seat now", swarm_run_path(@swarm), class: "btn txt-small" %>
+      <% end %>
+      <% if Current.user.can?("agents:write") %>
+        <%= link_to "Edit", edit_swarm_path(@swarm), class: "btn txt-small" %>
+      <% end %>
+      <% if Current.user.can?("agents:delete") %>
+        <%= render "layouts/shared/delete_dialog", name: @swarm.name, path: swarm_path(@swarm), message: "Its seats go; the agents stay in the roster." %>
+      <% end %>
+    </div>
+  </div>
+  <% if @swarm.description.present? %>
+    <p class="txt-small margin-none"><%= @swarm.description %></p>
+  <% end %>
+  <p class="txt-small txt-subtle margin-none">Works <%= @swarm.scope_label %>. Last <%= @activity.days %> days: <%= pluralize(@activity.completed, "run") %> completed, <%= @activity.failed %> failed, <%= @activity.active %> in flight.</p>
+
+  <section class="flex flex-column gap-half">
+    <h2 class="divider txt-medium">This cycle</h2>
+    <p class="txt-small margin-none"><%= @cycle[:verdict] %></p>
+    <p class="txt-x-small txt-subtle margin-none"><%= @cycle[:filed] %> filed · <%= @cycle[:accepted] %> accepted · <%= @cycle[:dismissed] %> dismissed · <%= @cycle[:open] %> open · <%= @cycle[:cost] %></p>
+    <% if @cycle[:by_kind].present? %>
+      <p class="txt-x-small txt-subtle margin-none"><%= @cycle[:by_kind].map { |kind, n| kind.to_s.tr("_", " ") + " " + n.to_s }.join(" · ") %></p>
+    <% end %>
+  </section>
+
+  <section class="flex flex-column gap-half">
+    <h2 class="divider txt-medium">Seats</h2>
+    <table class="data-table txt-small">
+      <thead><tr><th>Seat</th><th>Agent</th><th>When</th><th>Model</th><th>Last queued</th></tr></thead>
+      <tbody>
+        <% @members.each do |member| %>
+          <%# herb:key member.id %>
+          <tr class="<%= "txt-subtle" unless member.enabled %>">
+            <td><%= member.display_name %><%= " (off)" unless member.enabled %></td>
+            <td><%= member.agent ? link_to(member.agent.name, (Current.user.can?("agents:write") ? edit_agent_path(member.agent) : agent_runs_path(agent_id: member.agent_id)), class: "txt-link") : "(removed agent)" %></td>
+            <td><%= member.schedule_label %></td>
+            <td class="font-mono"><%= member.resolved_model %></td>
+            <td><%= member.last_enqueued_at ? time_ago_tag(member.last_enqueued_at) : "Never" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="flex flex-column gap-half">
+    <h2 class="divider txt-medium">Runs</h2>
+    <% if @runs.any? %>
+      <table class="data-table txt-small">
+        <tbody>
+          <% @runs.first(30).each do |run| %>
+            <%# herb:key run.id %>
+            <tr>
+              <td><%= link_to "#" + run.id.to_s, agent_run_path(run), class: "txt-ink font-weight-bold" %></td>
+              <td><%= run.swarm_member&.display_name || run.agent_name %></td>
+              <td><%= run_status_tag run %></td>
+              <td><%= time_ago_tag run.created_at %></td>
+              <td class="txt-x-small txt-subtle"><%= (run.error.presence || run.summary).to_s.truncate(120) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <p class="txt-small txt-subtle margin-none">No runs yet.</p>
+    <% end %>
+  </section>
+<% end %>

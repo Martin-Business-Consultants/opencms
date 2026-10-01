@@ -1,0 +1,106 @@
+<% @page_title = "General" %>
+<% hours = @settings["hours"] %>
+<% blank_rows = hours.empty? ? Settings::GeneralsController::DAYS : Array.new(3, "") %>
+
+<%= render "layouts/shared/page_header", title: "General" %>
+<% content_for :settings_aside do %>
+  <%= render "settings/save_box", form: "settings_form" %>
+<% end %>
+
+
+<section class="panel shadow settings-page txt-align-start">
+
+  <%= form_with url: settings_general_path, id: "settings_form", method: :patch, scope: :settings, class: "flex flex-column gap-double" do |form| %>
+    <%= tag.fieldset class: "settings-fieldset flex flex-column gap", disabled: !Current.user.can?("settings:write") do %>
+      <section class="settings__section flex flex-column gap">
+        <header><h2 class="divider">Identity</h2></header>
+        <p class="txt-small txt-subtle margin-none">Site title and description used as defaults across SEO, headers, and emails.</p>
+        <%= settings_field "Business name" do %>
+          <%= form.text_field :title, value: @settings["title"], class: "input full-width" %>
+        <% end %>
+        <%= settings_field "Tagline / description" do %>
+          <%= form.text_area :description, value: @settings["description"], rows: 2, class: "input full-width" %>
+        <% end %>
+        <div class="settings-fields">
+          <%= settings_field "Default locale" do %>
+            <%= form.text_field :default_locale, value: @settings["default_locale"], placeholder: "en", class: "input full-width" %>
+          <% end %>
+          <%= settings_field "Time zone", hint: "The admin shows and reads every time in this zone: schedules, board cards, timestamps. Blank uses the server's (" + Site.server_time_zone.tzinfo.name + ")." do %>
+            <%= form.select :timezone, options_for_select(site_time_zone_options(@settings["timezone"]), @settings["timezone"]), { include_blank: "Server's zone" }, class: "input input--select full-width" %>
+          <% end %>
+          <%= settings_field "Site base URL", hint: "Canonical public-site origin (no trailing slash). Used for sitemap.xml and anywhere absolute URLs are needed. Falls back to the request host when blank." do %>
+            <%= form.url_field :site_base_url, value: @settings["site_base_url"], placeholder: "https://www.example.com", class: "input full-width" %>
+          <% end %>
+        </div>
+        <%= settings_field "Additional public origins", hint: "One origin per line. Used to allow CORS for form submissions from these domains (preview, www/apex, staging). The Site base URL above is always allowed." do %>
+          <%= form.text_area :public_origins_raw, value: @settings["public_origins"].join("\n"), rows: 3, placeholder: "https://www.example.com\nhttps://preview.example.com", class: "input full-width font-mono" %>
+        <% end %>
+      </section>
+
+      <section class="settings__section flex flex-column gap">
+        <header><h2 class="divider">Contact</h2></header>
+        <p class="txt-small txt-subtle margin-none">Surfaces on the public site footer, contact pages, and SEO structured data.</p>
+        <div class="settings-fields">
+          <%= settings_field "Phone" do %>
+            <%= form.telephone_field :phone, value: @settings["phone"], placeholder: "(269) 555-1234", class: "input full-width" %>
+          <% end %>
+          <%= settings_field "Email" do %>
+            <%= form.email_field :email, value: @settings["email"], placeholder: "hello@example.com", class: "input full-width" %>
+          <% end %>
+        </div>
+        <%= settings_field "Address" do %>
+          <%= form.text_field :address_line1, value: @settings["address_line1"], placeholder: "717 E. Bridge Street", class: "input full-width" %>
+        <% end %>
+        <div class="settings-fields settings-fields--thirds">
+          <%= settings_field "City" do %>
+            <%= form.text_field :city, value: @settings["city"], class: "input full-width" %>
+          <% end %>
+          <%= settings_field "State" do %>
+            <%= form.text_field :state, value: @settings["state"], class: "input full-width" %>
+          <% end %>
+          <%= settings_field "Zip" do %>
+            <%= form.text_field :zip, value: @settings["zip"], class: "input full-width" %>
+          <% end %>
+        </div>
+      </section>
+
+      <section class="settings__section flex flex-column gap">
+        <header><h2 class="divider">Email sender</h2></header>
+        <p class="txt-small txt-subtle margin-none">Who the CMS's notification emails (collection events) come from. Blank uses the Forms plugin's sender, then the install's default.</p>
+        <div class="settings-fields">
+          <%= settings_field "From name" do %>
+            <%= form.text_field :email_from_name, value: @settings["email_from_name"], placeholder: "Acme", class: "input full-width" %>
+          <% end %>
+          <%= settings_field "From address" do %>
+            <%= form.email_field :email_from_address, value: @settings["email_from_address"], placeholder: "notifications@example.com", class: "input full-width" %>
+          <% end %>
+        </div>
+      </section>
+
+      <section class="settings__section flex flex-column gap">
+        <header><h2 class="divider">Hours</h2></header>
+        <p class="txt-small txt-subtle margin-none">Day and hours pairs. Clear both boxes in a row to remove it; the empty rows at the end add more.</p>
+        <div class="flex flex-column gap-half">
+          <% hours.each_with_index do |row, index| %>
+            <%# herb:key index %>
+            <div class="settings-fields">
+              <input type="text" name="settings[hours][][day]" value="<%= row["day"] %>" placeholder="Monday" class="input full-width" autocomplete="off" aria-label="Day">
+              <input type="text" name="settings[hours][][hours]" value="<%= row["hours"] %>" placeholder="11:00am – 9:00pm" class="input full-width" autocomplete="off" aria-label="Hours">
+            </div>
+          <% end %>
+          <% blank_rows.each_with_index do |day, index| %>
+            <%# herb:key "blank-" + index.to_s %>
+            <div class="settings-fields">
+              <input type="text" name="settings[hours][][day]" value="" placeholder="<%= day.presence || "Monday" %>" class="input full-width" autocomplete="off" aria-label="Day">
+              <input type="text" name="settings[hours][][hours]" value="" placeholder="11:00am – 9:00pm" class="input full-width" autocomplete="off" aria-label="Hours">
+            </div>
+          <% end %>
+        </div>
+        <%= settings_field "Holiday note" do %>
+          <%= form.text_field :holiday_note, value: @settings["holiday_note"], placeholder: "Closed for major holidays.", class: "input full-width" %>
+        <% end %>
+      </section>
+
+    <% end %>
+  <% end %>
+</section>

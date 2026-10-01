@@ -1,0 +1,30 @@
+@layer components {
+  /* A role's capability checkboxes, one small panel per resource group. */
+  .role-permissions {
+    border: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .role-permissions__groups {
+    display: grid;
+    gap: var(--block-space);
+    grid-template-columns: repeat(auto-fill, minmax(22ch, 1fr));
+  }
+
+  /* A role's capabilities: two cards to a row, one on a phone. */
+  .role-permissions__groups--pairs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    @media (max-width: 40rem) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .role-permissions__group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space-half);
+    margin: 0;
+  }
+}

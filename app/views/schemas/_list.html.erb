@@ -1,0 +1,16 @@
+<%# locals: (fields:, prefix:, field_types:, collection_slugs:, block_slugs: nil) %>
+<div class="schema-list flex flex-column gap-half" data-prefix="<%= prefix %>">
+  <ol class="schema-list__fields flex flex-column gap-half">
+    <% Array(fields).each_with_index do |field, index| %>
+      <%# herb:key index %>
+      <%= render "schemas/field", field: field, prefix: prefix, key: "f" + index.to_s,
+            field_types: field_types, collection_slugs: collection_slugs, block_slugs: block_slugs %>
+    <% end %>
+  </ol>
+  <div>
+    <button type="button" class="btn txt-small" data-action="schema-editor#add">
+      <%= icon_tag "add" %>
+      <span>Add field</span>
+    </button>
+  </div>
+</div>

@@ -1,0 +1,32 @@
+<%# locals: (script:, preset: nil) %>
+<%# The New script sheet's contents, in the new_script frame: what it starts
+    from (custom, or a preset, each link reloading the frame), then the
+    script's fields. It saves across the whole page (turbo_frame _top): added,
+    back to the list; refused, the list again with the sheet open. %>
+<turbo-frame id="new_script">
+  <nav class="flex flex-column gap-half txt-align-start" aria-label="Start from">
+    <span class="txt-small font-weight-bold">Start from</span>
+    <div class="flex flex-wrap gap-half">
+      <%= link_to "Custom script", new_script_path, class: "btn txt-small",
+            aria: { current: ("page" if preset.nil?) } %>
+      <% Scripts::Presets.all.each do |option| %>
+        <%# herb:key option[:key] %>
+        <%= link_to option[:name], new_script_path(preset: option[:key]), class: "btn txt-small",
+              title: Script::CATEGORY_LABELS[option[:category]], aria: { current: ("page" if preset && preset[:key] == option[:key]) } %>
+      <% end %>
+    </div>
+  </nav>
+
+  <%= render "layouts/shared/errors", record: script %>
+  <%= form_with model: script, url: scripts_path, class: "flex flex-column gap txt-medium margin-block-start", data: { turbo_frame: "_top" } do |form| %>
+    <%= render "scripts/fields", form: form, script: script, preset: preset %>
+    <label class="flex align-center gap-half txt-align-start">
+      <%= form.check_box :active %>
+      <span class="txt-small font-weight-bold">Active</span>
+    </label>
+    <div class="dialog__actions flex gap-half justify-end">
+      <button type="button" class="btn" data-action="dialog#close">Cancel</button>
+      <%= form.button "Add script", class: "btn btn--link" %>
+    </div>
+  <% end %>
+</turbo-frame>

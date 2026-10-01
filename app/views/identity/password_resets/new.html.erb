@@ -1,0 +1,22 @@
+<% @page_title = "Forgot password" %>
+
+<div class="panel panel--centered center flex flex-column gap-half">
+  <h1 class="txt-x-large font-weight-black margin-none">Forgot password</h1>
+  <p class="txt-small txt-subtle margin-none">Enter your email to receive a password reset link.</p>
+
+  <%= form_with url: identity_password_reset_path, class: "flex flex-column gap txt-medium margin-block-start", data: { controller: "form" } do |form| %>
+    <label class="flex flex-column gap-half txt-align-start">
+      <span class="txt-small font-weight-bold">Email address</span>
+      <%= form.email_field :email, required: true, autofocus: true, autocomplete: "off", class: "input full-width", placeholder: "email@example.com" %>
+    </label>
+
+    <button type="submit" class="btn btn--link center" data-form-target="submit">
+      <span>Email password reset link</span>
+      <%= icon_tag "arrow-right" %>
+    </button>
+  <% end %>
+
+  <p class="txt-small txt-subtle margin-block-start">
+    Or, return to <%= link_to "log in", sign_in_path, class: "txt-link" %>
+  </p>
+</div>

@@ -1,0 +1,63 @@
+<%# locals: (data:, except: nil) %>
+<%# What a report found, as text: its named figures, then each list of rows as a
+    table, then each nested part as a section of its own. %>
+<% parts = report_sections(data, except: except || []) %>
+
+<% if parts[:figures].any? %>
+  <section class="panel shadow flex flex-column gap-half">
+    <h2 class="txt-medium font-weight-bold margin-none">What it found</h2>
+    <dl class="report-facts">
+      <% parts[:figures].each do |key, value| %>
+        <%# herb:key key %>
+        <dt><%= report_label(key) %></dt>
+        <dd><%= report_value(value) %></dd>
+      <% end %>
+    </dl>
+  </section>
+<% end %>
+
+<% parts[:tables].each do |key, rows| %>
+  <%# herb:key key %>
+  <% columns = report_columns(rows) %>
+  <section class="panel shadow center index-table">
+    <h2 class="txt-medium font-weight-bold margin-none"><%= report_label(key) %> <span class="txt-small txt-subtle">(<%= rows.length %>)</span></h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <% columns.each do |column| %>
+            <%# herb:key column %>
+            <th><%= report_label(column) %></th>
+          <% end %>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.first(LocalMarketingHelper::TABLE_ROWS).each_with_index do |row, index| %>
+          <%# herb:key index %>
+          <tr data-filter-target="item">
+            <% columns.each do |column| %>
+              <%# herb:key column %>
+              <td class="txt-small"><%= report_value(row[column]) %></td>
+            <% end %>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <% if rows.length > LocalMarketingHelper::TABLE_ROWS %>
+      <p class="txt-x-small txt-subtle margin-none">And <%= rows.length - LocalMarketingHelper::TABLE_ROWS %> more — the full list is in <code>cms report</code>.</p>
+    <% end %>
+  </section>
+<% end %>
+
+<% parts[:sections].each do |key, section| %>
+  <%# herb:key key %>
+  <section class="panel shadow flex flex-column gap-half">
+    <h2 class="txt-medium font-weight-bold margin-none"><%= report_label(key) %></h2>
+    <dl class="report-facts">
+      <% section.each do |name, value| %>
+        <%# herb:key name %>
+        <dt><%= report_label(name) %></dt>
+        <dd><%= report_value(value) %></dd>
+      <% end %>
+    </dl>
+  </section>
+<% end %>

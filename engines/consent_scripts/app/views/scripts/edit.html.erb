@@ -1,0 +1,6 @@
+<% @page_title = @script.name %>
+<%= parent_page "Scripts", scripts_path %>
+
+<%= render "layouts/shared/page_header", title: @page_title %>
+
+<%= render "scripts/form", script: @script %>

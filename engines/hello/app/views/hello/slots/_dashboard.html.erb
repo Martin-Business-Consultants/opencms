@@ -1,0 +1,10 @@
+<%# locals: () %>
+<%# A dashboard slot: rendered by the core's plugin_slots(:dashboard) while the plugin is on. %>
+<section class="panel shadow hello txt-align-start flex flex-column gap-half">
+  <h2 class="txt-medium font-weight-bold margin-none">Greetings</h2>
+  <% latest = Hello::Greeting.newest_first.first %>
+  <p class="txt-small margin-none"><%= latest ? latest.message : "Nobody has said hello yet." %></p>
+  <% if Current.user&.can?("hello:read") %>
+    <%= link_to "All greetings", hello_greetings_path, class: "txt-link txt-small" %>
+  <% end %>
+</section>

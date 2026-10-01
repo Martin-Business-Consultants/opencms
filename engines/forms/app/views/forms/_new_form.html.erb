@@ -1,0 +1,54 @@
+<%# locals: (form_record:, open: false) %>
+<%# The New form sheet: a title, a slug, a status, and optionally a template
+    whose fields it starts with. It opens by itself at /forms/new (the menus
+    link there) and when a submit came back with errors. %>
+<div class="display-contents" data-controller="dialog" data-dialog-modal-value="true" data-dialog-auto-open-value="<%= open %>" data-action="keydown.esc->dialog#close:stop">
+  <button type="button" class="btn btn--labelled btn--circle-mobile" data-keys="n" data-action="dialog#open">
+    <%= icon_tag "add" %>
+    <span class="overflow-ellipsis">New form</span>
+    <kbd class="hide-on-touch">N</kbd>
+  </button>
+  <dialog class="dialog dialog--sheet panel fill-white shadow gap flex-column txt-align-start" data-dialog-target="dialog" aria-label="New form" closedby="any">
+    <h2 class="txt-large font-weight-bold margin-none">New form</h2>
+    <%= render "layouts/shared/errors", record: form_record %>
+    <%= form_with model: form_record, url: forms_path, class: "flex flex-column gap txt-medium" do |form| %>
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Title</span>
+        <%= form.text_field :title, class: "input full-width", placeholder: "Get in touch", autocomplete: "off" %>
+      </label>
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Slug</span>
+        <%= form.text_field :slug, class: "input full-width font-mono", placeholder: "contact", autocomplete: "off", spellcheck: false %>
+        <span class="txt-x-small txt-subtle">The site posts to <code>/api/forms/&lt;slug&gt;/submissions</code>, so it can’t change later. A template fills title and slug in when left blank.</span>
+      </label>
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Status</span>
+        <%= form.select :status, form_status_options, {}, class: "input input--select full-width" %>
+        <span class="txt-x-small txt-subtle">Only a published form takes submissions.</span>
+      </label>
+
+      <fieldset class="new-page-dialog__templates flex flex-column gap-half">
+        <legend class="txt-small font-weight-bold">Start from</legend>
+        <label class="new-collection__template">
+          <%= radio_button_tag :template, "", params[:template].blank?, id: nil %>
+          <span>No fields yet — I’ll add them</span>
+        </label>
+        <% Form::TEMPLATES.each do |template| %>
+          <%# herb:key template[:key] %>
+          <label class="new-collection__template">
+            <%= radio_button_tag :template, template[:key], params[:template] == template[:key], id: nil %>
+            <span>
+              <strong><%= template[:name] %></strong>
+              <span class="txt-x-small txt-subtle"><%= template[:description] %> · <%= pluralize(template[:fields].size, "field") %></span>
+            </span>
+          </label>
+        <% end %>
+      </fieldset>
+
+      <div class="dialog__actions flex gap-half justify-end">
+        <button type="button" class="btn" data-action="dialog#close">Cancel</button>
+        <%= form.button "Create form", class: "btn btn--link" %>
+      </div>
+    <% end %>
+  </dialog>
+</div>

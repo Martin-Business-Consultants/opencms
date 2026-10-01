@@ -1,0 +1,16 @@
+<% @page_title = "Hello" %>
+
+<%= render "layouts/shared/page_header", title: "Hello" %>
+
+<section class="panel shadow settings-page txt-align-start">
+  <section class="settings__section flex flex-column gap">
+    <p class="txt-small txt-subtle margin-none">A plugin's settings page. Pages published since the plugin was switched on: <%= @settings["pages_published"].to_i %>.</p>
+
+    <%= form_with url: hello_settings_path, method: :patch, scope: :settings, class: "flex flex-column gap" do |form| %>
+      <%= settings_field "Default greeting", hint: "What the Greetings form starts with." do %>
+        <%= form.text_field :default_message, value: @settings["default_message"], class: "input full-width", maxlength: 200 %>
+      <% end %>
+      <div><button type="submit" class="btn btn--link">Save</button></div>
+    <% end %>
+  </section>
+</section>

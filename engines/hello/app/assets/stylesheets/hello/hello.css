@@ -1,0 +1,21 @@
+/* A plugin stylesheet: linked on every admin page while Hello is on
+   (Cms::Plugins.stylesheet). */
+@layer components {
+  .hello {
+    max-inline-size: 60ch;
+  }
+
+  .hello__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space-half);
+    list-style: none;
+    padding: 0;
+  }
+
+  .hello__greeting {
+    display: flex;
+    gap: var(--inline-space);
+    justify-content: space-between;
+  }
+}

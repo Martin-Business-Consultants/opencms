@@ -1,0 +1,82 @@
+<% @page_title = "Agents" %>
+
+<% content_for :page_actions do %>
+  <%= link_to "Templates", agent_templates_path, class: "btn txt-small" %>
+  <%= link_to "Live", agent_runs_live_path, class: "btn txt-small" %>
+  <% if Current.user.can?("agents:write") %>
+    <%= render "layouts/shared/new_link", text: "New agent", path: new_agent_path %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title, description: "Definitions of recurring work. Running one queues it for a harness to claim — or runs it here, on the AI plugin’s key." %>
+
+<section class="panel shadow center flex flex-column gap-half txt-align-start agents-state agents-state--<%= @state.severity %>">
+  <h2 class="txt-medium font-weight-bold margin-none"><%= @state.headline %></h2>
+  <% if @state.detail.present? %>
+    <p class="txt-small margin-none"><%= @state.detail %></p>
+  <% end %>
+  <p class="txt-small txt-subtle margin-none">
+    <% @state.counts.each do |label, value| %>
+      <%# herb:key label %>
+      <span class="agents-state__count"><strong><%= value %></strong> <%= label.to_s.downcase %></span>
+    <% end %>
+  </p>
+  <p class="txt-small txt-subtle margin-none">
+    Runs execute <%= @worker.in_process? ? "in-process, on " + @worker.default_model : "on a worker" %>.
+    <% if @worker.last_claim_at %>
+      A worker last claimed work <%= time_ago_in_words(@worker.last_claim_at) %> ago.
+    <% end %>
+    Last <%= @activity.days %> days: <%= pluralize(@activity.completed, "run") %> completed, <%= @activity.failed %> failed, <%= @activity.canceled %> canceled, <%= @activity.active %> in flight · spent <%= @spend[:window] %> (<%= @spend[:today] %> today).
+  </p>
+  <% if @state.items.any? %>
+    <ul class="flex flex-column gap-half margin-none txt-small">
+      <% @state.items.first(8).each do |item| %>
+        <%# herb:key [item.title, item.agent_id] %>
+        <li>
+          <%= status_tag item.severity == "danger" ? "Blocked" : (item.severity == "warning" ? "Check" : "Note") %>
+          <% if item.href %>
+            <%= link_to item.title, item.href, class: "txt-link" %>
+          <% else %>
+            <%= item.title %>
+          <% end %>
+          <% if item.detail.present? %>
+            <span class="txt-subtle">— <%= item.detail %></span>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</section>
+
+<% if @agents.any? %>
+  <section class="panel shadow center index-table margin-block-start">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Agent</th>
+          <th>Cadence</th>
+          <th>Scope</th>
+          <th>Model</th>
+          <th>Last run</th>
+          <th class="data-table__number">Runs</th>
+          <th>30 days</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @agents.each do |agent| %>
+          <%# herb:key agent.id %>
+          <%= render "agents/agent", agent: agent, latest: @latest[agent.id], card: @cards[agent.id],
+                total: @run_counts.sum { |(id, _), n| id == agent.id ? n : 0 },
+                failed: @run_counts[[agent.id, "failed"]].to_i %>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+<% else %>
+  <div class="panel panel--centered center flex flex-column gap-half margin-block-start">
+    <p class="txt-medium margin-none">No agents yet. Stand one up from a template, or write your own.</p>
+    <%= link_to agent_templates_path, class: "btn btn--link center" do %>
+      <span>See the templates</span>
+      <%= icon_tag "arrow-right" %>
+    <% end %>
+  </div>
+<% end %>

@@ -1,0 +1,64 @@
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f5;padding:24px 0;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e7e5e4;border-radius:8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1c1917;">
+        <tr>
+          <td style="padding:24px 32px 8px;">
+            <p style="margin:0 0 4px;font-size:12px;color:#78716c;text-transform:uppercase;letter-spacing:0.05em;"><%= @business %></p>
+            <h1 style="margin:0;font-size:22px;">Invoice <%= @invoice.number %></h1>
+            <p style="margin:8px 0 0;font-size:15px;line-height:1.5;">
+              Hi <%= @invoice.customer_name %>,<br>
+              here is your invoice for <strong><%= @invoice.formatted(@invoice.total_cents) %></strong><%= @invoice.due_on ? ", due #{@invoice.due_on.to_fs(:long)}" : "" %>.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 32px 0;">
+            <table role="presentation" width="100%" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+              <tr style="background:#fafaf9;">
+                <th align="left" style="border:1px solid #e7e5e4;">Description</th>
+                <th align="right" style="border:1px solid #e7e5e4;">Qty</th>
+                <th align="right" style="border:1px solid #e7e5e4;">Amount</th>
+              </tr>
+              <% @invoice.line_items.each do |line| %>
+                <tr>
+                  <td style="border:1px solid #e7e5e4;"><%= line["description"] %><% if line["sku"].present? %><br><span style="color:#78716c;font-size:12px;">SKU <%= line["sku"] %></span><% end %></td>
+                  <td align="right" style="border:1px solid #e7e5e4;"><%= line["quantity"] %></td>
+                  <td align="right" style="border:1px solid #e7e5e4;"><%= @invoice.formatted(line["quantity"].to_i * line["unit_price_cents"].to_i) %></td>
+                </tr>
+              <% end %>
+              <tr><td colspan="2" align="right" style="padding-top:10px;color:#78716c;">Subtotal</td><td align="right" style="padding-top:10px;"><%= @invoice.formatted(@invoice.subtotal_cents) %></td></tr>
+              <% if @invoice.tax_cents.positive? %><tr><td colspan="2" align="right" style="color:#78716c;">Tax</td><td align="right"><%= @invoice.formatted(@invoice.tax_cents) %></td></tr><% end %>
+              <% if @invoice.shipping_cents.positive? %><tr><td colspan="2" align="right" style="color:#78716c;">Shipping</td><td align="right"><%= @invoice.formatted(@invoice.shipping_cents) %></td></tr><% end %>
+              <tr><td colspan="2" align="right" style="font-weight:700;font-size:16px;">Total</td><td align="right" style="font-weight:700;font-size:16px;"><%= @invoice.formatted(@invoice.total_cents) %></td></tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding:24px 32px 8px;">
+            <% if @invoice.payment_link.present? %>
+              <a href="<%= @invoice.payment_link %>" style="display:inline-block;background:#1c1917;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 24px;border-radius:8px;">Pay <%= @invoice.formatted(@invoice.total_cents) %></a>
+              <p style="margin:12px 0 0;font-size:13px;color:#78716c;">or <a href="<%= @view_url %>" style="color:#1c1917;">view the invoice online</a></p>
+            <% else %>
+              <a href="<%= @view_url %>" style="display:inline-block;background:#1c1917;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 24px;border-radius:8px;">View invoice</a>
+            <% end %>
+          </td>
+        </tr>
+        <% if @invoice.notes.present? || @invoice.terms.present? %>
+        <tr>
+          <td style="padding:16px 32px 0;font-size:14px;line-height:1.55;color:#44403c;">
+            <%= simple_format(@invoice.notes) if @invoice.notes.present? %>
+            <% if @invoice.terms.present? %><p style="margin:12px 0 0;font-size:12px;color:#78716c;"><%= @invoice.terms %></p><% end %>
+          </td>
+        </tr>
+        <% end %>
+        <tr>
+          <td style="padding:24px 32px;font-size:12px;color:#a8a29e;">
+            <%= @business %><%= " · #{@settings["business_address"]}" if @settings["business_address"].present? %>
+            <% if @settings["reply_to"].present? %><br>Questions? Reply to this email or write to <%= @settings["reply_to"] %>.<% end %>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

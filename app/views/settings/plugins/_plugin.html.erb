@@ -1,0 +1,38 @@
+<%# locals: (plugin:) %>
+<% enabled = Cms::Plugins.enabled?(plugin.key) %>
+<% switched_on = Cms::Plugins.switched_on?(plugin) %>
+<% missing = Cms::Plugins.missing_dependencies(plugin.key) %>
+<% settings_page = Cms::Plugins.settings_pages[plugin.key] %>
+<li id="plugin_<%= plugin.key %>" class="flex flex-column gap-half settings-plugin">
+  <div class="flex align-center justify-space-between gap">
+    <div class="flex flex-column min-width">
+      <span class="font-weight-bold">
+        <%= link_to plugin.name, settings_plugin_path(plugin.key), class: "txt-ink" %>
+        <span class="txt-x-small txt-subtle font-weight-normal"><%= plugin.version %> · <%= plugin.bundled ? "bundled" : "installed" %></span>
+      </span>
+      <span class="txt-small txt-subtle"><%= plugin.description %></span>
+    </div>
+    <div class="flex align-center gap-half flex-item-no-shrink">
+      <%= status_tag enabled ? "Active" : (switched_on ? "Waiting" : "Off") %>
+      <% if enabled && settings_page %>
+        <%= link_to instance_exec(&settings_page.path), class: "btn btn--plain", title: plugin.name + " settings" do %>
+          <%= icon_tag "settings-outline" %>
+          <span class="for-screen-reader"><%= plugin.name %> settings</span>
+        <% end %>
+      <% end %>
+      <% if Current.user.can?("settings:write") %>
+        <% if switched_on %>
+          <%= button_to "Switch off", settings_plugin_activation_path(plugin.key), method: :delete, class: "btn txt-small" %>
+        <% elsif plugin.compatible? %>
+          <%= button_to "Switch on", settings_plugin_activation_path(plugin.key), class: "btn txt-small" %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+  <% unless plugin.compatible? %>
+    <p class="txt-x-small txt-negative margin-none">Needs CMS <%= plugin.requires %>; this is <%= cms_version %>.</p>
+  <% end %>
+  <% if missing.any? %>
+    <p class="txt-x-small txt-negative margin-none">Needs <%= missing.map { |dependency| Cms::Plugins.manifests[dependency]&.name || dependency.to_s }.to_sentence %> switched on.</p>
+  <% end %>
+</li>

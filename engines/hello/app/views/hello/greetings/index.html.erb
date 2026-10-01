@@ -1,0 +1,28 @@
+<% @page_title = "Greetings" %>
+
+<%= render "layouts/shared/page_header", title: @page_title %>
+
+<section class="panel shadow center hello txt-align-start flex flex-column gap">
+
+  <% if Current.user.can?("hello:write") %>
+    <%= render "layouts/shared/errors", record: @greeting %>
+    <%= form_with model: @greeting, url: hello_greetings_path, scope: :greeting, class: "flex gap-half" do |form| %>
+      <%= form.text_field :message, class: "input full-width", maxlength: 200, aria: { label: "Greeting" } %>
+      <button type="submit" class="btn btn--link">Say it</button>
+    <% end %>
+  <% end %>
+
+  <% if @greetings.any? %>
+    <ul class="hello__list margin-none">
+      <% @greetings.each do |greeting| %>
+        <%# herb:key greeting.id %>
+        <li id="<%= dom_id(greeting) %>" class="hello__greeting" data-filter-target="item">
+          <%= greeting.message %>
+          <span class="txt-x-small txt-subtle"><%= time_ago_tag greeting.created_at %></span>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="txt-small txt-subtle margin-none">Nobody has said hello yet.</p>
+  <% end %>
+</section>

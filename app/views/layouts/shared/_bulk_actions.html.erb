@@ -1,0 +1,67 @@
+<%# locals: (id:, noun:, status_path: nil, statuses: nil, deletion_path: nil, delete_message: nil, search: nil) %>
+<%# A list table's top bar, as WordPress lays it out: a "Bulk actions" select
+    and Apply on the left, the search box on the right. The ticked rows'
+    checkboxes join the form with form="<id>"; the chosen action says where
+    it posts (bulk_actions_controller), and deleting asks first. Pass nil for
+    an action the role doesn't grant. search: false leaves the search box out.
+
+    Without JavaScript the select can't choose where the form posts, so it
+    stays hidden (the controller shows it) and <noscript> offers a button per
+    action instead, each posting to its own resource (formaction); Delete
+    opens under a <details> first, so it still takes a second click. %>
+<div class="tablenav">
+  <% if status_path || deletion_path %>
+    <%= form_with url: status_path || deletion_path, id: id, class: "tablenav__actions", data: { controller: "bulk-actions" } do %>
+      <span class="tablenav__bulk" data-bulk-actions-target="controls" hidden>
+      <label class="for-screen-reader" for="<%= id %>_choice">Bulk actions</label>
+      <select id="<%= id %>_choice" class="input input--select txt-small" data-bulk-actions-target="choice">
+        <option value="">Bulk actions</option>
+        <% if deletion_path %>
+          <option value="delete" data-url="<%= deletion_path %>" data-confirm="true">Delete</option>
+        <% end %>
+        <% if status_path %>
+          <% Array(statuses).each do |status| %>
+            <%# herb:key status %>
+            <option value="status-<%= status %>" data-url="<%= status_path %>" data-status="<%= status %>">Set to <%= status.to_s.humanize.downcase %></option>
+          <% end %>
+        <% end %>
+      </select>
+      <input type="hidden" name="status" value="" data-bulk-actions-target="status">
+      <button type="button" class="btn txt-small" data-action="bulk-actions#apply">Apply</button>
+      </span>
+      <noscript>
+        <span class="tablenav__bulk">
+          <% if status_path %>
+            <% Array(statuses).each do |status| %>
+              <%# herb:key status %>
+              <button type="submit" class="btn txt-small" formaction="<%= status_path %>" name="status" value="<%= status %>">Set to <%= status.to_s.humanize.downcase %></button>
+            <% end %>
+          <% end %>
+          <% if deletion_path %>
+            <details class="tablenav__confirm">
+              <summary class="btn txt-small">Delete…</summary>
+              <span class="txt-small"><%= delete_message || "They go to the trash, where they can be restored." %></span>
+              <button type="submit" class="btn txt-small txt-negative" formaction="<%= deletion_path %>">Delete the ticked <%= noun.pluralize %></button>
+            </details>
+          <% end %>
+        </span>
+      </noscript>
+      <dialog class="dialog dialog--action panel fill-white shadow gap flex-column txt-align-start" data-bulk-actions-target="dialog">
+        <h3 class="txt-large font-weight-bold margin-none">Delete the ticked <%= noun.pluralize %>?</h3>
+        <p class="txt-medium margin-block-half"><%= delete_message || "They go to the trash, where they can be restored." %></p>
+        <div class="flex gap-half justify-center margin-block-start">
+          <button type="button" class="btn" data-action="bulk-actions#cancel">Cancel</button>
+          <button type="submit" class="btn txt-negative">
+            <%= icon_tag "trash" %>
+            <span>Delete</span>
+          </button>
+        </div>
+      </dialog>
+    <% end %>
+  <% end %>
+  <% unless search == false %>
+    <div class="tablenav__search">
+      <%= render "layouts/shared/list_search" %>
+    </div>
+  <% end %>
+</div>

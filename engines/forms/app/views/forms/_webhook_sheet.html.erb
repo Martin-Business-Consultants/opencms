@@ -1,0 +1,75 @@
+<%# locals: (form:, record:) %>
+<%# The form's own webhook, set up in a half-width sheet as Gravity Forms'
+    Webhooks feed is: where it posts, and whether it sends every field or
+    only the keys mapped here (FormWebhookBody). Its inputs belong to the
+    form editor, so they save with it. %>
+<% body = FormWebhookBody.new(record) %>
+<div class="display-contents" data-controller="dialog" data-dialog-modal-value="true" data-action="keydown.esc->dialog#close:stop">
+  <div class="webhook-summary">
+    <span class="flex flex-column min-width-0">
+      <span class="txt-small font-weight-bold">Webhook</span>
+      <% if record.notify_webhook_url.present? %>
+        <code class="txt-x-small overflow-ellipsis"><%= record.notify_webhook_url %></code>
+        <span class="txt-x-small txt-subtle"><%= body.mapped? ? pluralize(body.mappings.size, "mapped key") : "Sends every field" %></span>
+      <% else %>
+        <span class="txt-x-small txt-subtle">Not set up. Each submission can also be posted to a URL.</span>
+      <% end %>
+    </span>
+    <button type="button" class="btn txt-small" data-action="dialog#open"><%= record.notify_webhook_url.present? ? "Edit" : "Set up" %></button>
+  </div>
+
+  <dialog class="dialog dialog--sheet dialog--sheet-half panel fill-white shadow gap flex-column txt-align-start webhook-sheet"
+          data-dialog-target="dialog" aria-label="Webhook" closedby="any">
+    <header class="flex align-center justify-space-between gap">
+      <h2 class="txt-large font-weight-bold margin-none">Webhook</h2>
+      <button type="button" class="btn txt-small" data-action="dialog#close">Close</button>
+    </header>
+
+    <%= settings_field "Request URL", hint: "Each submission is posted here as JSON." do %>
+      <%= form.url_field :notify_webhook_url, class: "input full-width font-mono", placeholder: "https://hooks.example.com/forms" %>
+    <% end %>
+
+    <fieldset class="webhook-sheet__mode">
+      <legend class="txt-small font-weight-bold">Request body</legend>
+      <label class="webhook-sheet__choice">
+        <%= radio_button_tag "form[webhook_body][mode]", "all", !body.mapped?, id: nil %>
+        <span><strong>All fields</strong> <span class="txt-x-small txt-subtle">The whole submission: the form, every answer, files, IP and time.</span></span>
+      </label>
+      <label class="webhook-sheet__choice">
+        <%= radio_button_tag "form[webhook_body][mode]", "fields", body.mapped?, id: nil %>
+        <span><strong>Select fields</strong> <span class="txt-x-small txt-subtle">Only the keys below, each set to a form value or a custom one.</span></span>
+      </label>
+    </fieldset>
+
+    <section class="webhook-map" data-controller="sortable-list" data-sortable-list-token-value="__ROW__">
+      <div class="webhook-map__head txt-x-small font-weight-bold" aria-hidden="true">
+        <span>Key</span>
+        <span>Value</span>
+      </div>
+      <ol class="webhook-map__rows" data-sortable-list-target="list">
+        <% body.mappings.each_with_index do |mapping, index| %>
+          <%# herb:key index %>
+          <%= render "forms/webhook_mapping", mapping: mapping, key: "m" + index.to_s, record: record %>
+        <% end %>
+      </ol>
+      <div>
+        <button type="button" class="btn txt-small" data-action="sortable-list#add">
+          <%= icon_tag "add" %>
+          <span>Add key</span>
+        </button>
+      </div>
+      <p class="txt-x-small txt-subtle margin-none">
+        A custom value can take <code>{{form_title}}</code>, <code>{{submission_id}}</code>, <code>{{submitted_at}}</code>,
+        <code>{{ip}}</code> or a field’s name, as <code>{{email}}</code>. The fields offered are the form’s as last saved.
+      </p>
+      <template data-sortable-list-target="template">
+        <%= render "forms/webhook_mapping", mapping: {}, key: "__ROW__", record: record %>
+      </template>
+    </section>
+
+    <div class="dialog__actions flex gap-half justify-end">
+      <button type="button" class="btn" data-action="dialog#close">Close</button>
+      <%= form.button "Save", class: "btn btn--link" %>
+    </div>
+  </dialog>
+</div>

@@ -1,0 +1,16 @@
+<%# locals: (record:, form:, hint:, required: nil) %>
+<%# A record's slug and the address it gives, at the top of its editor's
+    sidebar (permalinks always sit in the sidebar): the slug field, then the
+    public address once it's saved. %>
+<% url = record.persisted? ? record.public_url : nil %>
+<label class="content-field flex flex-column gap-half">
+  <span class="txt-small font-weight-bold">Slug</span>
+  <%= form.text_field :slug, required: required, class: "input font-mono", placeholder: "lowercase-with-dashes", autocomplete: "off", spellcheck: false %>
+  <span class="txt-x-small txt-subtle"><%= hint %></span>
+</label>
+<% if url.present? %>
+  <div class="content-field flex flex-column gap-half min-width-0">
+    <span class="txt-small font-weight-bold">Permalink</span>
+    <%= external_link url, url, link_class: "txt-link txt-small overflow-ellipsis" %>
+  </div>
+<% end %>

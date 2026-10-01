@@ -1,0 +1,63 @@
+# What every Kamal install of the CMS shares. It names no server, hostname or
+# secret: one install is one site, and each site is a destination over this
+# file (config/deploy.<site>.yml, see deploy.example-site.yml) with its
+# secrets in .kamal/secrets.<site>. Neither is committed.
+#
+#   kamal setup -d <site>     # once
+#   kamal deploy -d <site>    # every release
+#
+# Hoster reads this file as it is and writes the destination itself, from the
+# environment's hosts, domains, variables and secrets. docs/install.md has
+# both ways.
+service: cms
+image: cms
+
+# Every deploy names its site; there is no install without one.
+require_destination: true
+
+env:
+  clear:
+    SOLID_QUEUE_IN_PUMA: true
+    # The volume below: databases, uploaded files, and backups/ (the
+    # container backs it up before migrating).
+    CMS_DATA_DIR: /rails/storage
+  # No secret list here: Kamal replaces the list rather than merging it, so
+  # each destination names its own (SECRET_KEY_BASE, and AR_ENCRYPTION_* for
+  # a new site; see deploy.example-site.yml).
+
+proxy:
+  forward_headers: true
+  # Thruster's port, not Puma's (3000), so gzip and asset caching happen.
+  app_port: 80
+  healthcheck:
+    interval: 10
+    timeout: 90
+
+deploy_timeout: 300
+drain_timeout: 60
+
+# So a request reaching the old container mid-rollover still finds the new
+# one's fingerprinted assets.
+asset_path: /rails/public
+
+# Kamal's registry on the deploying machine, pushed to over SSH. A hosted one
+# (Docker Hub, GHCR) goes in the destination with KAMAL_REGISTRY_PASSWORD.
+registry:
+  server: localhost:5555
+
+builder:
+  arch: amd64
+  # The install's plugins (bin/fetch-plugins). A secret, so a private plugin's
+  # URL can carry a token; .kamal/secrets-common leaves it empty when unset.
+  secrets:
+    - CMS_PLUGINS
+
+aliases:
+  console: app exec --interactive --reuse "bin/rails console"
+  shell: app exec --interactive --reuse "bash"
+  logs: app logs -f
+  dbc: app exec --interactive --reuse "bin/rails dbconsole"
+
+# Each destination names its own volume, so sites on one server never share data.
+volumes:
+  - "cms_storage:/rails/storage"

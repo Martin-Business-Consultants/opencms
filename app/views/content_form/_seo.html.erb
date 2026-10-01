@@ -1,0 +1,23 @@
+<%# locals: (record:, scope:, invalid_json: nil) %>
+<%# The SEO panel: SeoFields as ordinary content fields, so ContentForm reads
+    them back like any object. A JSON-LD box that didn't parse shows what was
+    typed (`invalid_json`). %>
+<% seo = record.seo.is_a?(Hash) ? record.seo : {} %>
+<% seo = seo.merge("json_ld" => invalid_json["json_ld"]) if invalid_json&.key?("json_ld") %>
+<% seo_scope = content_scope(scope)["seo"] %>
+<%= postbox "seo", "SEO", open: false, klass: "content-seo" do %>
+  <div class="content-seo__sections flex flex-column gap">
+    <section class="flex flex-column gap-half">
+      <h3 class="txt-x-small txt-uppercase txt-subtle margin-none">Search</h3>
+      <%= render "content_form/fields", fields: SeoFields::SEARCH, values: seo, scope: seo_scope, depth: 1 %>
+    </section>
+    <section class="flex flex-column gap-half">
+      <h3 class="txt-x-small txt-uppercase txt-subtle margin-none">Social sharing</h3>
+      <%= render "content_form/fields", fields: SeoFields::SOCIAL, values: seo, scope: seo_scope, depth: 1 %>
+    </section>
+    <section class="flex flex-column gap-half">
+      <h3 class="txt-x-small txt-uppercase txt-subtle margin-none">Structured data</h3>
+      <%= render "content_form/fields", fields: SeoFields::STRUCTURED, values: seo, scope: seo_scope, depth: 1 %>
+    </section>
+  </div>
+<% end %>

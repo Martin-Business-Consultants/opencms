@@ -1,0 +1,43 @@
+<%# locals: (counts:, tab:) %>
+<%# Clearing imported content before a fresh import. The typed site key is the
+    confirmation (Importers::ContentWipe). %>
+<% total = counts.values.sum %>
+<section class="panel shadow center import-page flex flex-column gap-half txt-align-start margin-block-start">
+  <h2 class="divider txt-medium">Start over</h2>
+  <p class="txt-small margin-none">
+    Delete every page, collection (and its entries), block type and global so the next import has a clean slate.
+    Assets, forms, users and settings stay.
+  </p>
+  <p class="txt-small txt-subtle margin-none">
+    <%= counts.map { |kind, count| "#{number_with_delimiter(count)} #{kind.to_s.tr("_", " ")}" }.join(" · ") %>
+  </p>
+
+  <% if total.zero? %>
+    <p class="txt-small margin-none">Nothing to wipe.</p>
+  <% else %>
+    <div class="display-contents" data-controller="dialog" data-dialog-modal-value="true" data-action="keydown.esc->dialog#close:stop">
+      <button type="button" class="btn txt-small txt-negative" data-action="dialog#open">
+        <%= icon_tag "trash" %>
+        <span>Wipe imported content…</span>
+      </button>
+      <dialog class="dialog dialog--action panel fill-white shadow gap flex-column txt-align-start" data-dialog-target="dialog">
+        <h3 class="txt-large font-weight-bold margin-none">Wipe imported content?</h3>
+        <p class="txt-medium margin-block-half">This deletes them for good. It can’t be undone.</p>
+        <%= form_with url: tools_import_wipe_path, method: :delete, class: "flex flex-column gap-half" do |form| %>
+          <%= form.hidden_field :tab, value: tab %>
+          <label class="flex flex-column gap-half">
+            <span class="txt-small">Type <strong class="font-mono"><%= Site.key %></strong> to confirm</span>
+            <%= form.text_field :confirm, class: "input full-width font-mono", autocomplete: "off", placeholder: Site.key %>
+          </label>
+          <div class="flex gap-half justify-center margin-block-start">
+            <button type="button" class="btn" data-action="dialog#close">Cancel</button>
+            <button type="submit" class="btn txt-negative">
+              <%= icon_tag "trash" %>
+              <span>Wipe content</span>
+            </button>
+          </div>
+        <% end %>
+      </dialog>
+    </div>
+  <% end %>
+</section>

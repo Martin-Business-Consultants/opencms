@@ -1,0 +1,32 @@
+# Solid Queue recurring schedule. Two flavors:
+#
+#   1. Static jobs that always run (scheduled publishing — too important to
+#      leave configurable).
+#   2. The dispatcher that fans out to `RecurringTask` rows
+#      defined in the catalog (Tools → Schedules in the UI).
+production:
+  scheduled_publishing:
+    class: ProcessScheduledPublishingJob
+    queue: default
+    schedule: every minute
+  recurring_task_dispatcher:
+    class: RecurringTask::DispatchJob
+    queue: default
+    schedule: every minute
+  # Every enabled plugin's minutely tasks (Cms::Plugins.minutely) — the
+  # Agents plugin's scheduler and reaper, for one.
+  plugins_minutely:
+    class: PluginsMinutelyJob
+    queue: default
+    schedule: every minute
+  # Every enabled plugin's nightly task (Cms::Plugins.nightly).
+  plugins_nightly:
+    class: PluginsNightlyJob
+    queue: default
+    schedule: every day at 1am
+  # Is there a newer CMS release (Settings › Updates)? Also settles an update
+  # that finished or went quiet. CMS_UPDATE_CHECK=false skips the check.
+  update_check:
+    class: UpdateCheckJob
+    queue: default
+    schedule: every day at 4am

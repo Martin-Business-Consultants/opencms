@@ -1,0 +1,101 @@
+<% @page_title = "Reports" %>
+<% can_run = Current.user.can?("reports:run") %>
+
+<% content_for :page_actions do %>
+  <%= link_to "Marketer’s report", marketing_path, class: "btn txt-small" %>
+  <%= link_to "Settings", settings_reporting_path, class: "btn txt-small" %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title,
+      description: "What search, the map pack, reviews and AI assistants can see about the business. Each report is a snapshot from DataForSEO; running one spends from its balance." %>
+
+<div class="reports-page flex flex-column gap txt-align-start">
+  <% unless @configured %>
+    <section class="panel shadow flex flex-column gap-half">
+      <p class="margin-none">DataForSEO isn’t connected, so no report can run yet. <%= link_to "Add the login under Settings › Reporting", settings_reporting_path, class: "txt-link" %>.</p>
+    </section>
+  <% end %>
+
+  <div class="flex align-center justify-space-between gap flex-wrap">
+    <p class="txt-small txt-subtle margin-none">
+      Reporting has cost <%= report_money(@spend[:total]) %> over <%= pluralize(@spend[:runs], "run") %>, <%= report_money(@spend[:this_month]) %> of it this month.
+      In this window: <%= report_money(@spend[:in_range]) %> across <%= pluralize(@spend[:runs_in_range], "run") %>.
+    </p>
+    <div class="filters">
+      <%= render "layouts/shared/quick_filter", title: "Window", param: :range,
+            options: [["Last 7 days", "7d"], ["Last 30 days", "30d"], ["Last 90 days", "90d"], ["Last year", "1y"], ["All time", "all"]],
+            current: @range.preset || "90d" %>
+    </div>
+  </div>
+
+  <% if @running.any? %>
+    <section class="panel shadow flex flex-column gap-half" data-controller="refresh" data-refresh-interval-value="10">
+      <h2 class="txt-medium font-weight-bold margin-none">Running now</h2>
+      <ul class="margin-none">
+        <% @running.each do |report| %>
+          <%# herb:key report.id %>
+          <li><%= link_to report.title, report_path(report), class: "txt-link" %> — <%= report.status %> since <%= time_ago_tag report.created_at %></li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <% @catalog.group_by { |row| row[:definition].group }.each do |group, rows| %>
+    <%# herb:key group %>
+    <section class="panel shadow center index-table">
+      <h2 class="txt-medium font-weight-bold margin-none"><%= group %></h2>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Report</th>
+            <th>Last measured</th>
+            <th>Headline figures</th>
+            <th class="data-table__number">About</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% rows.each do |row| %>
+            <% definition = row[:definition] %>
+            <%# herb:key definition.key %>
+            <tr data-filter-target="item">
+              <td>
+                <% if row[:latest] %>
+                  <%= link_to definition.title, report_path(row[:latest]), class: "txt-ink font-weight-bold" %>
+                <% else %>
+                  <span class="font-weight-bold"><%= definition.title %></span>
+                <% end %>
+                <div class="txt-x-small txt-subtle"><%= definition.description %></div>
+                <% run_title = "Run " + definition.title + " (about " + report_money(definition.estimated_cost) + ")" %>
+                <%= render "layouts/shared/row_links",
+                      links: [ ([ "View", report_path(row[:latest]) ] if row[:latest]) ],
+                      buttons: [ ([ "Run now", run_reports_path(kind: definition.key), run_title ] if row[:missing].none? && can_run && @configured && !row[:running]) ],
+                      note: ("Needs " + row[:missing].map(&:humanize).to_sentence.downcase if row[:missing].any?) %>
+              </td>
+              <td class="txt-small">
+                <% if row[:running] %>
+                  Running now
+                <% elsif row[:latest] %>
+                  <%= time_ago_tag row[:latest].created_at %><% if row[:stale] %> <span class="txt-negative">— due for a re-run (<%= definition.cadence %>)</span><% end %>
+                <% else %>
+                  <span class="txt-subtle">Never</span>
+                <% end %>
+              </td>
+              <td class="txt-small">
+                <% if row[:metrics].any? %>
+                  <% row[:metrics].each do |metric| %>
+                    <%# herb:key metric[:label] %>
+                    <div><%= metric[:label] %>: <strong><%= report_value(metric[:now]) %></strong> <span class="txt-subtle">(<%= report_change(metric) %>)</span></div>
+                  <% end %>
+                <% else %>
+                  <span class="txt-subtle">—</span>
+                <% end %>
+              </td>
+              <td class="data-table__number txt-x-small txt-subtle">
+                ~<%= report_money(definition.estimated_cost) %> a run<br><%= definition.cadence %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </section>
+  <% end %>
+</div>

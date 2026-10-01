@@ -1,0 +1,55 @@
+# Local gem cache
+.gems
+
+# Bundler
+/.bundle
+
+# Logs and tmp
+/log/*
+!/log/.keep
+/tmp/*
+!/tmp/.keep
+.byebug_history
+
+# Local environment overrides, and the .env bin/install writes (secrets)
+*.local
+.env*.local
+/.env
+
+# Installed plugins belong to the install, like its data (docs/plugins.md)
+/plugins/*
+!/plugins/README.md
+
+# Active Storage + SQLite databases (incl. -journal/-wal/-shm sidecars)
+/storage/*
+!/storage/.keep
+*.sqlite3
+*.sqlite3-*
+
+# Compiled asset cache
+/public/assets
+
+# Coverage
+/coverage
+
+# OS / editor
+.DS_Store
+.idea
+.vscode
+
+# Ignore key files for decrypting credentials and more.
+/config/*.key
+
+
+# An install's own Kamal config and secrets (docs/install.md): only the shared
+# config/deploy.yml, the examples and secrets-common are committed.
+/config/deploy.*.yml
+!/config/deploy.example-site.yml
+/.kamal/secrets
+/.kamal/secrets.*
+!/.kamal/secrets.example-site
+
+# Editor and agent tooling belongs to whoever runs it
+/.claude/
+/.agents/
+/.opencode/

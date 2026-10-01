@@ -1,0 +1,53 @@
+<%# locals: (form:) %>
+<%# The builder's side panel: Add Fields (click one to add it after the
+    picked field, or drag it onto the canvas) and Field Settings (the picked
+    field's, one block per field, all posted). %>
+<% fields = Array(form.fields).map { it.is_a?(Hash) ? it : {} } %>
+<section class="form-panel panel shadow" data-forms--builder-target="panel" data-mode="add" data-tab="general">
+  <div class="form-panel__tabs" role="tablist">
+    <button type="button" class="form-panel__tab" role="tab" data-mode="add" data-action="forms--builder#showMode">Add Fields</button>
+    <button type="button" class="form-panel__tab" role="tab" data-mode="settings" data-action="forms--builder#showMode">Field Settings</button>
+  </div>
+
+  <div class="form-panel__pane" data-pane="add">
+    <% form_field_palette.each do |group, types| %>
+      <%# herb:key group %>
+      <div class="flex flex-column gap-half">
+        <h3 class="txt-x-small txt-uppercase txt-subtle margin-none"><%= group %></h3>
+        <div class="form-palette">
+          <% types.each do |type, label, icon| %>
+            <%# herb:key type %>
+            <button type="button" class="form-palette__item btn txt-small" draggable="true" data-type="<%= type %>" data-label="<%= label %>"
+                    data-action="forms--builder#add dragstart->forms--builder#paletteDragStart dragend->forms--builder#dragEnd">
+              <%= icon_tag icon %>
+              <span><%= label %></span>
+            </button>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="form-panel__pane" data-pane="settings">
+    <div class="form-panel__subtabs" role="tablist">
+      <% [ [ "general", "General" ], [ "appearance", "Appearance" ], [ "advanced", "Advanced" ] ].each do |tab, label| %>
+        <%# herb:key tab %>
+        <button type="button" class="form-panel__subtab" role="tab" data-tab="<%= tab %>" data-action="forms--builder#showTab"><%= label %></button>
+      <% end %>
+    </div>
+    <p class="txt-small txt-subtle margin-none" data-forms--builder-target="noPick">Pick a field on the form to edit its settings.</p>
+    <div data-forms--builder-target="settingsList">
+      <% fields.each_with_index do |field, index| %>
+        <%# herb:key index %>
+        <%= render "forms/field_settings", field: field, key: "f" + index.to_s %>
+      <% end %>
+    </div>
+  </div>
+
+  <template data-forms--builder-target="cardTemplate">
+    <%= render "forms/field_card", key: "__KEY__" %>
+  </template>
+  <template data-forms--builder-target="settingsTemplate">
+    <%= render "forms/field_settings", field: { "type" => "text" }, key: "__KEY__" %>
+  </template>
+</section>

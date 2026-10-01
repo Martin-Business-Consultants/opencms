@@ -1,0 +1,6 @@
+<%# locals: (field:, value:, scope:) %>
+<label class="content-field__check flex align-center gap-half txt-small" for="<%= scope.dom_id %>">
+  <%= hidden_field_tag scope.name, "0", id: nil %>
+  <%= check_box_tag scope.name, "1", value == true || value == "true", id: scope.dom_id %>
+  <span class="font-weight-bold"><%= content_field_label(field) %></span>
+</label>

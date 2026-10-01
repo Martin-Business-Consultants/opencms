@@ -1,0 +1,11 @@
+<% @page_title = "Edit Agent" %>
+<%= parent_page "Agents", agents_path %>
+
+<% content_for :page_actions do %>
+  <%= link_to "Add New", new_agent_path, class: "btn txt-small" %>
+  <% if Current.user.can?("agents:run") %>
+    <%= button_to "Run now", agent_dispatch_path(@agent), class: "btn txt-small", form_class: "display-inline" %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title %>
+<%= render "agents/form", agent: @agent %>

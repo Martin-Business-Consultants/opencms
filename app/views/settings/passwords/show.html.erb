@@ -1,0 +1,23 @@
+<% @page_title = "Password" %>
+
+<%= render "layouts/shared/page_header", title: "Password" %>
+
+<section class="panel shadow settings-page txt-align-start">
+  <section class="settings__section flex flex-column gap">
+    <p class="txt-small txt-subtle margin-none">Use a long, random password to keep your account secure.</p>
+    <%= render "layouts/shared/errors", record: @user %>
+
+    <%= form_with url: settings_password_path, method: :patch, class: "flex flex-column gap" do |form| %>
+      <%= settings_field "Current password" do %>
+        <%= form.password_field :password_challenge, required: true, autocomplete: "current-password", class: "input full-width" %>
+      <% end %>
+      <%= settings_field "New password", hint: "At least 8 characters." do %>
+        <%= form.password_field :password, required: true, autocomplete: "new-password", class: "input full-width" %>
+      <% end %>
+      <%= settings_field "Confirm new password" do %>
+        <%= form.password_field :password_confirmation, required: true, autocomplete: "new-password", class: "input full-width" %>
+      <% end %>
+      <button type="submit" class="btn btn--link">Save password</button>
+    <% end %>
+  </section>
+</section>

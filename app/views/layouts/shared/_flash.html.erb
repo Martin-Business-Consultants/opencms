@@ -1,0 +1,17 @@
+<%# locals: () %>
+<%# The flash as an admin notice, like WordPress's: a bar under the page
+    title, green for a notice and red for an alert, until it's dismissed. %>
+<%= turbo_frame_tag :flash, class: "notices" do %>
+  <% { notice: "success", alert: "error" }.each do |type, tone| %>
+    <%# herb:key type %>
+    <% if (message = flash[type]).present? %>
+      <div class="notice notice--<%= tone %>" role="<%= type == :alert ? "alert" : "status" %>" data-controller="element-removal">
+        <p class="notice__message"><%= message %></p>
+        <button type="button" class="notice__dismiss" title="Dismiss this notice" data-action="element-removal#remove">
+          <%= icon_tag "close" %>
+          <span class="for-screen-reader">Dismiss this notice</span>
+        </button>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

@@ -1,0 +1,109 @@
+{
+  "version": "1",
+  "note": "The Lumin <-> CMS seam. This file is mirrored byte-for-byte at ../cms/spec/fixtures/contracts/cms_contract.json. Both suites assert against their own copy, and against each other's when both repos are checked out side by side, so a change to one side fails the other's tests. Do not edit one copy alone. See ads/docs/cms-contract.md.",
+
+  "webhook": {
+    "direction": "CMS -> Lumin",
+    "method": "POST",
+    "path": "/webhooks/content",
+    "host": "the Lumin tenant's own subdomain (tenancy resolves from it)",
+    "signature_header": "X-CMS-Signature",
+    "signature_format": "sha256=<hex HMAC-SHA256 of the raw request body>",
+    "signature_key": "the Lumin Site#webhook_secret; the CMS Webhook row must be created carrying it",
+    "envelope_keys": ["event", "tenant", "delivered_at", "data"],
+    "tenant_is": "the CMS subdomain, which equals Lumin's Site#cms_key",
+    "events": [
+      "page.published", "page.updated", "page.unpublished", "page.deleted",
+      "entry.published", "entry.updated", "entry.unpublished", "entry.deleted",
+      "global.updated", "submission.created",
+      "quote_request.created", "invoice.sent", "invoice.paid"
+    ],
+    "content_events": [
+      "page.published", "page.updated", "page.unpublished", "page.deleted",
+      "entry.published", "entry.updated", "entry.unpublished", "entry.deleted"
+    ],
+    "page_data_keys": [
+      "id", "slug", "path", "url", "title", "status", "locale",
+      "published_at", "updated_at"
+    ],
+    "entry_data_keys": [
+      "id", "slug", "collection_slug", "url", "title", "status", "locale",
+      "published_at", "updated_at"
+    ],
+    "url_is": "absolute, canonical-aware, and identical to the address the sitemap publishes for the same record (PubliclyAddressable). Lumin joins Search Console rows to CMS records by it.",
+    "external_id_is": "<kind>-<data.id>, e.g. page-12 — CMS ids are unique per type, not across types",
+    "example": {
+      "event": "page.published",
+      "tenant": "acme",
+      "delivered_at": "2026-09-17T10:00:00Z",
+      "data": {
+        "id": 12,
+        "slug": "about",
+        "path": "about",
+        "url": "https://acme.test/about",
+        "title": "About us",
+        "status": "published",
+        "locale": "en",
+        "published_at": "2026-09-17T09:59:00Z",
+        "updated_at": "2026-09-17T09:59:00Z"
+      }
+    }
+  },
+
+  "recommendations": {
+    "direction": "Lumin -> CMS",
+    "method": "POST",
+    "path": "/api/recommendations",
+    "auth": "Bearer <Lumin Site#cms_api_token>, which must hold the recommendations:write capability",
+    "request_keys": ["recommendation", "subject"],
+    "recommendation_keys": ["kind", "title", "body", "impact", "evidence", "proposed_changes"],
+    "subject_optional": true,
+    "subject_absent_means": "a finding about content that does not exist yet (a content gap). The CMS treats an absent or unresolvable subject as normal, not an error.",
+    "subject_forms": [
+      {"type": "Page", "path": "about"},
+      {"type": "CollectionEntry", "collection": "posts", "slug": "hello"}
+    ],
+    "page_path_has_no_leading_slash": true,
+    "site_root_page_path": "home",
+    "kinds": [
+      "content_gap", "metadata", "schema", "internal_linking",
+      "cannibalization", "technical", "freshness", "accessibility"
+    ],
+    "impact_range": [0, 5],
+    "impact_zero_means": "unrated; sorts last in the CMS queue rather than first",
+    "response_status": 201,
+    "response_keys": ["recommendation"],
+    "response_recommendation_keys": [
+      "id", "kind", "title", "body", "impact", "status", "evidence",
+      "proposed_changes", "actionable", "subject", "agent_run_id", "agent",
+      "created_at", "resolved_at", "resolved_by"
+    ],
+    "lumin_kind_map": {
+      "schema_missing": "schema",
+      "title_rewrite": "metadata",
+      "content_update": "freshness",
+      "content_gap": "content_gap",
+      "cannibalization": "cannibalization",
+      "technical": "technical"
+    },
+    "example_request": {
+      "recommendation": {
+        "kind": "metadata",
+        "title": "Rewrite the title on /about",
+        "body": "Ranks 9 with a 1.1% CTR.",
+        "impact": 3,
+        "evidence": {"impressions": "4200", "position": "9.1"},
+        "proposed_changes": {"new_title": "About our team"}
+      },
+      "subject": {"type": "Page", "path": "about"}
+    },
+    "example_response": {
+      "recommendation": {
+        "id": 42,
+        "kind": "metadata",
+        "title": "Rewrite the title on /about",
+        "status": "open"
+      }
+    }
+  }
+}

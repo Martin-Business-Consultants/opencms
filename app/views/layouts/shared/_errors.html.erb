@@ -1,0 +1,12 @@
+<%# locals: (record:) %>
+<% if record.errors.any? %>
+  <div class="margin-block-half txt-negative txt-small txt-align-start">
+    <p class="margin-block-none font-weight-bold">That didn’t work:</p>
+    <ul class="margin-block-none">
+      <% record.errors.full_messages.each do |message| %>
+        <%# herb:key message %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>

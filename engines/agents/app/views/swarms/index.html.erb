@@ -1,0 +1,56 @@
+<% @page_title = "Swarms" %>
+
+<% content_for :page_actions do %>
+  <%= link_to "Templates", agent_templates_path, class: "btn txt-small" %>
+  <% if Current.user.can?("agents:write") %>
+    <%= render "layouts/shared/new_link", text: "New swarm", path: new_swarm_path %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title, description: "Standing teams of agents on a rota — each seat at its own rhythm, so cheap work runs often and expensive work doesn’t." %>
+
+<% if @swarms.any? %>
+  <section class="panel shadow center index-table">
+    <table class="data-table">
+      <thead>
+        <tr><th>Swarm</th><th>Scope</th><th>Rota</th><th class="data-table__number">In flight</th><th>Last run</th></tr>
+      </thead>
+      <tbody>
+        <% @swarms.each do |swarm| %>
+          <%# herb:key swarm.id %>
+          <tr id="<%= dom_id(swarm) %>" data-filter-target="item">
+            <td>
+              <span class="flex align-center gap-half">
+                <%= link_to swarm.name, swarm_path(swarm), class: "txt-ink font-weight-bold" %>
+                <%= status_tag swarm.enabled ? "On" : "Off", highlight: swarm.enabled %>
+              </span>
+              <% if swarm.description.present? %>
+                <span class="txt-x-small txt-subtle"><%= swarm.description %></span>
+              <% end %>
+  <%= render "layouts/shared/row_links", name: swarm.name,
+                  edit_path: (edit_swarm_path(swarm) if Current.user.can?("agents:write")),
+                  delete_path: (swarm_path(swarm) if Current.user.can?("agents:delete")),
+                  delete_message: "Its seats go; the agents stay in the roster." %>
+            </td>
+            <td class="txt-small"><%= swarm.scope_label %></td>
+            <td class="txt-x-small">
+              <% swarm.swarm_members.each do |member| %>
+                <%# herb:key member.id %>
+                <span class="<%= class_names("swarm-seat", "txt-subtle": !member.enabled) %>"><%= member.display_name %> · <%= member.schedule_label %></span>
+              <% end %>
+            </td>
+            <td class="data-table__number"><%= swarm.agent_runs.active.count %></td>
+            <td class="txt-small"><%= swarm.last_run_at ? time_ago_tag(swarm.last_run_at) : "Never" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+<% else %>
+  <div class="panel panel--centered center flex flex-column gap-half">
+    <p class="txt-medium margin-none">No swarms yet. Stand one up from a template (<%= pluralize(@templates.size, "available") %>), or put your own agents on a rota.</p>
+    <%= link_to agent_templates_path, class: "btn btn--link center" do %>
+      <span>See the templates</span>
+      <%= icon_tag "arrow-right" %>
+    <% end %>
+  </div>
+<% end %>

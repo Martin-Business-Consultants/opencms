@@ -1,0 +1,8 @@
+<%# locals: (field:, value:, scope:) %>
+<% whole = value.nil? || value.to_s.match?(/\A-?\d+\z/) %>
+<%= render "content_form/label", field: field, for_id: scope.dom_id %>
+<% if whole %>
+  <%= number_field_tag scope.name, value, id: scope.dom_id, step: 1, class: "input" %>
+<% else %>
+  <%= text_field_tag scope.name, value, id: scope.dom_id, class: "input" %>
+<% end %>

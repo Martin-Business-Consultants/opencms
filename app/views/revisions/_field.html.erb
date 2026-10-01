@@ -1,0 +1,48 @@
+<%# locals: (field:) %>
+<section class="flex flex-column gap-half txt-align-start revision-diff__field">
+  <h3 class="txt-small font-weight-bold margin-none"><code><%= field[:key] %></code></h3>
+  <% case field[:kind] %>
+  <% when "text" %>
+    <div class="revision-diff__pair">
+      <%= render "revisions/value", text: field[:before], tone: "del" %>
+      <%= render "revisions/value", text: field[:after], tone: "add" %>
+    </div>
+  <% when "lines" %>
+    <div class="revision-diff__lines font-mono txt-x-small">
+      <% field[:lines].each_with_index do |line, index| %>
+        <%# herb:key index %>
+        <% if line[:op] == "skip" %>
+          <div class="txt-subtle">… <%= pluralize(line[:count], "unchanged line") %></div>
+        <% else %>
+          <div class="<%= class_names("revision-diff__line", "revision-diff__value--add" => line[:op] == "add", "revision-diff__value--del" => line[:op] == "del") %>"><%= revision_line_marker(line[:op]) %> <%= line[:text] %></div>
+        <% end %>
+      <% end %>
+    </div>
+  <% when "object" %>
+    <%= render "revisions/entries", entries: field[:entries] %>
+  <% else %>
+    <% touched = field[:blocks].reject { |block| block[:op] == "unchanged" } %>
+    <% if touched.empty? %>
+      <span class="txt-x-small txt-subtle">No blocks changed.</span>
+    <% end %>
+    <% field[:blocks].each_with_index do |block, index| %>
+      <%# herb:key index %>
+      <% if block[:op] == "unchanged" %>
+        <div class="txt-x-small txt-subtle"><%= block[:index] + 1 %>. <%= block[:type] %>: unchanged</div>
+      <% else %>
+        <div class="<%= class_names("panel flex flex-column gap-half", "revision-diff__value--add" => block[:op] == "added", "revision-diff__value--del" => block[:op] == "removed") %>">
+          <span class="txt-small">
+            <strong><%= block[:index] + 1 %>. <%= block[:type] || "block" %></strong>
+            <span class="txt-subtle"><%= block[:op].tr("_", " ") %></span>
+            <% if block[:from_index].is_a?(Integer) && block[:from_index] != block[:index] %>
+              <span class="txt-x-small txt-subtle">moved from position <%= block[:from_index] + 1 %></span>
+            <% end %>
+          </span>
+          <% if block[:fields].any? %>
+            <%= render "revisions/entries", entries: block[:fields] %>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</section>

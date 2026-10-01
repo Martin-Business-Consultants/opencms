@@ -1,0 +1,6 @@
+<% @page_title = "Add New Invoice" %>
+<%= parent_page "Invoices", invoices_path %>
+
+<%= render "layouts/shared/page_header", title: @page_title,
+      description: @invoice.quote_request ? "Drafted from quote request #" + @invoice.quote_request_id.to_s + ". Nothing is sent until you send it." : "Nothing is sent until you send it." %>
+<%= render "invoices/form", invoice: @invoice %>

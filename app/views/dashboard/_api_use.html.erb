@@ -1,0 +1,29 @@
+<%# Who's working through the API: the tokens used this past week. This CMS
+    is mostly driven by the CLI, MCP and the site's build; this admin is for
+    doing things by hand. %>
+<% uses = Frontend.recent_api_use %>
+<section class="panel shadow flex flex-column gap-half txt-align-start">
+  <header class="flex align-center justify-space-between gap">
+    <h2 class="txt-medium font-weight-bold margin-none flex align-center gap-half"><%= icon_tag "ai" %> Working through the API</h2>
+    <%= link_to "Developers", developers_path, class: "btn txt-small" %>
+  </header>
+  <% if uses.any? %>
+    <ul class="dashboard-api-use margin-none">
+      <% uses.each do |use| %>
+        <%# herb:key use[:kind] + use[:name] %>
+        <li class="flex align-center justify-space-between gap txt-small">
+          <span class="flex align-center gap-half min-width-0">
+            <span class="overflow-ellipsis font-weight-bold"><%= use[:name] %></span>
+            <span class="txt-x-small txt-subtle"><%= use[:kind] == "service" ? "service token" : "CLI, MCP or API" %></span>
+          </span>
+          <span class="txt-x-small txt-subtle txt-nowrap"><%= time_ago_tag use[:last_used_at] %></span>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="txt-small margin-none">No token has used the API this week.</p>
+  <% end %>
+  <p class="txt-x-small txt-subtle margin-none">
+    Drive this CMS from an agent: <code>curl -fsSL <%= request.base_url %>/agent/install.sh | sh</code>, then <code>claude mcp add cms -- cms mcp</code>.
+  </p>
+</section>

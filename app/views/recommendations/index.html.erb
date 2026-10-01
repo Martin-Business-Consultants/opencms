@@ -1,0 +1,72 @@
+<% @page_title = @recommendation ? @recommendation.title : "Findings" %>
+<% if @recommendation %>
+  <%= parent_page "Findings", recommendations_path %>
+<% else %>
+  <%= parent_page "Approvals", approvals_path %>
+<% end %>
+
+<%= render "layouts/shared/page_header", title: "Findings",
+      description: "What agents found but couldn’t fix themselves. Deciding one records the decision; it never writes content, so anything it proposes still goes through the ordinary review gate." %>
+
+<section class="panel shadow center flex flex-column gap-half txt-align-start margin-block-end">
+  <strong class="txt-medium"><%= @state[:headline] %></strong>
+  <p class="txt-small txt-subtle margin-none"><%= @state[:detail] %></p>
+  <p class="flex flex-wrap align-center gap txt-small margin-none">
+    <% @state[:counts].each do |count| %>
+      <%# herb:key count[:label] %>
+      <span><%= count[:label] %>: <strong><%= count[:value] %></strong></span>
+    <% end %>
+    <% @kind_counts.each do |kind, count| %>
+      <%# herb:key kind %>
+      <%= status_tag "#{kind.tr("_", " ")} · #{count}" %>
+    <% end %>
+  </p>
+</section>
+
+<div class="<%= class_names("approvals", "findings--reviewing" => @recommendation) %>">
+  <section class="panel shadow flex flex-column gap-half txt-align-start">
+    <h2 class="txt-medium font-weight-bold margin-none">Open (<%= @open.size %>)</h2>
+    <p class="txt-x-small txt-subtle margin-none">Oldest and highest-impact first. A finding nobody decides is one the agent will keep finding.</p>
+    <% if @open.any? %>
+      <ul class="approvals__list">
+        <% @open.each do |finding| %>
+          <%# herb:key finding.id %>
+          <li id="<%= dom_id(finding) %>" class="<%= class_names("flex flex-column gap-quarter", "findings__current" => finding == @recommendation) %>" data-filter-target="item">
+            <%= link_to finding.title, recommendation_path(finding), class: "txt-ink font-weight-bold" %>
+            <span class="flex align-center gap-half txt-x-small txt-subtle">
+              <%= status_tag finding.kind_label %>
+              <% if finding.impact.to_i.positive? %>
+                <span>impact <%= finding.impact %></span>
+              <% end %>
+              <% if finding.subject_label %>
+                <span><%= finding.subject_label %></span>
+              <% end %>
+              <%= time_ago_tag finding.created_at %>
+            </span>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="txt-small txt-subtle margin-none">No open findings.</p>
+    <% end %>
+
+    <% if @resolved.any? %>
+      <details class="margin-block-start">
+        <summary class="txt-small font-weight-bold">Recently decided (<%= @resolved.size %>)</summary>
+        <ul class="approvals__list margin-block-start">
+          <% @resolved.each do |finding| %>
+            <%# herb:key finding.id %>
+            <li class="flex flex-column gap-quarter">
+              <%= link_to finding.title, recommendation_path(finding), class: "txt-ink" %>
+              <span class="txt-x-small txt-subtle"><%= finding.status.humanize %> by <%= finding.resolved_by&.email || "—" %> · <%= time_ago_tag finding.resolved_at %></span>
+            </li>
+          <% end %>
+        </ul>
+      </details>
+    <% end %>
+  </section>
+
+  <% if @recommendation %>
+    <%= render "recommendations/review", recommendation: @recommendation, next_recommendation: @next_recommendation %>
+  <% end %>
+</div>

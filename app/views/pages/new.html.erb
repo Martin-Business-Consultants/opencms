@@ -1,0 +1,7 @@
+<% @page_title = "Add New Page" %>
+<%= parent_page "Pages", pages_path %>
+
+<%= render "layouts/shared/page_header", title: @page_title %>
+
+<%= render "layouts/shared/errors", record: @page %>
+<%= render "pages/form", page: @page, invalid_json: @invalid_json %>

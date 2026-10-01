@@ -1,0 +1,43 @@
+<%# locals: (kind:, record:, deletion:) %>
+<%# What a trashed item was, when it went and who sent it, and bringing it
+    back or deleting it for good (both leave the sheet: turbo_frame _top). %>
+<% can_write = Current.user.can?("trash:write") %>
+<% label = AuditLog.describe_target(record).to_s.presence || "Untitled " + kind %>
+<div class="trash-item flex flex-column gap">
+  <div class="flex flex-column gap-half">
+    <span><%= status_tag Trash.labels.fetch(kind, kind.humanize).singularize %></span>
+    <strong class="txt-large"><%= label %></strong>
+  </div>
+
+  <% if record.is_a?(Asset) && record.image? %>
+    <div class="media-details__preview"><%= asset_thumbnail record, size: 640 %></div>
+  <% end %>
+
+  <dl class="file-manager-asset__facts txt-small margin-none">
+    <% trash_facts(kind, record).each do |name, value| %>
+      <%# herb:key name %>
+      <dt><%= name %></dt><dd><%= value %></dd>
+    <% end %>
+    <dt>Deleted</dt>
+    <dd>
+      <%= time_ago_tag record.deleted_at %>
+      <% if deletion&.actor_label.present? %>
+        by <%= deletion.actor_label %>
+      <% end %>
+    </dd>
+  </dl>
+
+  <% if can_write %>
+    <div class="flex flex-wrap align-center gap-half">
+      <%= button_to trash_item_restoration_path(kind, record.id), class: "btn btn--link", form_class: "display-contents", data: { turbo_frame: "_top" } do %>
+        <%= icon_tag "refresh" %>
+        <span>Restore</span>
+      <% end %>
+      <%= render "layouts/shared/delete_dialog", name: label, path: trash_item_path(kind, record.id),
+            message: "It’s deleted for good. This can’t be undone.", trigger_text: "Delete permanently" %>
+    </div>
+    <% if Trash.publish_capability(record) && record.try(:status) == "published" && !Current.user.can?(Trash.publish_capability(record)) %>
+      <p class="txt-x-small txt-subtle margin-none">It was live; restored by you, it comes back as a draft for someone who can publish.</p>
+    <% end %>
+  <% end %>
+</div>

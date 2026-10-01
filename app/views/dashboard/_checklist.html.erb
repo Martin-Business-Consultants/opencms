@@ -1,0 +1,53 @@
+<%# locals: (checklist:) %>
+<%# The getting-started checklist (OnboardingChecklist). Steps with a page to
+    visit link there; steps that happen on someone's machine are ticked off by
+    hand. %>
+<section class="panel shadow flex flex-column gap txt-align-start">
+  <header class="flex align-start justify-space-between gap">
+    <div class="flex flex-column gap-half">
+      <h2 class="txt-large font-weight-black margin-none"><%= checklist["all_done"] ? "You’re all set" : "Get started" %></h2>
+      <p class="txt-small txt-subtle margin-none">
+        <%= checklist["all_done"] ? "Every step is done. Dismiss this card to hide it for good." : "Five-minute checklist to get content reaching the public site." %>
+      </p>
+    </div>
+    <div class="flex align-center gap-half flex-item-no-shrink">
+      <span class="txt-x-small txt-subtle txt-nowrap"><%= checklist["done_count"] %> / <%= checklist["total_count"] %></span>
+      <%= button_to dashboard_checklist_dismissal_path, class: "btn btn--circle borderless", title: "Dismiss checklist" do %>
+        <%= icon_tag "close" %>
+        <span class="for-screen-reader">Dismiss checklist</span>
+      <% end %>
+    </div>
+  </header>
+
+  <progress class="checklist__progress" value="<%= checklist["done_count"] %>" max="<%= checklist["total_count"] %>"><%= checklist["done_count"] %> of <%= checklist["total_count"] %></progress>
+
+  <ol class="checklist">
+    <% checklist["steps"].each do |step| %>
+      <%# herb:key step["key"] %>
+      <li class="checklist__step flex align-start gap">
+        <div class="flex-item-grow flex flex-column gap-half">
+          <%= tag.p step["title"], class: class_names("margin-none txt-medium", "txt-subtle checklist__step--done": step["done"]) %>
+          <% unless step["done"] %>
+            <p class="margin-none txt-x-small txt-subtle"><%= step["hint"] %></p>
+          <% end %>
+        </div>
+        <div class="flex-item-no-shrink">
+          <% if step["href"].blank? %>
+            <% if step["done"] %>
+              <%= button_to "Unmark", dashboard_checklist_acknowledgement_path(step["key"]), method: :delete, class: "btn btn--plain txt-small" %>
+            <% else %>
+              <%= button_to "Mark done", dashboard_checklist_acknowledgements_path, params: { key: step["key"] }, class: "btn txt-small" %>
+            <% end %>
+          <% elsif step["done"] %>
+            <%= status_tag "Done" %>
+          <% else %>
+            <%= link_to step["href"], class: "btn txt-small" do %>
+              <span><%= step["cta"] || "Go" %></span>
+              <%= icon_tag "arrow-right" %>
+            <% end %>
+          <% end %>
+        </div>
+      </li>
+    <% end %>
+  </ol>
+</section>

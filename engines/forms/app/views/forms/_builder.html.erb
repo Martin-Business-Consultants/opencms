@@ -1,0 +1,19 @@
+<%# locals: (form:) %>
+<%# The form builder's canvas, laid out like Gravity Forms': the fields as the
+    site shows them, in order, above the submit button. Fields come from the
+    side panel (forms/_field_panel), clicked or dragged in; picking one opens
+    its settings there. Rows post as form[fields][<row id>][…] for FormFields
+    to read back, in the canvas's order. %>
+<% fields = Array(form.fields).map { it.is_a?(Hash) ? it : {} } %>
+<ol class="form-canvas" data-forms--builder-target="canvas">
+  <% fields.each_index do |index| %>
+    <%# herb:key index %>
+    <%= render "forms/field_card", key: "f" + index.to_s %>
+  <% end %>
+</ol>
+<%= tag.p class: "form-canvas__empty txt-small txt-subtle", data: { forms__builder_target: "empty" }, hidden: fields.any? do %>
+  No fields yet. Add them from the panel, or drag them here.
+<% end %>
+<div class="form-canvas__submit">
+  <span class="btn btn--link" data-forms--builder-target="submitPreview"><%= form.submit_label.presence || "Submit" %></span>
+</div>

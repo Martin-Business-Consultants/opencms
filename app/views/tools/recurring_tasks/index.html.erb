@@ -1,0 +1,40 @@
+<% @page_title = "Schedules" %>
+<% @sheet_recipe ||= nil %>
+
+<%# The schedules as a list table; a schedule's settings open in a sheet
+    (tools/recurring_tasks/sheet, into the schedule_sheet frame). At its own
+    address, and when a save is refused, the list opens with it. %>
+<div class="display-contents" data-controller="dialog" data-dialog-modal-value="true" data-dialog-auto-open-value="<%= @sheet_recipe.present? %>"
+     data-action="keydown.esc->dialog#close:stop">
+<%= render "layouts/shared/page_header", title: "Schedules",
+      description: "Recurring work that runs on a cron schedule. Switch each on, tune it, or run it now." %>
+
+<section class="panel shadow center index-table">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Schedule</th>
+        <th>Cron</th>
+        <th>State</th>
+        <th>Next run</th>
+        <th>Last run</th>
+        <th><span class="for-screen-reader">Run</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @recipes.each do |recipe| %>
+        <%# herb:key recipe.key %>
+        <%= render "tools/recurring_tasks/recipe", recipe: recipe, task: @tasks[recipe.key] %>
+      <% end %>
+    </tbody>
+  </table>
+</section>
+
+<dialog class="dialog dialog--sheet panel fill-white shadow gap flex-column txt-align-start" data-dialog-target="dialog" aria-label="Schedule" closedby="any">
+  <% if @sheet_recipe %>
+    <%= render "tools/recurring_tasks/sheet", recipe: @sheet_recipe, task: @tasks[@sheet_recipe.key] %>
+  <% else %>
+    <turbo-frame id="schedule_sheet"><p class="txt-small txt-subtle">Loading…</p></turbo-frame>
+  <% end %>
+</dialog>
+</div>

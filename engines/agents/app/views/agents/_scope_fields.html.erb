@@ -1,0 +1,20 @@
+<%# locals: (form:, kind:, value:, key:, id: nil) %>
+<%# One row of an agent's or a swarm's scope. `form` is the param name
+    ("agent", "swarm"), `key` the nested-attributes index; a saved row carries
+    its id and a remove box, a new one a remove button (schema-editor controller). %>
+<% name = form + "[content_scopes_attributes][" + key.to_s + "]" %>
+<div class="schema-field flex align-center gap-half">
+  <% if id %>
+    <%= hidden_field_tag name + "[id]", id, id: nil %>
+  <% end %>
+  <%= select_tag name + "[scope_kind]", options_for_select(scope_kind_options, kind), id: nil, class: "input input--select", aria: { label: "What it covers" } %>
+  <%= text_field_tag name + "[value]", value, id: nil, class: "input flex-item-grow font-mono", list: "agent_scope_values", placeholder: "blog · /docs · fr", autocomplete: "off", aria: { label: "Which one" } %>
+  <% if id %>
+    <label class="flex align-center gap-half txt-x-small txt-subtle">
+      <%= check_box_tag name + "[_destroy]", "1", false, id: nil %>
+      Remove
+    </label>
+  <% else %>
+    <button type="button" class="btn btn--plain txt-x-small" data-action="schema-editor#remove">Remove</button>
+  <% end %>
+</div>

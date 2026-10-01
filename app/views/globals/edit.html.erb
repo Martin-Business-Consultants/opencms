@@ -1,0 +1,15 @@
+<% @page_title = "Edit Global" %>
+<%= parent_page "Globals", globals_path %>
+
+<% content_for :page_actions do %>
+  <% if Current.user.can?("globals:write") %>
+    <%= link_to "Add New", new_global_path, class: "btn txt-small" %>
+  <% end %>
+  <%= link_to "Fields", global_schema_path(@global.slug), class: "btn txt-small" %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title %>
+
+<%= render "layouts/shared/errors", record: @global %>
+<%= render layout: "content_form/editor_tabs", locals: { record: @global, kind: "global" } do %>
+  <%= render "globals/form", global: @global %>
+<% end %>

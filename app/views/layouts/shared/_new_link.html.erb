@@ -1,0 +1,8 @@
+<%# locals: (text:, path:, icon: nil, key: nil) %>
+<% icon ||= "add"
+   key ||= "n" %>
+<a href="<%= path %>" class="btn btn--labelled btn--circle-mobile" data-keys="<%= key %>">
+  <%= icon_tag icon %>
+  <span class="overflow-ellipsis"><%= text %></span>
+  <kbd class="hide-on-touch"><%= key.upcase %></kbd>
+</a>

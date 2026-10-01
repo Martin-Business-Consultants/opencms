@@ -1,0 +1,26 @@
+<% @page_title = "Appearance" %>
+
+<%= render "layouts/shared/page_header", title: "Appearance" %>
+
+<section class="panel shadow settings-page txt-align-start">
+  <section class="settings__section flex flex-column gap">
+    <p class="txt-small txt-subtle margin-none">Applies to this browser. The workspace’s colours and font are under Branding.</p>
+
+    <div class="theme-switcher flex flex-wrap gap txt-small" data-controller="theme">
+      <label class="btn theme-switcher__btn">
+        <%= icon_tag "sun" %>
+        <span>Light</span>
+        <input type="radio" name="theme" value="light" data-theme-target="lightButton" data-action="theme#setLight">
+      </label>
+      <label class="btn theme-switcher__btn">
+        <%= icon_tag "moon" %>
+        <span>Dark</span>
+        <input type="radio" name="theme" value="dark" data-theme-target="darkButton" data-action="theme#setDark">
+      </label>
+      <label class="btn theme-switcher__btn">
+        <span>System</span>
+        <input type="radio" name="theme" value="auto" data-theme-target="autoButton" data-action="theme#setAuto">
+      </label>
+    </div>
+  </section>
+</section>

@@ -1,0 +1,53 @@
+<%# locals: (page:, templates:) %>
+<%# The New page sheet: a title, a slug, and optionally a template whose
+    blocks the page starts with. It opens by itself when a submit came back
+    with errors. %>
+<% open = page.errors.any? %>
+<div class="display-contents" data-controller="dialog" data-dialog-modal-value="true" data-dialog-auto-open-value="<%= open %>" data-action="keydown.esc->dialog#close:stop">
+  <button type="button" class="btn btn--labelled btn--circle-mobile" data-keys="n" data-action="dialog#open">
+    <%= icon_tag "add" %>
+    <span class="overflow-ellipsis">New page</span>
+    <kbd class="hide-on-touch">N</kbd>
+  </button>
+  <dialog class="dialog dialog--sheet panel fill-white shadow gap flex-column txt-align-start" data-dialog-target="dialog" aria-label="New page" closedby="any">
+    <h2 class="txt-large font-weight-bold margin-none">New page</h2>
+    <%= render "layouts/shared/errors", record: page %>
+    <%= form_with model: page, url: pages_path, scope: :page, class: "flex flex-column gap txt-medium" do |form| %>
+      <%= hidden_field_tag :from, "dialog", id: nil %>
+      <%= form.hidden_field :status, value: "draft" %>
+      <%= form.hidden_field :locale, value: page.locale.presence || "en" %>
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Title</span>
+        <%= form.text_field :title, class: "input full-width", placeholder: "About us", autocomplete: "off" %>
+      </label>
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Slug</span>
+        <%= form.text_field :slug, class: "input full-width font-mono", placeholder: "about", autocomplete: "off", spellcheck: false %>
+        <span class="txt-x-small txt-subtle">Leave it blank to make one from the title.</span>
+      </label>
+      <% if templates.any? %>
+        <fieldset class="new-page-dialog__templates flex flex-column gap-half">
+          <legend class="txt-small font-weight-bold">Start from</legend>
+          <label class="new-page-dialog__template">
+            <%= radio_button_tag :template, "", params[:template].blank?, id: nil %>
+            <span>A blank page</span>
+          </label>
+          <% templates.each do |template| %>
+            <%# herb:key template["key"] %>
+            <label class="new-page-dialog__template">
+              <%= radio_button_tag :template, template["key"], params[:template] == template["key"], id: nil %>
+              <span>
+                <strong><%= template["title"] %></strong>
+                <span class="txt-x-small txt-subtle"><%= template["description"] %> · <%= pluralize(template["blocks"].size, "block") %></span>
+              </span>
+            </label>
+          <% end %>
+        </fieldset>
+      <% end %>
+      <div class="dialog__actions flex gap-half justify-end">
+        <button type="button" class="btn" data-action="dialog#close">Cancel</button>
+        <%= form.button "Create page", class: "btn btn--link" %>
+      </div>
+    <% end %>
+  </dialog>
+</div>

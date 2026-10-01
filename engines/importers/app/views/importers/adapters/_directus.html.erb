@@ -1,0 +1,22 @@
+<%# locals: (adapter:) %>
+<%= form_with url: tools_import_run_path(adapter.key), multipart: true, class: "flex flex-column gap" do |form| %>
+  <label class="flex flex-column gap-half">
+    <span class="txt-small font-weight-bold">SQLite database file</span>
+    <%= form.file_field :file, accept: ".db,.sqlite,.sqlite3,application/octet-stream,application/vnd.sqlite3", required: true, class: "input full-width" %>
+  </label>
+  <button type="submit" class="btn btn--link">
+    <span>Start import</span>
+    <%= icon_tag "arrow-right" %>
+  </button>
+<% end %>
+
+<div class="flex flex-column gap-half txt-small">
+  <h3 class="txt-small font-weight-bold margin-none">What comes across</h3>
+  <ul class="margin-none">
+    <li>Collections, as CMS collections with their entries</li>
+    <li>Sections, as block types</li>
+    <li>Singletons, as globals</li>
+    <li>Pages, with their blocks</li>
+  </ul>
+  <p class="txt-x-small txt-subtle margin-none">The schema is scanned as soon as you upload, and the notice says what was found. Running it again is safe: records are matched by slug.</p>
+</div>

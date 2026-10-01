@@ -1,0 +1,31 @@
+<% @page_title = "Settings" %>
+
+<%= render "layouts/shared/page_header", title: "Settings" %>
+
+<section class="panel shadow txt-align-start settings-page">
+  <p class="txt-small txt-subtle margin-none">
+    CMS <%= cms_version %>
+    <% if UpdateCheck.update_available? %>
+      · <strong class="txt-ink">Version <%= UpdateCheck.latest_version %> is available.</strong>
+      <%= link_to "What’s new", UpdateCheck.release_url || UpdateCheck.changelog_url, class: "txt-link", rel: "noopener" %>
+      <% if Current.user.can?("settings:read") %>
+        · <%= link_to "Update in Settings › Updates", settings_updates_path, class: "txt-link" %>
+      <% end %>
+    <% end %>
+  </p>
+  <% settings_sections.each do |group, links| %>
+    <%# herb:key group %>
+    <section class="settings__section flex flex-column gap-half">
+      <header><h2 class="divider"><%= group %></h2></header>
+      <dl class="settings-index">
+        <% links.each do |text, path, description| %>
+          <%# herb:key path %>
+          <div class="settings-index__item">
+            <dt><%= link_to text, path, class: "txt-link font-weight-bold" %></dt>
+            <dd class="txt-small txt-subtle margin-none"><%= description %></dd>
+          </div>
+        <% end %>
+      </dl>
+    </section>
+  <% end %>
+</section>

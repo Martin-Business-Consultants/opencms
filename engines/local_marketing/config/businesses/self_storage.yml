@@ -1,0 +1,30 @@
+key: self_storage
+version: 1
+name: Self storage
+description: A storage facility with units to rent — storefront, address-driven, seasonal with moves and student terms.
+category: Self-storage facility
+schema_type: SelfStorage
+footprint: storefront
+services: [self storage, storage units, climate controlled storage, vehicle storage, boat storage, RV storage, business storage, student storage]
+keyword_patterns: ["{service} {city}", "{service} near me", "{modifier} {service} {city}"]
+modifiers: [cheap, secure, 24 hour]
+directories: [sparefoot.com, storage.com, selfstorage.com]
+reports:
+  - {kind: site_audit, cadence: weekly}
+  - {kind: business_profile, cadence: weekly}
+  - {kind: google_reviews, cadence: weekly}
+  - {kind: local_rankings, cadence: weekly}
+  - {kind: rank_map, cadence: weekly}
+  - {kind: ranked_keywords, cadence: weekly}
+  - {kind: keyword_demand, cadence: monthly}
+  - {kind: citations, cadence: monthly}
+  - {kind: local_competitors, cadence: monthly}
+  - {kind: page_health, cadence: weekly}
+  - {kind: ai_answers, cadence: weekly}
+agents: [reporting_analyst, metadata_optimizer, technical_seo, content_gap]
+targets: {map_pack_share: 60, rating: 4.6, reviews: 80, top_3: 15, page_score: 85, ai_mention_rate: 25, citations_consistent: 10}
+content_scaffold:
+  - {slug: storage-units, title: Storage units & prices, kind: services}
+  - {slug: locations, title: Our location, kind: location}
+  - {slug: faq, title: Frequently asked questions, kind: faq}
+  - {slug: reviews, title: Customer reviews, kind: reviews}

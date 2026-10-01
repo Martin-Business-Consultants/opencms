@@ -1,0 +1,29 @@
+key: restaurant
+version: 1
+name: Restaurant
+description: A restaurant or café — reviews and Maps are everything; the website is menu, hours and booking.
+category: Restaurant
+schema_type: Restaurant
+footprint: storefront
+services: [restaurant, brunch, dinner, takeout, catering, private dining, happy hour]
+keyword_patterns: ["{service} {city}", "{service} near me", "{modifier} {service} {city}"]
+modifiers: [best, family friendly, romantic]
+directories: [tripadvisor.com, opentable.com, zomato.com, grubhub.com, doordash.com]
+reports:
+  - {kind: site_audit, cadence: weekly}
+  - {kind: business_profile, cadence: weekly}
+  - {kind: google_reviews, cadence: weekly}
+  - {kind: maps_rankings, cadence: weekly}
+  - {kind: rank_map, cadence: weekly}
+  - {kind: local_competitors, cadence: monthly}
+  - {kind: citations, cadence: monthly}
+  - {kind: web_mentions, cadence: monthly}
+  - {kind: page_health, cadence: monthly}
+  - {kind: ai_answers, cadence: weekly}
+agents: [reporting_analyst, schema_markup, metadata_optimizer]
+targets: {map_pack_share: 50, rating: 4.5, reviews: 300, top_3: 8, page_score: 80, ai_mention_rate: 25, citations_consistent: 12}
+content_scaffold:
+  - {slug: menu, title: Menu, kind: page}
+  - {slug: hours-location, title: Hours & location, kind: location}
+  - {slug: reservations, title: Reservations, kind: page}
+  - {slug: reviews, title: Reviews, kind: reviews}

@@ -1,0 +1,53 @@
+key: alt_text
+version: 1
+name: Image Alt Text
+description: Finds images published without alt text and writes it — accessibility and image search
+  in the same pass.
+category: Technical
+icon: image
+tier: cheap
+cron: 0 11 * * 5
+budget:
+  tool_rounds: 6
+  proposals: 8
+  context_tokens: 8000
+capabilities:
+- manifest
+- read_pages
+- read_entries
+- search
+- references
+- sitemap
+- recommend
+- write_pages
+- write_entries
+- review_request
+- read_assets
+instructions: |
+  You write alt text for images that don't have any. This is the cheapest
+  high-value work on the site: it's an accessibility obligation and an image
+  search signal at once, and it is almost never done.
+
+  Method:
+  1. Walk published pages and entries. For each, find the images in its blocks
+     and its asset references.
+  2. Identify images with missing or useless alt text. Useless means: the
+     filename, "image", "photo", "logo" on a decorative mark, or a repeat of the
+     caption.
+  3. For each, read the surrounding content to learn what the image is doing on
+     that page. Alt text describes the image's PURPOSE in context, not its
+     pixels.
+
+  Write alt text that:
+  - describes what a reader would lose if the image didn't load
+  - is one sentence, typically under 125 characters
+  - does not begin "image of" or "picture of"
+  - is empty (alt="") for genuinely decorative images — a spacer or a background
+    flourish. Marking a decorative image as decorative is the correct fix, not a
+    failure to write alt text.
+
+  Rules:
+  - Never describe an image you cannot actually inspect. If all you have is a
+    filename and no context, file a recommendation listing it instead of
+    guessing.
+  - At most 25 images per run.

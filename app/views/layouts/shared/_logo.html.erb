@@ -1,0 +1,8 @@
+<%# locals: () %>
+<%# The site's logo (Settings > Branding), or its site title. %>
+<% branding = current_branding %>
+<% if branding[:logo_url].present? %>
+  <%= image_tag branding[:logo_url], alt: branding[:site_title].presence || "Home", class: "header__logo-image" %>
+<% else %>
+  <%= branding[:site_title].presence || "CMS" %>
+<% end %>

@@ -1,0 +1,32 @@
+<% @page_title = "Reset password" %>
+
+<div class="panel panel--centered center flex flex-column gap-half">
+  <h1 class="txt-x-large font-weight-black margin-none">Reset password</h1>
+  <p class="txt-small txt-subtle margin-none">Please enter your new password below.</p>
+
+  <%= render "layouts/shared/errors", record: @user %>
+
+  <%= form_with url: identity_password_reset_path, method: :patch, class: "flex flex-column gap txt-medium margin-block-start", data: { controller: "form" } do |form| %>
+    <%= hidden_field_tag :sid, params[:sid] %>
+
+    <label class="flex flex-column gap-half txt-align-start">
+      <span class="txt-small font-weight-bold">Email</span>
+      <input type="email" value="<%= @user.email %>" class="input full-width" autocomplete="email" readonly>
+    </label>
+
+    <label class="flex flex-column gap-half txt-align-start">
+      <span class="txt-small font-weight-bold">Password</span>
+      <%= form.password_field :password, required: true, autofocus: true, autocomplete: "new-password", class: "input full-width", placeholder: "Password" %>
+    </label>
+
+    <label class="flex flex-column gap-half txt-align-start">
+      <span class="txt-small font-weight-bold">Confirm password</span>
+      <%= form.password_field :password_confirmation, required: true, autocomplete: "new-password", class: "input full-width", placeholder: "Confirm password" %>
+    </label>
+
+    <button type="submit" class="btn btn--link center" data-form-target="submit">
+      <span>Reset password</span>
+      <%= icon_tag "arrow-right" %>
+    </button>
+  <% end %>
+</div>

@@ -1,0 +1,957 @@
+/* The admin, laid out like WordPress's but drawn like a modern mail app: the
+/* admin bar sits on a light grey frame, and the admin menu and the page share
+/* one white card below it, rounded at its top-left corner. Inside the card
+/* everything is flat, divided by hairlines. layouts/application,
+/* layouts/shared/_admin_bar and _admin_menu; the fold and drawer states are
+/* html[data-menu="folded"] and html[data-menu-open] (admin_menu_controller). */
+@layer components {
+  :root {
+    --admin-bar-height: 2.5rem;
+    --admin-menu-width: 13.5rem;
+    --admin-menu-folded-width: 3.25rem;
+    /* The admin bar: on the frame, in the theme's ink. Its dropdowns are
+       cards (--admin-chrome); the bar is the frame's grey (--admin-chrome-deep). */
+    --admin-chrome: var(--color-canvas);
+    --admin-chrome-deep: var(--admin-canvas);
+    --admin-chrome-hover: color-mix(in oklch, var(--admin-canvas) 90%, var(--color-ink));
+    --admin-chrome-text: var(--color-ink);
+    --admin-chrome-muted: var(--color-ink-dark);
+    --admin-chrome-accent: var(--color-link);
+    /* The admin menu: the theme's canvas and ink, with a shade for hovers and
+       the open submenu. */
+    /* In light mode a faint grey, between the white page and the frame. */
+    --admin-menu-bg: color-mix(in oklch, var(--color-canvas) 97%, var(--color-ink));
+    --admin-menu-shade: color-mix(in oklch, var(--color-canvas) 93.5%, var(--color-ink));
+    --admin-menu-text: var(--color-ink);
+    --admin-menu-muted: var(--color-ink-dark);
+    --admin-menu-accent: var(--color-link);
+    --admin-menu-border: var(--color-ink-lighter);
+    /* The current item: a plain grey fill, its words dark. */
+    --admin-current: color-mix(in oklch, var(--color-canvas) 91%, var(--color-ink));
+    --admin-current-text: var(--color-ink);
+    /* The frame around the card. */
+    --admin-canvas: color-mix(in oklch, var(--color-canvas) 93%, var(--color-ink));
+    --admin-gutter: clamp(1rem, 2.5vw, 1.75rem);
+    /* The admin bar and menu read 1px larger than the page's small text. */
+    --admin-chrome-size: calc(var(--text-small) + 1px);
+  }
+
+  /* Dark: the frame goes darker than the card, and the sidebar is the card's
+     own colour. */
+  html[data-theme="dark"] {
+    --admin-canvas: color-mix(in oklch, var(--color-canvas) 82%, black);
+    --admin-menu-bg: var(--color-canvas);
+    --admin-menu-shade: color-mix(in oklch, var(--color-canvas) 94%, var(--color-ink));
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme]) {
+      --admin-canvas: color-mix(in oklch, var(--color-canvas) 82%, black);
+      --admin-menu-bg: var(--color-canvas);
+      --admin-menu-shade: color-mix(in oklch, var(--color-canvas) 94%, var(--color-ink));
+    }
+  }
+
+  body.admin {
+    background-color: var(--admin-canvas);
+    display: block;
+    min-block-size: 100dvh;
+  }
+
+  .admin__container {
+    display: block;
+    min-block-size: 100dvh;
+    position: relative;
+
+  }
+
+  /* The column behind the admin menu, down the whole window however long
+     the page or the menu. */
+  .admin__container::before {
+    background-color: var(--admin-menu-bg);
+    border-inline-end: 1px solid var(--admin-menu-border);
+    border-start-start-radius: var(--radius-large);
+    content: "";
+    inline-size: var(--admin-menu-width);
+    inset: var(--admin-bar-height) auto 0 0;
+    position: fixed;
+    z-index: calc(var(--z-nav) - 1);
+  }
+
+  :root[data-menu="folded"] .admin__container::before {
+    inline-size: var(--admin-menu-folded-width);
+  }
+
+  @media (max-width: 782px) {
+    .admin__container::before {
+      display: none;
+    }
+  }
+
+  /* body.admin, to win over .btn's position (buttons.css loads later). */
+  body.admin .admin__skip-link {
+    inset: 0 auto auto 0;
+    position: fixed;
+    transform: translateY(-120%);
+    z-index: var(--z-nav-open);
+
+    &:focus-visible {
+      transform: none;
+    }
+  }
+
+  /* The page: the rest of the white card, under the bar and beside the menu,
+     its top-left corner rounded where no menu covers it (a narrow screen). */
+  .admin__content {
+    background-color: var(--color-canvas);
+    border-start-end-radius: var(--radius-large);
+    border-start-start-radius: var(--radius-large);
+    margin-block-start: var(--admin-bar-height);
+    margin-inline-end: 0.5rem;
+    min-block-size: calc(100dvh - var(--admin-bar-height));
+    min-inline-size: 0;
+    padding-block: var(--block-space) var(--block-space-double);
+    padding-inline: calc(var(--admin-menu-width) + var(--admin-gutter)) var(--admin-gutter);
+
+    :root[data-menu="folded"] & {
+      padding-inline-start: calc(var(--admin-menu-folded-width) + var(--admin-gutter));
+    }
+
+    @media (max-width: 782px) {
+      :root & {
+        padding-inline: var(--admin-gutter);
+      }
+    }
+
+    > .notices {
+      display: block;
+      margin-block-end: var(--block-space);
+    }
+  }
+
+  body.admin #main {
+    inline-size: auto;
+    max-inline-size: none;
+    padding-inline: 0;
+    text-align: start;
+  }
+
+  /* Form panels sit at the left of the page, as WordPress's edit screens do. */
+  body.admin #main > .panel--centered,
+  body.admin #main > .panel.center {
+    margin-inline: 0;
+  }
+}
+
+/* The admin bar. */
+@layer components {
+  .admin-bar {
+    align-items: stretch;
+    background-color: var(--admin-chrome-deep);
+    block-size: var(--admin-bar-height);
+    color: var(--admin-chrome-text);
+    display: flex;
+    font-size: var(--admin-chrome-size);
+    inset: 0 0 auto 0;
+    padding-inline-end: 0.5rem;
+    position: fixed;
+    /* Above the admin menu, so the bar's dropdowns (+ New, the user menu)
+       open over the sidebar rather than under it. */
+    z-index: calc(var(--z-nav) + 1);
+
+    .icon {
+      --icon-size: 1.15em;
+    }
+  }
+
+  .admin-bar__group {
+    display: flex;
+    position: relative;
+  }
+
+  .admin-bar__item {
+    align-items: center;
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    font: inherit;
+    gap: 0.45em;
+    padding-inline: 0.75em;
+    text-decoration: none;
+    transition: background-color 120ms ease, color 120ms ease;
+    white-space: nowrap;
+
+    &:hover,
+    &:focus-visible {
+      background-color: var(--admin-chrome-hover);
+      color: var(--admin-chrome-text);
+    }
+  }
+
+  .admin-bar__site {
+    font-weight: 600;
+  }
+
+  .admin-bar__drawer-toggle {
+    display: none;
+
+    @media (max-width: 782px) {
+      display: flex;
+    }
+  }
+
+  .admin-bar__update {
+    color: var(--admin-chrome-accent);
+  }
+
+  .admin-bar__slots {
+    align-items: center;
+    color: var(--admin-chrome-muted);
+    gap: 0.5em;
+    padding-inline: 0.5em;
+
+    /* Plugins' items (the agents ticker) are ordinary buttons and text, drawn
+       flat in the bar's colours. */
+    .btn {
+      --btn-background: transparent;
+      --btn-border-color: transparent;
+      --btn-color: var(--admin-chrome-text);
+    }
+  }
+
+  .admin-bar__end {
+    align-items: center;
+    display: flex;
+    gap: 0.25em;
+    margin-inline-start: auto;
+
+    /* The "/" filter and theme toggle, drawn flat in the bar's colours. */
+    .btn {
+      --btn-background: transparent;
+      --btn-border-color: transparent;
+      --btn-color: var(--admin-chrome-text);
+    }
+
+    /* In use, the filter is a white field on the grey bar. */
+    .nav-filter:is(:focus-within, :has(.nav-filter__input:not(:placeholder-shown))) {
+      background-color: var(--color-canvas);
+      border-color: var(--color-ink-lighter);
+    }
+  }
+
+  /* A dropdown under a bar item, open while the item is hovered or holds focus. */
+  .admin-bar__menu {
+    background-color: var(--admin-chrome);
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: var(--radius-large);
+    box-shadow: var(--shadow);
+    display: none;
+    /* Flush with the bar: a gap between the item and its dropdown would drop
+       the hover that keeps it open on the way down. */
+    inset: 100% auto auto 0.35rem;
+    list-style: none;
+    margin: 0;
+    min-inline-size: 13rem;
+    padding: 0.35rem;
+    position: absolute;
+
+    .admin-bar__dropdown:is(:hover, :focus-within) > & {
+      display: block;
+    }
+
+    .admin-bar__dropdown--end > & {
+      inset-inline: auto 0;
+    }
+  }
+
+  .admin-bar__menu-link {
+    background: none;
+    border: 0;
+    color: var(--admin-chrome-text);
+    cursor: pointer;
+    display: block;
+    font: inherit;
+    border-radius: var(--radius);
+    inline-size: 100%;
+    padding: 0.45em 0.75em;
+    text-align: start;
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      background-color: var(--admin-chrome-hover);
+      color: var(--admin-chrome-text);
+    }
+  }
+
+  .admin-bar__menu-note {
+    color: var(--admin-chrome-muted);
+    font-size: 0.86em;
+    padding: 0.35em 1em;
+  }
+
+  @media (max-width: 782px) {
+    .admin-bar .admin-bar__label {
+      display: none;
+    }
+  }
+}
+
+/* The admin menu. */
+@layer components {
+  .admin-menu {
+    background-color: var(--admin-menu-bg);
+    border-start-start-radius: var(--radius-large);
+    color: var(--admin-menu-text);
+    display: flex;
+    flex-direction: column;
+    font-size: var(--admin-chrome-size);
+    inline-size: var(--admin-menu-width);
+    inset: var(--admin-bar-height) auto 0 0;
+    /* Fixed, and scrolled on its own: scrolling the page leaves the menu
+       where it is, and scrolling over the menu moves only the menu (never the
+       page behind it, even at its ends). Fly-outs are fixed too, placed
+       beside their item by admin_menu_controller, so this scrolling box
+       doesn't clip them. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    position: fixed;
+    scrollbar-width: thin;
+    z-index: var(--z-nav);
+
+    :root[data-menu="folded"] & {
+      inline-size: var(--admin-menu-folded-width);
+    }
+
+    @media (max-width: 782px) {
+      :root & {
+        inline-size: min(var(--admin-menu-width), 85vw);
+        transform: translateX(-100%);
+        transition: transform 150ms ease;
+      }
+
+      :root[data-menu-open] & {
+        transform: none;
+      }
+    }
+  }
+
+  .admin-menu__list {
+    list-style: none;
+    margin: 0;
+    padding: 0.75rem 0;
+  }
+
+  .admin-menu__separator {
+    block-size: 0;
+    border-block-start: 1px solid var(--admin-menu-border);
+    margin: 0.6rem 0.9rem;
+  }
+
+  .admin-menu__item {
+    position: relative;
+  }
+
+  .admin-menu__link {
+    align-items: center;
+    border-radius: var(--radius);
+    color: inherit;
+    display: flex;
+    gap: 0.6em;
+    margin: 1px 0.5rem;
+    min-block-size: 2.1rem;
+    padding: 0.3em 0.55em;
+    text-decoration: none;
+    transition: background-color 120ms ease, color 120ms ease;
+
+    &:hover,
+    &:focus-visible {
+      background-color: var(--admin-menu-shade);
+      color: var(--admin-menu-accent);
+    }
+  }
+
+  /* An item keeps its hover look while the pointer is anywhere in it, its
+     fly-out submenu included, so it's clear which item the fly-out belongs to. */
+  .admin-menu__item:not(.admin-menu__item--current):is(:hover, :focus-within) > .admin-menu__link {
+    background-color: var(--admin-menu-shade);
+    color: var(--admin-menu-accent);
+  }
+
+  .admin-menu__icon {
+    --icon-size: 1.15rem;
+
+    opacity: 0.75;
+  }
+
+  .admin-menu__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (min-width: 783px) {
+    :root[data-menu="folded"] :is(.admin-menu__link, .admin-menu__collapse) > .admin-menu__label {
+      display: none;
+    }
+  }
+
+  .admin-menu__item--current > .admin-menu__link {
+    background-color: var(--admin-current);
+    color: var(--admin-current-text);
+    font-weight: 600;
+    position: relative;
+
+    .admin-menu__icon {
+      opacity: 1;
+    }
+  }
+
+  /* A submenu: open inline under the current item; flying out to the right of
+     any other item while it's hovered or holds focus. */
+  .admin-menu__submenu {
+    display: none;
+    list-style: none;
+    margin: 0;
+    padding: 0.35rem 0;
+  }
+
+  .admin-menu__submenu-head {
+    display: none;
+  }
+
+  .admin-menu__submenu-link {
+    align-items: center;
+    border-radius: var(--radius);
+    color: var(--admin-menu-muted);
+    display: flex;
+    gap: 0.45em;
+    margin: 1px 0.5rem;
+    padding: 0.28em 0.55em 0.28em 2.3rem;
+    text-decoration: none;
+    transition: background-color 120ms ease, color 120ms ease;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--admin-menu-accent);
+    }
+
+    &[aria-current="page"] {
+      background-color: var(--admin-menu-shade);
+      color: var(--admin-menu-text);
+      font-weight: 600;
+    }
+  }
+
+  .admin-menu__item--current > .admin-menu__submenu {
+    display: block;
+  }
+
+  @media (min-width: 783px) {
+    .admin-menu__item:not(.admin-menu__item--current):is(:hover, :focus-within) > .admin-menu__submenu,
+    :root[data-menu="folded"] .admin-menu__item:is(:hover, :focus-within) > .admin-menu__submenu {
+      background-color: var(--admin-menu-bg);
+      border: 1px solid var(--admin-menu-border);
+      border-radius: var(--radius-large);
+      box-shadow: var(--shadow);
+      display: block;
+      /* Beside the menu, at the item's height (--flyout-top, set by
+         admin_menu_controller, which also shifts it up to fit the window). */
+      inset: var(--flyout-top, var(--admin-bar-height)) auto auto var(--admin-menu-width);
+      max-block-size: calc(100dvh - var(--admin-bar-height));
+      min-inline-size: 12rem;
+      overflow-y: auto;
+      position: fixed;
+      z-index: 1;
+
+      :root[data-menu="folded"] & {
+        inset-inline-start: var(--admin-menu-folded-width);
+      }
+
+      .admin-menu__submenu-link {
+        padding-inline-start: 0.75em;
+      }
+    }
+
+    /* Folded, the current item's submenu flies out too, headed by its name. */
+    :root[data-menu="folded"] .admin-menu__item--current > .admin-menu__submenu {
+      display: none;
+    }
+
+    :root[data-menu="folded"] .admin-menu__item:is(:hover, :focus-within) > .admin-menu__submenu {
+      display: block;
+
+      .admin-menu__submenu-head {
+        color: var(--admin-menu-text);
+        display: block;
+        font-weight: 600;
+        padding: 0.3em 1em 0.4em;
+      }
+    }
+
+  }
+
+  .admin-menu__collapse {
+    align-items: center;
+    background: none;
+    border: 0;
+    color: var(--admin-menu-muted);
+    cursor: pointer;
+    display: flex;
+    font: inherit;
+    gap: 0.6em;
+    margin-block-start: auto;
+    padding: 0.8em 0.9em;
+    text-align: start;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--admin-menu-accent);
+    }
+
+    :root[data-menu="folded"] & .admin-menu__icon {
+      transform: scaleX(-1);
+    }
+
+    @media (max-width: 782px) {
+      display: none;
+    }
+  }
+
+  /* Behind the open drawer, a shade that closes it when tapped. */
+  .admin-menu__backdrop {
+    display: none;
+
+    @media (max-width: 782px) {
+      :root[data-menu-open] & {
+        background-color: oklch(0% 0 0 / 0.4);
+        display: block;
+        inset: var(--admin-bar-height) 0 0 0;
+        position: fixed;
+        z-index: calc(var(--z-nav) - 1);
+      }
+    }
+  }
+}
+
+/* Notices, under the page title (layouts/shared/_flash). */
+@layer components {
+  .notices {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  /* A tinted, rounded callout in the notice's colour. */
+  .notice {
+    align-items: start;
+    background-color: color-mix(in oklch, var(--notice-color, var(--color-link)) 8%, var(--color-canvas));
+    border: 1px solid color-mix(in oklch, var(--notice-color, var(--color-link)) 28%, var(--color-canvas));
+    border-radius: var(--radius-large);
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.65rem 0.6rem 0.65rem 0.95rem;
+    text-align: start;
+  }
+
+  .notice--success { --notice-color: var(--color-positive); }
+  .notice--error { --notice-color: var(--color-negative); }
+
+  .notice__message {
+    flex: 1 1 auto;
+    margin: 0;
+  }
+
+  .notice__dismiss {
+    background: none;
+    border: 0;
+    color: var(--color-ink-dark);
+    cursor: pointer;
+    padding: 0.2em;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--color-negative);
+    }
+  }
+
+  body.public .notices {
+    margin: var(--block-space) auto;
+    max-inline-size: 42ch;
+  }
+}
+
+/* A page's title row (layouts/shared/_page_header): the title, then its
+/* primary action as a quiet button beside it. */
+@layer components {
+  .page-title {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    margin-block-end: 0.35rem;
+  }
+
+  .page-title__heading {
+    align-items: center;
+    display: flex;
+    font-size: var(--text-large);
+    font-weight: 650;
+    gap: 0.35em;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    margin: 0;
+  }
+
+  /* A collection's icon beside its name: in the admin menu's submenu, the
+     page title and the collections list. */
+  .admin-menu__submenu-icon {
+    --icon-size: 1.05em;
+
+    opacity: 0.8;
+  }
+
+  .page-title__icon {
+    --icon-size: 0.85em;
+
+    color: var(--color-ink-dark);
+  }
+
+  .collection-name {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.4em;
+  }
+
+  .page-title__actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+
+    /* The actions beside a title: small, neutral buttons. A primary action
+       (btn--link) stays filled, wherever it sits. */
+    .btn:not(dialog .btn, .btn--link) {
+      --btn-background: var(--color-canvas);
+      --btn-border-color: var(--color-ink-lighter);
+      --btn-color: var(--color-ink);
+      --btn-padding: 0.4em 0.85em;
+      --icon-size: 0.95em;
+
+      box-shadow: var(--shadow-small);
+      font-size: var(--text-small);
+      min-block-size: 0;
+    }
+
+    kbd {
+      display: none;
+    }
+  }
+
+  /* The screen's `cms` command, under its title: the CLI is the real surface. */
+  .page-title__cli {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4em;
+    margin: 0.2rem 0 0;
+
+    code {
+      background: var(--color-ink-lightest);
+      border-radius: var(--radius);
+      padding: 0.1em 0.45em;
+    }
+
+    .btn {
+      --btn-padding: 0.1em 0.5em;
+    }
+  }
+
+  .page-title__description {
+    color: var(--color-ink-dark);
+    font-size: var(--text-small);
+    margin: 0.15rem 0 var(--block-space);
+    max-inline-size: 72ch;
+  }
+
+  .page-title + .notices,
+  .page-title__description + .notices {
+    margin-block: 0.5rem var(--block-space);
+  }
+}
+
+/* List tables, as WordPress lays them out: status links above the table
+/* (All (12) | Published (8)), a bar with bulk actions on the left and the
+/* search box on the right, then the table with its row actions revealed
+/* under the title on hover or focus. */
+@layer components {
+  /* The status links as a row of pills, the current one filled. */
+  .subsubsub {
+    color: var(--color-ink-dark);
+    display: flex;
+    flex-wrap: wrap;
+    font-size: var(--text-small);
+    gap: 0.3em;
+    list-style: none;
+    margin: 0 0 0.75rem;
+    padding: 0;
+
+    a {
+      border: 1px solid transparent;
+      border-radius: 999px;
+      color: var(--color-ink-dark);
+      display: inline-block;
+      padding: 0.25em 0.75em;
+      text-decoration: none;
+      transition: background-color 120ms ease, color 120ms ease;
+
+      &:hover {
+        background-color: var(--color-ink-lightest);
+        color: var(--color-ink);
+      }
+
+      &[aria-current="page"] {
+        background-color: var(--admin-current);
+        color: var(--color-ink);
+        font-weight: 600;
+      }
+    }
+
+    .count {
+      color: var(--color-ink-medium);
+      font-variant-numeric: tabular-nums;
+      font-weight: 400;
+    }
+  }
+
+  .tablenav {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: space-between;
+    margin-block-end: 0.6rem;
+  }
+
+  .tablenav__actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+
+    .input {
+      inline-size: auto;
+      min-inline-size: 12rem;
+    }
+  }
+
+  /* The select and Apply (shown by bulk_actions_controller), or without
+     JavaScript the button per action; :not([hidden]) keeps the hidden
+     attribute working. */
+  .tablenav__bulk:not([hidden]) {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+
+    .btn {
+      white-space: nowrap;
+    }
+  }
+
+  .tablenav__confirm {
+    display: inline-flex;
+
+    > summary {
+      list-style: none;
+
+      &::-webkit-details-marker { display: none; }
+    }
+
+    &[open] {
+      align-items: center;
+      gap: 0.4rem;
+    }
+  }
+
+  .tablenav__search {
+    margin-inline-start: auto;
+  }
+
+  .list-search {
+    align-items: center;
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .list-search__input {
+    inline-size: 16rem;
+    max-inline-size: 60vw;
+  }
+
+  body.admin .index-table {
+    --panel-padding: 0;
+
+    box-shadow: var(--shadow-small);
+  }
+
+  body.admin .data-table {
+    th {
+      background-color: var(--color-canvas);
+      border-block-end-color: var(--color-ink-lighter);
+      color: var(--color-ink-dark);
+      font-size: var(--text-x-small);
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      padding: 0.7em 1em;
+      text-transform: none;
+    }
+
+    td {
+      padding: 0.75em 1em;
+    }
+
+    tbody tr:hover td {
+      background-color: color-mix(in oklch, var(--color-canvas) 97.5%, var(--color-ink));
+    }
+  }
+
+  .row-actions {
+    color: var(--color-ink-dark);
+    display: flex;
+    flex-wrap: wrap;
+    font-size: var(--text-small);
+    gap: 0.9em;
+    margin-block-start: 0.2em;
+    visibility: hidden;
+
+    tr:is(:hover, :focus-within) & {
+      visibility: visible;
+    }
+
+    @media (any-hover: none) {
+      visibility: visible;
+    }
+  }
+
+  /* A row action that POSTs (button_to) sits inline like the links. */
+  .row-actions__form {
+    display: inline;
+    margin: 0;
+  }
+
+  .row-actions__link {
+    background: none;
+    border: 0;
+    color: var(--color-link);
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      text-decoration: underline;
+    }
+  }
+
+  .row-actions__link--danger {
+    color: var(--color-negative);
+  }
+}
+
+/* A list table's tick-box column. */
+@layer components {
+  body.admin .data-table .data-table__check {
+    inline-size: 2.2em;
+    text-align: center;
+  }
+}
+
+/* A panel's top row that held its title beside a button, now the title sits
+/* in the page header: the button keeps to the right. */
+@layer components {
+  body.admin .panel > .justify-space-between:first-child:has(> :only-child) {
+    justify-content: flex-end;
+  }
+}
+
+/* WordPress's Screen Options tab (screen_options_controller). */
+@layer components {
+  .screen-options {
+    align-items: end;
+    display: flex;
+    flex-direction: column;
+
+    /* Only a screen with a table shows the tab; elsewhere it takes no room. */
+    &:has(> .screen-options__tab:not([hidden])) {
+      margin-block: calc(-1 * var(--block-space)) var(--block-space-half);
+    }
+  }
+
+  .screen-options__tab {
+    background: var(--color-canvas);
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-small);
+    color: var(--color-ink-dark);
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--text-small);
+    padding: 0.3em 0.9em;
+
+    &::after {
+      content: " ▾";
+    }
+
+    &[aria-expanded="true"]::after {
+      content: " ▴";
+    }
+
+    &[hidden] { display: none; }
+  }
+
+  .screen-options__panel {
+    align-self: stretch;
+    background: var(--color-canvas);
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: var(--radius);
+    margin-block-start: var(--block-space-half);
+    padding: var(--block-space-half) var(--block-space);
+
+    &[hidden] { display: none; }
+  }
+
+  .screen-options__columns {
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .screen-options__choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4em 1.2em;
+    margin-block-start: 0.4em;
+  }
+
+  .screen-options__choice {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.35em;
+  }
+}
+
+/* In the utilities layer, so it beats .txt-subtle there: muted text in the
+   admin bar's plugin slots is the bar's muted colour, not the canvas's. */
+@layer utilities {
+  .admin-bar__slots .txt-subtle {
+    color: var(--admin-chrome-muted);
+  }
+}

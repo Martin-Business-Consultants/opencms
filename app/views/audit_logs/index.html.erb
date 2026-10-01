@@ -1,0 +1,80 @@
+<% @page_title = "Audit log" %>
+
+<%= render "layouts/shared/page_header", title: @page_title,
+      description: "Editorial actions across the workspace. Append-only: entries never change after they’re recorded." %>
+
+<%= form_with url: audit_logs_path, method: :get, class: "panel shadow center flex flex-wrap align-end gap margin-block-end txt-small", data: { turbo_action: "advance" } do %>
+  <label class="flex flex-column gap-half txt-align-start">
+    <span class="font-weight-bold">Actor</span>
+    <%= text_field_tag :actor, params[:actor], class: "input", placeholder: "email or name", autocomplete: "off" %>
+  </label>
+  <label class="flex flex-column gap-half txt-align-start">
+    <span class="font-weight-bold">Action</span>
+    <%= select_tag :action_filter, options_for_select(@known_actions, params[:action_filter]), include_blank: "Any action", class: "input input--select" %>
+  </label>
+  <label class="flex flex-column gap-half txt-align-start">
+    <span class="font-weight-bold">From</span>
+    <%= datetime_local_field_tag :from, params[:from], class: "input" %>
+  </label>
+  <label class="flex flex-column gap-half txt-align-start">
+    <span class="font-weight-bold">To</span>
+    <%= datetime_local_field_tag :to, params[:to], class: "input" %>
+  </label>
+  <div class="flex gap-half">
+    <button type="submit" class="btn txt-small">Apply</button>
+    <%= link_to "Clear", audit_logs_path, class: "btn btn--plain txt-small" %>
+  </div>
+<% end %>
+
+<div class="tablenav">
+  <div class="tablenav__search">
+    <%= render "layouts/shared/list_search", placeholder: "Search actions, people and targets…" %>
+  </div>
+</div>
+
+<% if @entries.any? %>
+  <section class="panel shadow center index-table">
+    <table class="data-table" data-controller="pagination" data-pagination-paginate-on-intersection-value="true" data-pagination-discard-frame-value="true">
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>Actor</th>
+          <th>Action</th>
+          <th>Target</th>
+          <th>Detail</th>
+        </tr>
+      </thead>
+      <tbody id="<%= pagination_frame_id_for(:audit_rows, @page.number) %>">
+        <% @entries.each do |entry| %>
+          <%# herb:key entry.id %>
+          <tr id="<%= dom_id(entry) %>" data-filter-target="item">
+            <td class="txt-subtle txt-small txt-nowrap"><%= time_ago_tag entry.created_at %></td>
+            <td>
+              <div><%= entry.actor_label.presence || "system" %></div>
+              <% if entry.ip.present? %>
+                <div class="txt-x-small txt-subtle font-mono"><%= entry.ip %></div>
+              <% end %>
+            </td>
+            <td><%= status_tag entry.current_action, highlight: false %></td>
+            <td>
+              <% if entry.target_label.present? %>
+                <%= audit_target_link(entry) %>
+                <% if entry.target_type.present? %>
+                  <span class="txt-x-small txt-subtle">(<%= entry.target_type %>)</span>
+                <% end %>
+              <% else %>
+                <span class="txt-subtle">—</span>
+              <% end %>
+            </td>
+            <td class="txt-subtle font-mono txt-x-small"><%= audit_metadata(entry.metadata) %></td>
+          </tr>
+        <% end %>
+        <%= table_next_page_row :audit_rows, @page, columns: 5 %>
+      </tbody>
+    </table>
+  </section>
+<% else %>
+  <div class="panel panel--centered center">
+    <p class="txt-medium margin-none">No entries match.</p>
+  </div>
+<% end %>

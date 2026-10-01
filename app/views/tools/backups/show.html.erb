@@ -1,0 +1,66 @@
+<% @page_title = "Backup" %>
+
+<%# The automatic backups as a list table; taking one now is a sheet off the
+    title row: what it will hold, and the download. %>
+<div class="display-contents" data-controller="dialog" data-dialog-modal-value="true" data-action="keydown.esc->dialog#close:stop">
+<% content_for :page_actions do %>
+  <button type="button" class="btn btn--labelled btn--circle-mobile" data-keys="n" data-action="dialog#open">
+    <%= icon_tag "add" %>
+    <span class="overflow-ellipsis">Download a backup</span>
+    <kbd class="hide-on-touch">N</kbd>
+  </button>
+<% end %>
+<%= render "layouts/shared/page_header", title: "Backup",
+      description: "Copies of this site: the ones taken automatically before every update, and one you download now — its database and every uploaded file, as one .tar.gz." %>
+
+<% if @archives.any? %>
+  <section class="panel shadow center index-table">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Automatic backup</th>
+          <th>Taken</th>
+          <th class="data-table__number">Size</th>
+          <th><span class="for-screen-reader">Download</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @archives.each do |archive| %>
+          <%# herb:key archive.name %>
+          <tr id="archive_<%= archive.name.parameterize %>">
+            <td class="font-mono txt-small"><%= archive.name %></td>
+            <td class="txt-subtle txt-small"><%= time_ago_tag archive.taken_at %></td>
+            <td class="data-table__number"><%= number_to_human_size(archive.byte_size) %></td>
+            <td><%= link_to "Download", tools_backup_archive_path(archive.name), class: "btn txt-small", data: { turbo: false } %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+<% else %>
+  <div class="panel panel--centered center">
+    <p class="txt-medium margin-none">No automatic backups yet. <code>bin/update</code> takes one before it migrates; the newest few are kept.</p>
+  </div>
+<% end %>
+
+<dialog class="dialog dialog--sheet panel fill-white shadow gap flex-column txt-align-start" data-dialog-target="dialog" aria-label="Download a backup" closedby="any">
+  <header class="flex align-center justify-space-between gap">
+    <h2 class="txt-large font-weight-bold margin-none">Download a backup</h2>
+    <button type="button" class="btn txt-small" data-action="dialog#close">Close</button>
+  </header>
+  <p class="txt-small margin-none">The site’s database and every uploaded file, as one .tar.gz. It will hold:</p>
+  <ul class="txt-small margin-none">
+    <% @contents.each do |kind, count| %>
+      <%# herb:key kind %>
+      <li><%= number_with_delimiter(count) %> <%= kind.to_s.humanize(capitalize: false) %></li>
+    <% end %>
+  </ul>
+  <p class="txt-x-small txt-subtle margin-none">Restoring one is done on the server — see <code>docs/install.md</code>.</p>
+  <div class="dialog__actions flex gap-half justify-end">
+    <button type="button" class="btn" data-action="dialog#close">Cancel</button>
+    <%= button_to tools_backup_path, class: "btn btn--link", form_class: "display-contents", data: { turbo: false } do %>
+      <span>Download backup</span>
+    <% end %>
+  </div>
+</dialog>
+</div>

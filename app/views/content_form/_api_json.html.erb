@@ -1,0 +1,36 @@
+<%# locals: (preview:) %>
+<%# A record as its site gets it: where to fetch it, how, and the JSON that
+    comes back. This CMS is headless — it keeps content and serves it as this;
+    the site (the Astro app) renders it. %>
+<% url = request.base_url + preview.path %>
+<div class="api-json flex flex-column gap txt-align-start">
+  <p class="txt-small txt-subtle margin-none">
+    This is exactly what the site receives for this record, as last saved. The CMS never renders it: the site fetches this JSON and draws it with its own components.
+    <%= link_to "How frontends work with the CMS", developers_path, class: "txt-link", data: { turbo_frame: "_top" } %>
+  </p>
+
+  <div class="flex flex-column gap-half">
+    <span class="txt-small font-weight-bold">Endpoint</span>
+    <div class="flex align-center gap-half">
+      <code class="settings-code flex-item-grow">GET <%= url %></code>
+      <%= copy_button url %>
+    </div>
+  </div>
+
+  <details class="api-json__snippets" open>
+    <summary class="txt-small font-weight-bold">Fetch it</summary>
+    <pre class="settings-code margin-block-start-half"><%= api_json_cli_call(preview.path) %>   # the cms CLI, or the same tool over MCP</pre>
+    <pre class="settings-code">curl -H "Authorization: Bearer $CMS_API_TOKEN" "<%= url %>"</pre>
+    <pre class="settings-code">// In an Astro site with the CMS integration (integrations/astro)
+import { cms } from "~/lib/cms/cms";
+<%= api_json_client_call(preview.path) %></pre>
+  </details>
+
+  <div class="flex flex-column gap-half">
+    <div class="flex align-center justify-space-between gap">
+      <span class="txt-small font-weight-bold">Response</span>
+      <%= copy_button preview.json %>
+    </div>
+    <pre class="api-json__body"><code><%= preview.json %></code></pre>
+  </div>
+</div>

@@ -1,0 +1,50 @@
+key: technical_seo
+version: 1
+name: Technical SEO Sweep
+description: Checks redirects, sitemap health, slug hygiene and the structural problems that quietly
+  cost traffic.
+category: Technical
+icon: wrench
+tier: cheap
+cron: 0 6 * * *
+budget:
+  tool_rounds: 6
+  proposals: 8
+  context_tokens: 8000
+capabilities:
+- manifest
+- read_pages
+- read_entries
+- search
+- references
+- sitemap
+- recommend
+- read_redirects
+- write_redirects
+- deploy
+instructions: |
+  You keep the site's technical SEO sound. This runs often and cheaply, so
+  prefer checking everything shallowly over auditing one thing deeply.
+
+  Check, in order:
+  1. REDIRECTS (`cms redirects all`). Look for: chains (A→B→C, which should be
+     A→C and B→C), loops, redirects to URLs that 404, and rules with zero hits
+     that have been there long enough to be dead weight.
+  2. SITEMAP (`cms sitemap`). Every published page should be in it; nothing
+     unpublished should be.
+  3. SLUGS. Look for slugs that are auto-generated noise ("untitled-2"), overly
+     deep nesting, uppercase or underscores, or slugs that don't match their
+     page's title after a retitle.
+  4. DUPLICATE PATHS across locales or collections that resolve to the same
+     content without differentiation.
+
+  Act:
+  - Flatten redirect chains directly — that's mechanical and safe.
+  - A slug change is NOT safe: it breaks every inbound link. File it as a
+    recommendation with the redirect that would be needed, and let a human
+    decide.
+  - File anything structural as a `technical` recommendation.
+
+  Finish with a short health summary: what you checked, what you fixed, what
+  needs a person. If nothing was wrong, say that plainly — a clean run is a
+  useful result, not a failed one.

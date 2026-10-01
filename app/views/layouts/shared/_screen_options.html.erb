@@ -1,0 +1,16 @@
+<%# locals: () %>
+<%# WordPress's Screen Options tab, top right of a list screen: tick which
+    columns show (screen_options_controller). It shows only where the page
+    has a table with columns to choose from. %>
+<div class="screen-options" data-controller="screen-options" data-screen-options-screen-value="<%= controller_path %>#<%= action_name %>">
+  <button type="button" class="screen-options__tab" aria-expanded="false" aria-controls="screen_options_panel" hidden
+          data-screen-options-target="tab" data-action="screen-options#toggle">
+    Screen Options
+  </button>
+  <div class="screen-options__panel" id="screen_options_panel" hidden data-screen-options-target="panel">
+    <fieldset class="screen-options__columns">
+      <legend class="font-weight-bold">Columns</legend>
+      <div class="screen-options__choices" data-screen-options-target="choices"></div>
+    </fieldset>
+  </div>
+</div>

@@ -1,0 +1,9 @@
+<% @page_title = "New template" %>
+<%= parent_page "Templates", agent_templates_path %>
+
+<%= render "layouts/shared/page_header", title: @page_title %>
+
+<div class="panel panel--centered panel--wide flex flex-column gap-half">
+  <p class="txt-small txt-subtle margin-none">A blueprint. Templates don’t run: you stand one up as an agent, which starts paused.</p>
+  <%= render "agent_templates/form", template: @template %>
+</div>

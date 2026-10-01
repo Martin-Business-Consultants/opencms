@@ -1,0 +1,65 @@
+<% @page_title = "Globals" %>
+<% can_write = Current.user.can?("globals:write") %>
+<% can_delete = Current.user.can?("globals:delete") %>
+
+<% content_for :page_actions do %>
+  <% if can_write %>
+    <%= render "globals/new_global", global: @new_global || Global.new, open: @new_global.present? %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title, description: "One-of-a-kind content the whole site shares: navigation, footer, contact details." %>
+
+<% if can_delete && @globals.any? %>
+  <%= render "layouts/shared/bulk_actions", id: "globals_bulk", noun: "global", deletion_path: globals_bulk_deletions_path %>
+<% end %>
+
+<% if @globals.any? %>
+  <section class="panel shadow center index-table" data-controller="select-all">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <% if can_delete %>
+            <th class="data-table__check"><input type="checkbox" aria-label="Select every row" data-select-all-target="all" data-action="select-all#toggle"></th>
+          <% end %>
+          <th>Name</th>
+          <th>Slug</th>
+          <th class="data-table__number">Fields</th>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @globals.each do |global| %>
+          <%# herb:key global.id %>
+          <tr id="<%= dom_id(global) %>" data-filter-target="item">
+            <% if can_delete %>
+              <td class="data-table__check"><input type="checkbox" data-select-all-target="box" data-action="select-all#sync" name="slugs[]" value="<%= global.slug %>" form="globals_bulk" aria-label="Select <%= global.name %>"></td>
+            <% end %>
+            <td>
+              <%= link_to global.name, (can_write ? edit_global_path(global.slug) : global_schema_path(global.slug)), class: "txt-ink font-weight-bold" %>
+              <% if global.description.present? %>
+                <div class="txt-x-small txt-subtle"><%= global.description %></div>
+              <% end %>
+              <%= render "layouts/shared/row_links",
+                    links: [ ([ "Edit", edit_global_path(global.slug) ] if can_write), ([ "Schema", global_schema_path(global.slug) ] if can_write) ].compact,
+                    delete_path: (global_path(global.slug) if can_delete), delete_name: global.name, delete_label: "Trash",
+                    delete_message: "It goes to the trash, where it can be restored." %>
+            </td>
+            <td class="txt-subtle font-mono"><%= global.slug %></td>
+            <td class="data-table__number"><%= global.fields.size %></td>
+            <td class="txt-subtle txt-small"><%= time_ago_tag global.updated_at %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+<% else %>
+  <div class="panel panel--centered center flex flex-column gap-half">
+    <p class="txt-medium">No globals yet.</p>
+    <% if can_write %>
+      <%= link_to new_global_path, class: "btn btn--link center" do %>
+        <span>Add a global</span>
+        <%= icon_tag "arrow-right" %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

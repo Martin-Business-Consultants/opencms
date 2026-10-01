@@ -1,0 +1,4 @@
+<% @page_title = "New block type" %>
+<%= parent_page "Block types", block_types_path %>
+<%= render "layouts/shared/page_header", title: @page_title %>
+<%= render "block_types/form", block_type: @block_type %>

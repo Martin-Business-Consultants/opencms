@@ -1,0 +1,19 @@
+<%# locals: (guides:, current:) %>
+<%# The guides and the two checklists, down the Docs sidebar. %>
+<%= postbox "docs-nav", "Docs" do %>
+  <nav class="settings-sections" aria-label="Docs">
+    <ul class="settings-sections__list">
+      <li><%= link_to "All docs", docs_path, class: class_names("settings-sections__link", "settings-sections__link--current": current == :index) %></li>
+      <% guides.each do |guide| %>
+        <%# herb:key guide.slug %>
+        <li><%= link_to guide.title, doc_path(guide.slug), class: class_names("settings-sections__link", "settings-sections__link--current": current == guide.slug),
+                  aria: { current: ("page" if current == guide.slug) } %></li>
+      <% end %>
+      <li><%= link_to "Before going live", go_live_docs_path, class: class_names("settings-sections__link", "settings-sections__link--current": current == :go_live),
+                aria: { current: ("page" if current == :go_live) } %></li>
+      <li><%= link_to "Site health", site_health_docs_path, class: class_names("settings-sections__link", "settings-sections__link--current": current == :site_health),
+                aria: { current: ("page" if current == :site_health) } %></li>
+    </ul>
+  </nav>
+  <p class="txt-x-small txt-subtle margin-none">From the CLI or MCP: <code>cms docs</code>, <code>cms go-live</code>, <code>cms site-health</code>.</p>
+<% end %>

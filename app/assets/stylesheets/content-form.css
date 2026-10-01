@@ -1,0 +1,421 @@
+@layer components {
+  /* The content editor: a page's, entry's or global's form (content_form/*),
+     laid out like WordPress's: the title, permalink, fields, blocks and SEO
+     in the main column; the Publish box and the other boxes in a fixed-width
+     sidebar (editor.css styles the boxes). */
+  .content-form {
+    align-items: start;
+    display: grid;
+    gap: var(--block-space) 1.5rem;
+    grid-template-columns: minmax(0, 1fr) min(20rem, 100%);
+    inline-size: 100%;
+    text-align: start;
+
+    /* Narrow, the boxes follow the content, as WordPress's do. */
+    @media (max-width: 60rem) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* Two thirds and one third: a record with a smaller sidebar's worth of
+     settings beside a wider one of its own (users, roles, form emails). */
+  .content-form--thirds {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+
+    @media (max-width: 60rem) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .content-form__aside {
+    position: sticky;
+    inset-block-start: var(--block-space);
+
+    @media (max-width: 60rem) {
+      position: static;
+    }
+  }
+
+  .content-panel {
+    background: var(--color-canvas);
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: var(--radius);
+    padding: var(--block-space);
+  }
+
+  .content-notice {
+    border-inline-start: 4px solid oklch(var(--lch-yellow-dark));
+    margin-block-end: var(--block-space);
+    padding: var(--block-space-half) var(--block-space);
+    text-align: start;
+  }
+
+  .content-panel__note {
+    background: oklch(var(--lch-yellow-lightest));
+    border-radius: var(--radius);
+    color: oklch(var(--lch-yellow-darker));
+    padding: 0.4em 0.6em;
+  }
+
+  .content-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space-half);
+
+    &[hidden] { display: none; }
+  }
+
+  .content-field__label {
+    display: block;
+  }
+
+  .content-field__check {
+    cursor: pointer;
+  }
+
+  .content-group {
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: var(--radius);
+    margin: 0;
+    padding: var(--block-space-half) var(--block-space);
+
+    > legend { padding-inline: 0.3em; }
+  }
+
+  .content-reference {
+    background: var(--color-ink-lightest);
+    border-radius: var(--radius);
+    padding: 0.35em 0.6em;
+  }
+
+  /* Rows of a list: blocks, repeater items, strings and entries. */
+  .content-blocks__items,
+  .content-repeater__items,
+  .content-list__items,
+  .content-picker__types {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .content-block,
+  .content-item {
+    background: var(--color-canvas);
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: var(--radius);
+  }
+
+  .content-block__details--invalid {
+    border-inline-start: 3px solid var(--color-negative);
+  }
+
+  .content-block__summary,
+  .content-item__summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 0.45em 0.6em;
+
+    &::-webkit-details-marker { display: none; }
+  }
+
+  details[open] > .content-block__summary,
+  details[open] > .content-item__summary {
+    border-block-end: 1px solid var(--color-ink-lighter);
+  }
+
+  .content-block__body,
+  .content-item__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space);
+    padding: var(--block-space);
+  }
+
+  .content-block__errors {
+    padding-inline-start: 1.2em;
+  }
+
+  .content-list__item {
+    padding-block: 0.15em;
+  }
+
+  .content-handle {
+    color: var(--color-ink-light);
+    cursor: grab;
+    padding-inline: 0.2em;
+    user-select: none;
+  }
+
+  .content-row--dragging {
+    opacity: 0.5;
+  }
+
+  /* A row's move, add, duplicate and remove: a small bordered toolbar, its
+     buttons lighting up under the pointer, remove in red (txt-negative) on a
+     red tint. The same look as the form builder's field tools. */
+  .content-row-moves {
+    align-items: center;
+    background-color: var(--color-canvas);
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: var(--radius);
+    display: inline-flex;
+    gap: 1px;
+    padding: 2px;
+
+    .btn {
+      --btn-background: transparent;
+      --btn-size: 1.75rem;
+      --icon-size: 0.95rem;
+
+      border-radius: var(--radius);
+      color: var(--color-ink-dark);
+
+      &:hover,
+      &:focus-visible {
+        --btn-background: var(--color-ink-lightest);
+
+        color: var(--color-ink);
+        filter: none;
+      }
+
+      &.txt-negative:is(:hover, :focus-visible) {
+        --btn-background: color-mix(in oklch, var(--color-negative) 12%, var(--color-canvas));
+
+        color: var(--color-negative);
+      }
+    }
+  }
+
+  .content-row-moves__down .icon {
+    rotate: 180deg;
+  }
+
+  /* A link field shows the control for the kind it's set to. */
+  .content-link__url,
+  .content-link__page,
+  .content-link__entry {
+    display: none;
+    flex: 1 1 16ch;
+  }
+
+  .content-link:has(.content-link__kind option[value="url"]:checked) .content-link__url,
+  .content-link:has(.content-link__kind option[value="page"]:checked) .content-link__page,
+  .content-link:has(.content-link__kind option[value="entry"]:checked) .content-link__entry {
+    display: block;
+  }
+
+  .content-asset__preview {
+    align-items: center;
+    background: var(--color-ink-lightest);
+    border-radius: var(--radius);
+    display: flex;
+    flex: none;
+    block-size: 4.5rem;
+    inline-size: 4.5rem;
+    justify-content: center;
+    overflow: hidden;
+
+    &:not(:has(*)) { display: none; }
+
+    img {
+      block-size: 100%;
+      inline-size: 100%;
+      object-fit: cover;
+    }
+  }
+
+  .content-rich-text lexxy-editor {
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: var(--radius);
+    display: block;
+    min-block-size: 8rem;
+  }
+
+  /* The "Add block" and asset pickers. */
+  .content-picker {
+    inline-size: min(48rem, calc(100vw - 2rem));
+    max-block-size: min(80dvh, 48rem);
+    overflow-y: auto;
+
+    /* A flex column only while open, so its gap spaces the header, the filter
+       and the groups; a `flex` class would also show the dialog when closed. */
+    &[open] {
+      display: flex;
+    }
+  }
+
+  .content-picker__types {
+    display: grid;
+    gap: var(--block-space-half);
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+
+    > [hidden] { display: none; }
+  }
+
+  .content-picker__type {
+    block-size: 100%;
+    inline-size: 100%;
+    justify-content: flex-start;
+    white-space: normal;
+  }
+
+  .asset-picker__grid {
+    display: grid;
+    gap: var(--block-space-half);
+    grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .asset-picker__asset {
+    background: none;
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3em;
+    inline-size: 100%;
+    padding: 0.35em;
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--color-link);
+    }
+  }
+
+  .asset-picker__thumb {
+    align-items: center;
+    aspect-ratio: 1;
+    background: var(--color-ink-lightest);
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
+
+    img {
+      block-size: 100%;
+      inline-size: 100%;
+      object-fit: cover;
+    }
+  }
+}
+
+@layer utilities {
+  .min-width-0 { min-inline-size: 0; }
+}
+
+/* A reference or link field's searchable picker (picker_controller). */
+@layer components {
+  .picker {
+    position: relative;
+  }
+
+  .picker__results {
+    background: var(--color-canvas);
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    inset: calc(100% + 2px) 0 auto 0;
+    max-block-size: 18rem;
+    overflow-y: auto;
+    position: absolute;
+    z-index: 10;
+
+    &[hidden] { display: none; }
+  }
+
+  .picker__list {
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem 0;
+  }
+
+  .picker__choice {
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    font: inherit;
+    gap: 0.6em;
+    inline-size: 100%;
+    justify-content: space-between;
+    padding: 0.4em 0.75em;
+    text-align: start;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--color-selected);
+      outline: none;
+    }
+  }
+
+  .picker__empty {
+    padding: 0.5em 0.75em;
+  }
+}
+
+@layer components {
+  /* A Markdown field: Write (a monospace textarea) and Preview (drawn on the
+     server), as tabs above the field. */
+  .markdown-editor {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .markdown-editor__tabs {
+    display: flex;
+    gap: 0.25em;
+  }
+
+  .markdown-editor__tab {
+    background: none;
+    border: 1px solid transparent;
+    border-block-end: 0;
+    border-start-end-radius: var(--radius);
+    border-start-start-radius: var(--radius);
+    color: var(--color-ink-dark);
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--text-small);
+    padding: 0.35em 0.9em;
+
+    &[aria-selected="true"] {
+      background-color: var(--color-canvas);
+      border-color: var(--color-ink-lighter);
+      color: var(--color-ink);
+      font-weight: 600;
+    }
+  }
+
+  .markdown-editor__input {
+    border-start-start-radius: 0;
+    font-family: var(--font-mono);
+    line-height: 1.5;
+    min-block-size: 12em;
+  }
+
+  .markdown-editor__preview {
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: 0 var(--radius) var(--radius);
+    min-block-size: 12em;
+    padding: var(--block-space-half) var(--block-space);
+
+    &[hidden] { display: none; }
+  }
+}
+
+@layer components {
+  /* The picker's deprecated types, collapsed under the groups. */
+  .content-picker__deprecated {
+    > summary {
+      cursor: pointer;
+    }
+
+    &[open] {
+      display: grid;
+      gap: var(--block-space-half);
+    }
+  }
+}

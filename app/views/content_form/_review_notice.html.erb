@@ -1,0 +1,16 @@
+<%# locals: (record:, prefix:) %>
+<%# Where a live record's edits go when you can't publish it (ContentEditing),
+    and the revision a save just filed or found waiting. %>
+<% revision_id = flash[:review_revision_id] %>
+<% pending = revision_id ? Revision.find_by(id: revision_id) : Revision.pending.for_revisable(record).first %>
+<% live = record.respond_to?(:status) ? record.status == "published" : true %>
+<% if pending %>
+  <div class="content-notice panel txt-small flex align-center justify-space-between gap">
+    <span>A revision of this <%= record.model_name.human.downcase %> is waiting for review<%= pending.author ? " (from " + pending.author.name.to_s + ")" : "" %>.</span>
+    <%= link_to "Open the revision", revision_path(pending), class: "btn txt-small" %>
+  </div>
+<% elsif live && !can_publish_content?(prefix) %>
+  <div class="content-notice panel txt-small">
+    This <%= record.model_name.human.downcase %> is live and your role can’t publish it, so saving files your changes as a revision for someone to review. The live content stays as it is until then.
+  </div>
+<% end %>

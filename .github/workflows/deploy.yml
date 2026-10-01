@@ -1,0 +1,103 @@
+# Deploys a release to one Kamal site. Started by hand from the Actions tab, or
+# by an owner pressing Update in the site's Settings › Updates (Upgrade::Github),
+# which fills in `upgrade` so the site can find this run again. Sites deployed
+# by Hoster update there instead.
+#
+# Each site is a GitHub environment named for its destination (the <site> in
+# config/deploy.<site>.yml), holding what the repository doesn't carry:
+#   DEPLOY_DESTINATION_YML   the contents of config/deploy.<site>.yml
+#   SSH_PRIVATE_KEY          a key the server accepts for Kamal's ssh user
+#   and each secret the destination's env.secret names: SECRET_KEY_BASE,
+#   AR_ENCRYPTION_*; SMTP_PASSWORD, CMS_GITHUB_TOKEN,
+#   KAMAL_REGISTRY_PASSWORD and CMS_PLUGINS if it uses them.
+name: Deploy
+run-name: Deploy ${{ inputs.version }} to ${{ inputs.destination }}${{ inputs.upgrade && format(' ({0})', inputs.upgrade) || '' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release tag, like v1.1.0
+        required: true
+      destination:
+        description: The site's Kamal destination (config/deploy.<site>.yml)
+        required: true
+      upgrade:
+        description: Set by the site that asked (its host and update number)
+        required: false
+        default: ""
+
+concurrency:
+  group: deploy-${{ inputs.destination }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.destination }}
+    timeout-minutes: 30
+    env:
+      VERSION_TAG: ${{ inputs.version }}
+      DESTINATION: ${{ inputs.destination }}
+    steps:
+      - name: Check the inputs
+        run: |
+          [[ "$VERSION_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::version must look like v1.1.0"; exit 1; }
+          [[ "$DESTINATION" =~ ^[a-z0-9_-]+$ ]] || { echo "::error::destination must be a site name, like acme"; exit 1; }
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy config
+        env:
+          DEPLOY_DESTINATION_YML: ${{ secrets.DEPLOY_DESTINATION_YML }}
+        run: |
+          [ -n "$DEPLOY_DESTINATION_YML" ] || { echo "::error::Set DEPLOY_DESTINATION_YML (config/deploy.$DESTINATION.yml) in the $DESTINATION environment's secrets"; exit 1; }
+          printf '%s\n' "$DEPLOY_DESTINATION_YML" > "config/deploy.$DESTINATION.yml"
+
+      # .kamal/secrets.<site> normally reads the deploying machine's files and
+      # tools; here every secret comes from the environment instead. Only the
+      # ones set are written, so Kamal names any the destination needs and lacks.
+      - name: Secrets for Kamal
+        env:
+          SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
+          AR_ENCRYPTION_PRIMARY_KEY: ${{ secrets.AR_ENCRYPTION_PRIMARY_KEY }}
+          AR_ENCRYPTION_DETERMINISTIC_KEY: ${{ secrets.AR_ENCRYPTION_DETERMINISTIC_KEY }}
+          AR_ENCRYPTION_KEY_DERIVATION_SALT: ${{ secrets.AR_ENCRYPTION_KEY_DERIVATION_SALT }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          CMS_GITHUB_TOKEN: ${{ secrets.CMS_GITHUB_TOKEN }}
+          KAMAL_REGISTRY_PASSWORD: ${{ secrets.KAMAL_REGISTRY_PASSWORD }}
+          CMS_PLUGINS: ${{ secrets.CMS_PLUGINS }}
+        run: |
+          : > ".kamal/secrets.$DESTINATION"
+          for name in SECRET_KEY_BASE AR_ENCRYPTION_PRIMARY_KEY AR_ENCRYPTION_DETERMINISTIC_KEY AR_ENCRYPTION_KEY_DERIVATION_SALT \
+                      SMTP_PASSWORD CMS_GITHUB_TOKEN KAMAL_REGISTRY_PASSWORD CMS_PLUGINS; do
+            [ -n "${!name}" ] && echo "$name=\$$name" >> ".kamal/secrets.$DESTINATION"
+          done
+          true
+
+      - name: Deploy
+        env:
+          SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
+          AR_ENCRYPTION_PRIMARY_KEY: ${{ secrets.AR_ENCRYPTION_PRIMARY_KEY }}
+          AR_ENCRYPTION_DETERMINISTIC_KEY: ${{ secrets.AR_ENCRYPTION_DETERMINISTIC_KEY }}
+          AR_ENCRYPTION_KEY_DERIVATION_SALT: ${{ secrets.AR_ENCRYPTION_KEY_DERIVATION_SALT }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          CMS_GITHUB_TOKEN: ${{ secrets.CMS_GITHUB_TOKEN }}
+          KAMAL_REGISTRY_PASSWORD: ${{ secrets.KAMAL_REGISTRY_PASSWORD }}
+          CMS_PLUGINS: ${{ secrets.CMS_PLUGINS }}
+        run: bin/kamal deploy -d "$DESTINATION"

@@ -1,0 +1,79 @@
+<%# locals: (collection:, entry:, invalid_json: nil) %>
+<%# An entry's editor, laid out like WordPress's: its name, its fields,
+    blocks (when the collection has them), body and SEO in the main column;
+    the Publish box, Entry Attributes (slug and permalink, locale, the
+    collection's sidebar fields) and taxonomy down the side. %>
+<% sidebar_fields = collection.fields.select { it["sidebar"] } %>
+<% main_fields = collection.fields.reject { it["sidebar"] } %>
+<% fm_scope = content_scope("entry")["frontmatter"] %>
+<% trash = entry.persisted? && Current.user.can?("entries:delete") %>
+<%= form_with model: entry, url: (entry.persisted? ? collection_entry_path(collection.slug, entry.slug) : collection_entries_path(collection.slug)),
+      scope: :entry, id: "entry_form", class: "content-form", data: { controller: "form", action: "keydown.esc->form#cancel" } do |form| %>
+  <div class="content-form__main flex flex-column gap">
+    <div class="editor-title">
+      <label class="for-screen-reader" for="entry_title">Name</label>
+      <%= form.text_field :title, required: true, class: "input editor-title__input", placeholder: "Add title", autofocus: entry.new_record? %>
+    </div>
+
+    <% if main_fields.any? %>
+      <%= postbox "entry-fields", "Fields" do %>
+        <%= render "content_form/fields", fields: main_fields, values: entry.frontmatter, scope: fm_scope, depth: 1 %>
+      <% end %>
+    <% end %>
+
+    <% if collection.enable_blocks? %>
+      <section class="editor-box">
+        <h2 class="editor-box__header">Blocks</h2>
+        <div class="editor-box__body">
+          <%= render "content_form/blocks", blocks: entry.blocks, scope: content_scope("entry")["blocks"], depth: 1, record: entry %>
+        </div>
+        <p class="editor-box__status"><%= editor_status_line(entry) %></p>
+      </section>
+    <% end %>
+
+    <section class="editor-box">
+      <h2 class="editor-box__header">Body</h2>
+      <div class="editor-box__body">
+        <%= render "content_form/fields/rich_text", field: { "name" => "body_markdown", "label" => "Body" }, value: entry.body_markdown,
+              scope: content_scope("entry")["body_markdown"], markdown: true %>
+      </div>
+      <% unless collection.enable_blocks? %>
+        <p class="editor-box__status"><%= editor_status_line(entry) %></p>
+      <% end %>
+    </section>
+
+    <%= render "content_form/seo", record: entry, scope: "entry", invalid_json: invalid_json %>
+  </div>
+
+  <aside class="content-form__aside flex flex-column gap">
+    <%= render "content_form/publish_box", record: entry, form: form, scope: "entry", prefix: "entries", statuses: CollectionEntry::STATUSES.sort,
+          trash_name: "this entry", trash_path: (collection_entry_path(collection.slug, entry.slug) if trash), trash_form: ("entry_trash_form" if trash) %>
+
+    <%= postbox "entry-attributes", "Entry Attributes" do %>
+      <%= render "content_form/permalink", record: entry, form: form, hint: "Made from the name when blank." %>
+      <label class="content-field flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Locale</span>
+        <%= form.text_field :locale, required: true, class: "input", placeholder: "en", autocomplete: "off" %>
+      </label>
+      <% if sidebar_fields.any? %>
+        <%= render "content_form/fields", fields: sidebar_fields, values: entry.frontmatter, scope: fm_scope, depth: 1 %>
+      <% end %>
+      <% if entry.persisted? %>
+        <%= render "content_form/reference", reference: collection.slug + "/" + entry.slug %>
+      <% end %>
+    <% end %>
+
+    <% if entry.category_pool || entry.tag_pool %>
+      <%= postbox "entry-taxonomy", "Categories & Tags" do %>
+        <%= render "content_form/taxonomy", record: entry, scope: "entry" %>
+      <% end %>
+    <% end %>
+  </aside>
+
+  <%= link_to "Cancel and go back", collection_entries_path(collection.slug), data: { form_target: "cancel" }, hidden: true %>
+<% end %>
+<% if trash %>
+  <%= render "layouts/shared/delete_form", id: "entry_trash_form", path: collection_entry_path(collection.slug, entry.slug) %>
+<% end %>
+<%= render "content_form/asset_picker" %>
+<%= render "content_form/postbox_state" %>

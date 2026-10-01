@@ -1,0 +1,57 @@
+<% @page_title = "Roles" %>
+
+<% content_for :page_actions do %>
+  <% if Current.user.can?("roles:write") %>
+    <%= render "layouts/shared/new_link", text: "New role", path: new_role_path %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title, description: "Named sets of capabilities. A user holds one role and can do exactly what it grants." %>
+
+<% can_delete = Current.user.can?("roles:delete") %>
+<% if can_delete %>
+  <%= render "layouts/shared/bulk_deletion", id: "roles_bulk_deletion", path: roles_bulk_deletions_path, noun: "role",
+        message: "Users holding them are left with no role. System roles are never included." %>
+<% end %>
+
+<section class="panel shadow center index-table" data-controller="select-all">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <% if can_delete %>
+          <th class="data-table__check"><input type="checkbox" aria-label="Select every row" data-select-all-target="all" data-action="select-all#toggle"></th>
+        <% end %>
+        <th>Name</th>
+        <th>Description</th>
+        <th class="data-table__number">Capabilities</th>
+        <th class="data-table__number">Users</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @roles.each do |role| %>
+        <%# herb:key role.id %>
+        <tr id="<%= dom_id(role) %>" data-filter-target="item">
+          <% if can_delete %>
+            <td>
+              <% unless role.system? %>
+                <input type="checkbox" data-select-all-target="box" data-action="select-all#sync" name="ids[]" value="<%= role.id %>" form="roles_bulk_deletion" aria-label="Select <%= role.name %>">
+              <% end %>
+            </td>
+          <% end %>
+          <td>
+            <%= link_to role.name, edit_role_path(role), class: "txt-ink font-weight-bold" %>
+            <% if role.system? %>
+              <%= status_tag "System" %>
+            <% end %>
+  <%= render "layouts/shared/row_links", name: role.name,
+                edit_path: edit_role_path(role),
+                delete_path: (role_path(role) if can_delete && !role.system?),
+                delete_message: "Users holding it are left with no role." %>
+          </td>
+          <td class="txt-subtle"><%= role.description %></td>
+          <td class="data-table__number"><%= role.admin? ? "All" : role.permissions.size %></td>
+          <td class="data-table__number"><%= role.users.size %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>

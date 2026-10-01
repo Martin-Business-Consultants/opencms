@@ -1,0 +1,55 @@
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f5;padding:24px 0;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e7e5e4;border-radius:8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1c1917;">
+        <tr>
+          <td style="padding:24px 32px 8px;">
+            <p style="margin:0 0 4px;font-size:12px;color:#78716c;text-transform:uppercase;letter-spacing:0.05em;">Quote request #<%= @quote.id %></p>
+            <h1 style="margin:0;font-size:20px;"><%= @quote.customer_name %><%= " · #{@quote.company}" if @quote.company.present? %></h1>
+            <p style="margin:8px 0 0;font-size:14px;">
+              <% if @quote.customer_email.present? %><a href="mailto:<%= @quote.customer_email %>" style="color:#1c1917;"><%= @quote.customer_email %></a><% end %>
+              <% if @quote.customer_phone.present? %> · <a href="tel:<%= @quote.customer_phone %>" style="color:#1c1917;"><%= @quote.customer_phone %></a><% end %>
+            </p>
+          </td>
+        </tr>
+        <% if @quote.items.any? %>
+        <tr>
+          <td style="padding:16px 32px 0;">
+            <table role="presentation" width="100%" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+              <tr style="background:#fafaf9;">
+                <th align="left" style="border:1px solid #e7e5e4;">Item</th>
+                <th align="right" style="border:1px solid #e7e5e4;">Qty</th>
+                <th align="right" style="border:1px solid #e7e5e4;">Listed</th>
+              </tr>
+              <% @quote.items.each do |item| %>
+                <tr>
+                  <td style="border:1px solid #e7e5e4;">
+                    <% if item["url"].present? %><a href="<%= item["url"] %>" style="color:#1c1917;font-weight:600;"><%= item["title"] %></a><% else %><strong><%= item["title"] %></strong><% end %>
+                    <% if item["sku"].present? %><br><span style="color:#78716c;font-size:12px;">SKU <%= item["sku"] %></span><% end %>
+                  </td>
+                  <td align="right" style="border:1px solid #e7e5e4;"><%= item["quantity"] %></td>
+                  <td align="right" style="border:1px solid #e7e5e4;"><%= item["unit_price"].presence || "—" %></td>
+                </tr>
+              <% end %>
+            </table>
+          </td>
+        </tr>
+        <% end %>
+        <% if @quote.message.present? %>
+        <tr>
+          <td style="padding:16px 32px 0;font-size:15px;line-height:1.55;">
+            <p style="margin:0 0 4px;font-size:12px;color:#78716c;text-transform:uppercase;letter-spacing:0.05em;">Message</p>
+            <%= simple_format(@quote.message) %>
+          </td>
+        </tr>
+        <% end %>
+        <tr>
+          <td style="padding:24px 32px;border-top:1px solid #e7e5e4;margin-top:16px;font-size:12px;color:#a8a29e;">
+            Sent <%= @quote.created_at.to_fs(:long) %><%= " from #{@quote.page_url}" if @quote.page_url.present? %><%= " · #{@quote.ip}" if @quote.ip.present? %>.
+            Reply to this email to answer the customer directly.
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

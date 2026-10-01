@@ -1,0 +1,67 @@
+<% @page_title = "How the business is doing" %>
+<%= parent_page "Marketer’s report", marketing_path %>
+<% overview = @overview %>
+<% business = overview.business %>
+<% scorecard = overview.scorecard %>
+
+<%# The owner's version: what's working, what we're doing, what only they can
+    do. No costs, no agents, no report ids. %>
+<div class="reports-page flex flex-column gap txt-align-start">
+  <%= render "layouts/shared/page_header", title: (business[:name].presence || @page_title),
+        description: "Where things stand, " + l(Date.current, format: :long) + "." %>
+
+  <% narrative = overview.narrative %>
+  <% if narrative %>
+    <section class="panel shadow flex flex-column gap-half">
+      <% if narrative["headline"].present? %>
+        <p class="font-weight-bold margin-none"><%= narrative["headline"] %></p>
+      <% end %>
+      <p class="margin-none"><%= narrative["summary"] %></p>
+    </section>
+  <% end %>
+
+  <section class="panel shadow flex flex-column gap-half">
+    <h2 class="txt-medium font-weight-bold margin-none">Where things stand</h2>
+    <ul class="margin-none">
+      <% scorecard[:pillars].each do |pillar| %>
+        <%# herb:key pillar[:key] %>
+        <li>
+          <strong><%= pillar[:label] %>:</strong>
+          <% if pillar[:score] %>
+            <%= pillar[:score] %> out of 100<% if pillar[:trend] %>, <%= pillar[:trend] %> since last time<% end %>.
+          <% else %>
+            not measured yet.
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+
+  <section class="panel shadow flex flex-column gap-half">
+    <h2 class="txt-medium font-weight-bold margin-none">What we’re doing</h2>
+    <% if overview.doing.any? %>
+      <ul class="margin-none">
+        <% overview.doing.each do |item| %>
+          <%# herb:key item[:key] %>
+          <li><%= item[:title] %></li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="margin-none">Nothing in progress right now.</p>
+    <% end %>
+  </section>
+
+  <section class="panel shadow flex flex-column gap-half">
+    <h2 class="txt-medium font-weight-bold margin-none">What we need from you</h2>
+    <% if overview.owner_actions.any? %>
+      <ul class="margin-none">
+        <% overview.owner_actions.each do |item| %>
+          <%# herb:key item[:key] %>
+          <li><strong><%= item[:title] %></strong><% if item[:body].present? %> — <%= item[:body] %><% end %></li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="margin-none">Nothing — thank you.</p>
+    <% end %>
+  </section>
+</div>

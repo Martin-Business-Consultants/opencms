@@ -1,0 +1,418 @@
+@layer components {
+  /* The form builder (forms/edit), after Gravity Forms: a canvas of field
+     previews, and a wider side panel to add fields and edit the picked one. */
+  .form-builder {
+    grid-template-columns: minmax(0, 1fr) min(24rem, 100%);
+
+    @media (max-width: 60rem) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .form-canvas {
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space-half);
+    list-style: none;
+    margin: 0;
+    min-block-size: 4rem;
+    padding: 0;
+  }
+
+  /* A field as the site shows it; picked, it's outlined and its settings are
+     in the panel. */
+  .form-card {
+    border: 1px dashed transparent;
+    border-radius: var(--radius);
+    cursor: pointer;
+    padding: var(--block-space-half) var(--inline-space);
+    position: relative;
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--color-ink-lighter);
+      outline: none;
+    }
+  }
+
+  .form-card--picked,
+  .form-card--picked:hover {
+    background-color: color-mix(in oklch, var(--color-link) 6%, var(--color-canvas));
+    border: 1px solid var(--color-link);
+  }
+
+  .form-card--dragging {
+    opacity: 0.4;
+  }
+
+  .form-card--placeholder {
+    block-size: 3.5rem;
+    border: 2px dashed var(--color-link);
+    cursor: default;
+  }
+
+  /* The preview draws inputs, but they're for looking at: a click picks the card. */
+  .form-card__preview {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4em;
+    pointer-events: none;
+
+    .input:disabled {
+      background-color: var(--color-canvas);
+      opacity: 1;
+    }
+  }
+
+  .form-card__label {
+    font-size: var(--text-small);
+    font-weight: 600;
+  }
+
+  .form-card__required {
+    color: var(--color-negative);
+  }
+
+  .form-card__help {
+    color: var(--color-ink-dark);
+    font-size: var(--text-x-small);
+  }
+
+  .form-card__choices {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3em;
+  }
+
+  .form-card__choice {
+    align-items: center;
+    display: flex;
+    font-size: var(--text-small);
+    gap: 0.5em;
+  }
+
+  .form-card__file {
+    border: 1px dashed var(--color-ink-medium);
+    border-radius: var(--radius);
+    color: var(--color-ink-dark);
+    font-size: var(--text-small);
+    padding: 0.9em;
+    text-align: center;
+  }
+
+  /* A field's move, duplicate and delete: a small toolbar at its top-right,
+     set apart from the preview by its border and shadow; each button lights
+     up under the pointer. */
+  .form-card__tools {
+    align-items: center;
+    background-color: var(--color-canvas);
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    display: none;
+    gap: 1px;
+    inset: 0.4em 0.4em auto auto;
+    padding: 2px;
+    position: absolute;
+    z-index: 1;
+
+    .form-card:is(:hover, :focus-within, .form-card--picked) > & {
+      display: flex;
+    }
+
+    .btn {
+      --btn-background: transparent;
+      --btn-size: 1.75rem;
+      --icon-size: 0.95rem;
+
+      border-radius: var(--radius);
+      color: var(--color-ink-dark);
+
+      &:hover,
+      &:focus-visible {
+        --btn-background: var(--color-ink-lightest);
+
+        color: var(--color-ink);
+        filter: none;
+      }
+
+      /* Delete: red (txt-negative), on a red tint under the pointer. */
+      &.txt-negative {
+        &:hover,
+        &:focus-visible {
+          --btn-background: color-mix(in oklch, var(--color-negative) 12%, var(--color-canvas));
+
+          color: var(--color-negative);
+        }
+      }
+    }
+  }
+
+  .form-card__down .icon {
+    transform: rotate(180deg);
+  }
+
+  .form-canvas__submit {
+    border-block-start: 1px solid var(--color-ink-lighter);
+    padding-block-start: var(--block-space-half);
+    pointer-events: none;
+  }
+
+  /* The side panel: its two tabs, the palette, and the picked field's settings. */
+  .form-panel {
+    --panel-padding: 0;
+
+    display: flex;
+    flex-direction: column;
+    max-block-size: calc(100dvh - var(--admin-bar-height, 0px) - var(--block-space) * 2);
+    overflow-y: auto;
+  }
+
+  .form-panel__tabs {
+    border-block-end: 1px solid var(--color-ink-lighter);
+    display: flex;
+    inset-block-start: 0;
+    position: sticky;
+    z-index: 1;
+    background-color: var(--color-canvas);
+  }
+
+  .form-panel__tab {
+    background: none;
+    border: 0;
+    border-block-end: 2px solid transparent;
+    color: var(--color-ink-dark);
+    cursor: pointer;
+    flex: 1;
+    font: inherit;
+    font-size: var(--text-small);
+    font-weight: 600;
+    padding: 0.8em 0.5em;
+  }
+
+  .form-panel__pane {
+    display: none;
+    flex-direction: column;
+    gap: var(--block-space);
+    padding: var(--block-space);
+  }
+
+  .form-panel[data-mode="add"] :is(.form-panel__tab[data-mode="add"]),
+  .form-panel[data-mode="settings"] :is(.form-panel__tab[data-mode="settings"]) {
+    border-block-end-color: var(--color-link);
+    color: var(--color-ink);
+  }
+
+  .form-panel[data-mode="add"] > [data-pane="add"],
+  .form-panel[data-mode="settings"] > [data-pane="settings"] {
+    display: flex;
+  }
+
+  .form-palette {
+    display: grid;
+    gap: var(--inline-space-half);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-palette__item {
+    cursor: grab;
+    justify-content: start;
+  }
+
+  .form-panel__subtabs {
+    display: flex;
+    gap: 0.25em;
+  }
+
+  .form-panel__subtab {
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    color: var(--color-ink-dark);
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--text-small);
+    padding: 0.3em 0.8em;
+  }
+
+  .form-panel[data-tab="general"] .form-panel__subtab[data-tab="general"],
+  .form-panel[data-tab="appearance"] .form-panel__subtab[data-tab="appearance"],
+  .form-panel[data-tab="advanced"] .form-panel__subtab[data-tab="advanced"] {
+    border-color: var(--color-ink-lighter);
+    color: var(--color-ink);
+  }
+
+  .form-settings {
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space);
+  }
+
+  .form-settings__tab,
+  .form-settings__group {
+    display: none;
+    flex-direction: column;
+    gap: var(--block-space);
+  }
+
+  .form-settings__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--inline-space-half);
+  }
+
+  .form-settings__check {
+    align-items: center;
+    display: flex;
+    gap: var(--inline-space-half);
+  }
+
+  .form-panel[data-tab="general"] .form-settings__tab[data-tab="general"],
+  .form-panel[data-tab="appearance"] .form-settings__tab[data-tab="appearance"],
+  .form-panel[data-tab="advanced"] .form-settings__tab[data-tab="advanced"] {
+    display: flex;
+  }
+
+  /* A setting only some types have shows for those types (the type select
+     lives under Advanced). */
+  .form-settings [data-for] {
+    display: none;
+  }
+
+  .form-settings:has([data-role="type"] :is(option[value="select"], option[value="radio"]):checked) [data-for="choices"],
+  .form-settings:has([data-role="type"] option[value="file"]:checked) [data-for="file"],
+  .form-settings:has([data-role="type"] :is(option[value="text"], option[value="email"], option[value="tel"], option[value="url"], option[value="textarea"]):checked) [data-for="text"],
+  .form-settings:not(:has([data-role="type"] :is(option[value="text"], option[value="email"], option[value="tel"], option[value="url"], option[value="textarea"]):checked)) [data-for="no-text"] {
+    display: flex;
+  }
+
+  /* The forms list's Active switch column, as narrow as the switch. */
+  .form-list__active {
+    inline-size: 1%;
+    white-space: nowrap;
+  }
+
+  /* The form's webhook: its line in Delivery, and its sheet's key mapping. */
+  .webhook-summary {
+    align-items: center;
+    display: flex;
+    gap: var(--inline-space);
+    justify-content: space-between;
+  }
+
+  .webhook-sheet__mode {
+    border: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--inline-space-half);
+    margin: 0;
+    padding: 0;
+  }
+
+  .webhook-sheet__choice {
+    align-items: start;
+    display: flex;
+    gap: 0.5em;
+
+    > span {
+      display: flex;
+      flex-direction: column;
+    }
+  }
+
+  .webhook-map {
+    display: flex;
+    flex-direction: column;
+    gap: var(--inline-space-half);
+
+    .webhook-sheet:has(input[value="all"]:checked) & {
+      display: none;
+    }
+  }
+
+  .webhook-map__head,
+  .webhook-map__row {
+    align-items: center;
+    display: grid;
+    gap: var(--inline-space-half);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+
+  .webhook-map__head {
+    color: var(--color-ink-dark);
+
+    > :last-child {
+      grid-column: span 2;
+    }
+  }
+
+  .webhook-map__rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--inline-space-half);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* The custom value's box, only for a key set to one. */
+  .webhook-map__row:not(:has(option[value="custom"]:checked)) .webhook-map__custom {
+    visibility: hidden;
+  }
+
+  @media (max-width: 40rem) {
+    .webhook-map__head {
+      display: none;
+    }
+
+    .webhook-map__row {
+      grid-template-columns: minmax(0, 1fr) auto;
+
+      > :not(label, button) {
+        grid-column: 1;
+      }
+
+      > button {
+        grid-column: 2;
+        grid-row: 1;
+      }
+    }
+
+    .webhook-map__row:not(:has(option[value="custom"]:checked)) .webhook-map__custom {
+      display: none;
+    }
+  }
+
+  /* The email editor's preview sheet: the email in a frame filling it. */
+  .form-email-preview__frame {
+    background: #f7f7f5;
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: var(--radius);
+    flex: 1;
+    inline-size: 100%;
+    min-block-size: 60dvh;
+  }
+
+  .form-email-tokens code {
+    white-space: nowrap;
+  }
+
+  .form-emails {
+    display: grid;
+    gap: var(--inline-space);
+    grid-template-columns: repeat(auto-fit, minmax(28ch, 1fr));
+  }
+
+  .submission-data {
+    display: grid;
+    gap: var(--block-space-half) var(--inline-space);
+    grid-template-columns: minmax(12ch, max-content) 1fr;
+    margin: 0;
+  }
+
+  .submission-data dd {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}

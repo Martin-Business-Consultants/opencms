@@ -1,0 +1,60 @@
+<% @page_title = "Invoices" %>
+
+<% content_for :page_actions do %>
+  <% if Current.user.can?("invoices:write") %>
+    <%= render "layouts/shared/new_link", text: "New invoice", path: new_invoice_path %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title, description: "What the shop has billed, newest first." %>
+
+<%= render "layouts/shared/status_links", param: :status, current: @status.to_s, options: commerce_status_links(Invoice::STATUSES, @counts) %>
+
+<div class="tablenav">
+  <div class="tablenav__search">
+    <%= render "layouts/shared/list_search", placeholder: "Search invoices…" %>
+  </div>
+</div>
+
+<% if @invoices.any? %>
+  <section class="panel shadow center index-table">
+    <table class="data-table" data-controller="pagination" data-pagination-paginate-on-intersection-value="true" data-pagination-discard-frame-value="true">
+      <thead>
+        <tr>
+          <th>Number</th>
+          <th>Customer</th>
+          <th>Status</th>
+          <th class="data-table__number">Total</th>
+          <th>Due</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody id="<%= pagination_frame_id_for(:invoice_rows, @page.number) %>">
+        <% @invoices.each do |invoice| %>
+          <%# herb:key invoice.id %>
+          <tr id="<%= dom_id(invoice) %>" data-filter-target="item">
+            <td><%= link_to invoice.number, invoice_path(invoice), class: "txt-ink font-weight-bold font-mono" %></td>
+            <td>
+              <%= invoice.customer_name %>
+              <div class="txt-x-small txt-subtle"><%= [invoice.company, invoice.customer_email].compact_blank.join(" · ") %></div>
+            </td>
+            <td><%= status_tag invoice.status %></td>
+            <td class="data-table__number"><%= invoice.formatted(invoice.total_cents) %></td>
+            <td class="txt-subtle txt-small"><%= invoice.due_on ? l(invoice.due_on) : "—" %></td>
+            <td class="txt-subtle txt-small"><%= time_ago_tag invoice.created_at %></td>
+          </tr>
+        <% end %>
+        <%= table_next_page_row :invoice_rows, @page, columns: 6 %>
+      </tbody>
+    </table>
+  </section>
+<% else %>
+  <div class="panel panel--centered center flex flex-column gap-half">
+    <% if @status %>
+      <p class="txt-medium margin-none">No <%= @status %> invoices.</p>
+      <%= link_to "Show all", invoices_path, class: "txt-link" %>
+    <% else %>
+      <p class="txt-medium margin-none">No invoices yet.</p>
+      <p class="txt-small txt-subtle margin-none">Draft one from a quote request, or start a blank one.</p>
+    <% end %>
+  </div>
+<% end %>

@@ -1,0 +1,69 @@
+<% content_for :title, "Invoice #{@invoice.number} — #{@business}" %>
+<main class="sheet">
+  <header>
+    <div>
+      <% if @logo_url.present? %><img src="<%= @logo_url %>" alt="<%= @business %>" style="max-height:48px;max-width:180px;display:block;margin-bottom:12px;"><% end %>
+      <p class="eyebrow"><%= @business %></p>
+      <h1>Invoice <%= @invoice.number %></h1>
+      <p class="muted" style="margin:6px 0 0;">
+        <% if @invoice.issued_on %>Issued <%= @invoice.issued_on.to_fs(:long) %><% end %>
+        <% if @invoice.due_on %> · Due <%= @invoice.due_on.to_fs(:long) %><% end %>
+      </p>
+    </div>
+    <span class="status status-<%= @invoice.status %>"><%= @invoice.paid? ? "Paid" : @invoice.void? ? "Void" : "Due" %></span>
+  </header>
+
+  <div class="grid">
+    <div>
+      <p class="eyebrow">Billed to</p>
+      <strong><%= @invoice.customer_name %></strong><br>
+      <% if @invoice.company.present? %><%= @invoice.company %><br><% end %>
+      <% if @invoice.billing_address.present? %><span style="white-space:pre-line;"><%= @invoice.billing_address %></span><br><% end %>
+      <% if @invoice.customer_email.present? %><span class="muted"><%= @invoice.customer_email %></span><br><% end %>
+      <% if @invoice.customer_phone.present? %><span class="muted"><%= @invoice.customer_phone %></span><% end %>
+    </div>
+    <div>
+      <p class="eyebrow">From</p>
+      <strong><%= @business %></strong><br>
+      <% if @settings["business_address"].present? %><span class="muted" style="white-space:pre-line;"><%= @settings["business_address"] %></span><br><% end %>
+      <% if @settings["reply_to"].present? %><span class="muted"><%= @settings["reply_to"] %></span><br><% end %>
+      <% if @settings["business_phone"].present? %><span class="muted"><%= @settings["business_phone"] %></span><% end %>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Description</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Amount</th></tr>
+    </thead>
+    <tbody>
+      <% @invoice.line_items.each do |line| %>
+        <tr>
+          <td><%= line["description"] %><% if line["sku"].present? %><br><span class="muted" style="font-size:12px;">SKU <%= line["sku"] %></span><% end %></td>
+          <td class="num"><%= line["quantity"] %></td>
+          <td class="num"><%= @invoice.formatted(line["unit_price_cents"]) %></td>
+          <td class="num"><%= @invoice.formatted(line["quantity"].to_i * line["unit_price_cents"].to_i) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+    <tfoot>
+      <tr><td colspan="3" class="num muted">Subtotal</td><td class="num"><%= @invoice.formatted(@invoice.subtotal_cents) %></td></tr>
+      <% if @invoice.tax_cents.positive? %><tr><td colspan="3" class="num muted">Tax</td><td class="num"><%= @invoice.formatted(@invoice.tax_cents) %></td></tr><% end %>
+      <% if @invoice.shipping_cents.positive? %><tr><td colspan="3" class="num muted">Shipping</td><td class="num"><%= @invoice.formatted(@invoice.shipping_cents) %></td></tr><% end %>
+      <tr class="total"><td colspan="3" class="num">Total <span class="muted" style="font-size:12px;font-weight:400;"><%= @invoice.currency %></span></td><td class="num"><%= @invoice.formatted(@invoice.total_cents) %></td></tr>
+    </tfoot>
+  </table>
+
+  <% if @invoice.payment_link.present? && !@invoice.paid? && !@invoice.void? %>
+    <a class="pay" href="<%= @invoice.payment_link %>" rel="noopener">Pay <%= @invoice.formatted(@invoice.total_cents) %></a>
+  <% elsif @invoice.paid? %>
+    <p style="margin-top:24px;font-weight:600;color:#166534;">Paid<%= @invoice.paid_at ? " on #{@invoice.paid_at.to_date.to_fs(:long)}" : "" %>. Thank you.</p>
+  <% end %>
+
+  <% if @invoice.notes.present? %><div class="notes"><%= @invoice.notes %></div><% end %>
+  <% if @invoice.terms.present? %><p class="notes muted" style="font-size:12px;"><%= @invoice.terms %></p><% end %>
+
+  <footer>
+    <span class="no-print"><a href="javascript:print()" style="color:#78716c;">Print or save as PDF</a> · </span>
+    Invoice <%= @invoice.number %> · <%= @business %>
+  </footer>
+</main>

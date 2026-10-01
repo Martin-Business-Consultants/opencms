@@ -1,0 +1,60 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Brings a plain install up to date (docs/install.md): backs up the data
+# directory, optionally checks out a release, then bundles, migrates,
+# compiles assets and asks Puma to restart. Safe to run again; stops at the
+# first step that fails.
+#
+#   bin/update                          # apply the code that is checked out (after your own git pull)
+#   bin/update v1.2.0                   # fetch and check out that release first
+#   bin/update --env-file PATH [vX.Y.Z]
+require "fileutils"
+require "optparse"
+
+APP_ROOT = File.expand_path("..", __dir__)
+env_file = File.join(APP_ROOT, ".env")
+OptionParser.new do |parser|
+  parser.banner = "Usage: bin/update [--env-file PATH] [vX.Y.Z]"
+  parser.on("--env-file PATH", "The install's settings (default: .env in the app)") { env_file = File.expand_path(it) }
+end.parse!
+release = ARGV.first
+
+def system!(*args) = system(*args, exception: true)
+def step(title) = puts("\n== #{title} ==")
+
+FileUtils.chdir APP_ROOT do
+  abort "No #{env_file}. Run bin/install first." unless File.exist?(env_file)
+  File.readlines(env_file).each do |line|
+    next if line.strip.empty? || line.start_with?("#")
+    key, value = line.strip.split("=", 2)
+    ENV[key] = value
+  end
+
+  from = File.read("VERSION").strip
+
+  step "Backing up the data directory"
+  system! "bin/rails", "cms:backup"
+
+  if release
+    step "Checking out #{release}"
+    system! "git", "fetch", "--tags", "--quiet"
+    system! "git", "checkout", "--quiet", release
+  end
+
+  step "Installing gems"
+  system! "bundle", "install"
+
+  step "Migrating the database"
+  system! "bin/rails", "db:migrate"
+
+  step "Compiling assets"
+  system! "bin/rails", "assets:precompile"
+
+  step "Restarting"
+  FileUtils.mkdir_p File.join(APP_ROOT, "tmp")
+  FileUtils.touch File.join(APP_ROOT, "tmp/restart.txt")
+  puts "Asked Puma to restart (tmp/restart.txt). Under systemd: sudo systemctl restart cms"
+  to = File.read("VERSION").strip
+  puts from == to ? "Still CMS #{to}" : "CMS #{from} → #{to}"
+end

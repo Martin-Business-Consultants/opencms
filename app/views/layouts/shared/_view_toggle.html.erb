@@ -1,0 +1,16 @@
+<%# locals: (current:, extra: nil) %>
+<%# How an index shows its records, as a small icon toggle beside its New button. Each
+    choice keeps the page's other filters. %>
+<% views = [ [ "cards", "Cards", "grid" ], [ "table", "Table", "column-left" ] ] + Array(extra) %>
+<% following = views[(views.index { |key, _label, _icon| key == current } || -1) + 1]&.first || views.first.first %>
+<nav class="view-toggle" aria-label="View">
+  <% views.each do |key, label, icon| %>
+    <%# herb:key key %>
+    <% keys = [ ("v" if key == following), ("g b" if key == "board") ].compact.join(", ") %>
+    <%= link_to url_for(request.query_parameters.merge("view" => key)), class: class_names("view-toggle__option", "view-toggle__option--current": key == current),
+          title: label, aria: { current: ("page" if key == current) }, data: { keys: keys.presence } do %>
+      <%= icon_tag icon %>
+      <span class="for-screen-reader"><%= label %></span>
+    <% end %>
+  <% end %>
+</nav>

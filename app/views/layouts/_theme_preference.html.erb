@@ -1,0 +1,11 @@
+<%# locals: () %>
+<%# Applies the saved light/dark choice before first paint
+    (localStorage "appearance": light, dark or system). %>
+<%= javascript_tag nonce: true do %>
+  {
+    const stored = localStorage.getItem("appearance")
+    if (stored === "light" || stored === "dark") {
+      document.documentElement.dataset.theme = stored
+    }
+  }
+<% end %>

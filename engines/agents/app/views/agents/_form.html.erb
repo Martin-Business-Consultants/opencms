@@ -1,0 +1,94 @@
+<%# locals: (agent:) %>
+<%= render "layouts/shared/errors", record: agent %>
+
+<% trash = agent.persisted? && Current.user.can?("agents:delete") %>
+<%# An agent's editor, laid out like the content editors: its name and
+    instructions, what it may do and where, in the main column; enabling,
+    cadence and model in the sidebar's first box. %>
+<%= form_with model: agent, id: "agent_form", class: "content-form", data: { controller: "form", action: "keydown.esc->form#cancel" } do |form| %>
+  <%= form.hidden_field :icon %>
+
+  <div class="content-form__main flex flex-column gap">
+  <div class="editor-title">
+    <label class="for-screen-reader" for="agent_name">Name</label>
+    <%= form.text_field :name, required: true, class: "input editor-title__input", autofocus: agent.new_record?, autocomplete: "off", placeholder: "Metadata Optimizer" %>
+    <label class="for-screen-reader" for="agent_description">Description</label>
+    <%= form.text_field :description, class: "input full-width", autocomplete: "off", placeholder: "What this agent is for, in one line." %>
+  </div>
+
+  <section class="editor-box">
+    <h2 class="editor-box__header">Instructions</h2>
+    <div class="editor-box__body">
+      <%= form.text_area :instructions, rows: 14, required: true, class: "input full-width txt-small", aria: { label: "Instructions" } %>
+    </div>
+    <p class="editor-box__status">What it does, how it decides, and what it hands to a person. The run brief adds the scope, the capabilities and the house rules.</p>
+  </section>
+
+  <%= postbox "agent-capabilities", "What it may do" do %>
+  <fieldset class="flex flex-column gap-half txt-align-start role-permissions">
+    <legend class="for-screen-reader">What it may do</legend>
+    <p class="txt-x-small txt-subtle margin-none">Each is a set of cms commands. Writes to published content still go to review unless the reviewing role can publish.</p>
+    <%= hidden_field_tag "agent[capability_keys][]", "", id: nil %>
+    <%# A switched-off plugin's capabilities aren't offered, but a saved one stays saved. %>
+    <% (Agents::CapabilityCatalog.valid_keys(agent.capability_keys) - Agents::CapabilityCatalog.all.keys).each do |key| %>
+      <%# herb:key key %>
+      <%= hidden_field_tag "agent[capability_keys][]", key, id: nil %>
+    <% end %>
+    <div class="role-permissions__groups">
+      <% Agents::CapabilityCatalog.groups.each do |group, entries| %>
+        <%# herb:key group %>
+        <fieldset class="panel role-permissions__group">
+          <legend class="txt-small font-weight-bold"><%= group %></legend>
+          <% entries.each do |key, entry| %>
+            <%# herb:key key %>
+            <label class="flex align-start gap-half txt-small" title="<%= Array(entry[:commands]).join("\n") %>">
+              <%= check_box_tag "agent[capability_keys][]", key, Array(agent.capability_keys).include?(key), id: "agent_capability_" + key %>
+              <span>
+                <%= entry[:label] %>
+                <span class="txt-x-small txt-subtle font-mono"><%= entry[:capability] %></span>
+              </span>
+            </label>
+          <% end %>
+        </fieldset>
+      <% end %>
+    </div>
+  </fieldset>
+  <% end %>
+
+  <%= postbox "agent-scope", "Scope" do %>
+    <%= render "agents/scopes", form: "agent", record: agent %>
+  <% end %>
+  </div>
+
+  <aside class="content-form__aside flex flex-column gap">
+    <% schedule = capture do %>
+      <div class="flex flex-column gap">
+        <label class="flex align-center gap-half txt-align-start">
+          <%= form.check_box :enabled %>
+          <span class="txt-small font-weight-bold">Enabled</span>
+          <span class="txt-x-small txt-subtle">On the schedule. Run now works either way.</span>
+        </label>
+        <label class="flex flex-column gap-half txt-align-start">
+          <span class="txt-small font-weight-bold">Cadence</span>
+          <%= form.text_field :cron, class: "input full-width font-mono", autocomplete: "off", placeholder: "0 9 * * 1" %>
+          <span class="txt-x-small txt-subtle">A cron line (Monday 09:00 above). Blank runs only when someone presses Run.</span>
+        </label>
+        <label class="flex flex-column gap-half txt-align-start">
+          <span class="txt-small font-weight-bold">Model</span>
+          <%= form.select :preferred_model, model_preference_options, {}, class: "input input--select full-width" %>
+          <span class="txt-x-small txt-subtle">A tier says what the work needs; a model id pins one.</span>
+        </label>
+      </div>
+    <% end %>
+    <% facts = agent.from_library? ? [ [ "stack", "Template", agent.template_key.to_s + " v" + agent.template_version.to_i.to_s + (agent.upgradable? ? " (v" + agent.latest_template_version.to_s + " available)" : "") ] ] : [] %>
+    <%= render "layouts/shared/save_box", key: "agent-save", title: "Agent", lines: facts, extra: schedule,
+          button: (agent.new_record? ? "Add agent" : "Update"),
+          trash_name: agent.name.to_s, trash_path: (agent_path(agent) if trash), trash_form: ("agent_trash_form" if trash) %>
+  </aside>
+
+  <%= link_to "Cancel and go back", agents_path, data: { form_target: "cancel" }, hidden: true %>
+<% end %>
+<% if trash %>
+  <%= render "layouts/shared/delete_form", id: "agent_trash_form", path: agent_path(agent) %>
+<% end %>
+<%= render "content_form/postbox_state" %>

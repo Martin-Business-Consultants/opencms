@@ -1,0 +1,29 @@
+<%# locals: (blocks:, scope:, depth:, allowed_types: nil, record: nil, new_block_url: nil) %>
+<%# A list of blocks. Rows are keyed opaquely and carry the block they were
+    rendered from; a new one comes from the server (content_blocks#new, or
+    new_block_url for a list of other block types — with_content_block_types)
+    with its type's defaults. `record` is the page or entry whose top-level
+    list this is, for its validation messages. %>
+<div class="content-blocks flex flex-column gap-half" data-controller="sortable-list"
+     data-sortable-list-url-value="<%= new_block_url || new_content_block_path %>"
+     data-sortable-list-scope-value="<%= scope.name %>"
+     data-sortable-list-depth-value="<%= depth %>">
+  <%= hidden_field_tag scope[ContentForm::LIST_MARKER].name, "1", id: nil %>
+  <ol class="content-blocks__items flex flex-column gap-half" data-sortable-list-target="list">
+    <% Array(blocks).each_with_index do |block, index| %>
+      <%# herb:key index %>
+      <%= render "content_form/block", block: block, scope: scope[content_row_key], depth: depth,
+            errors: (record ? content_block_errors(record, index) : []) %>
+    <% end %>
+  </ol>
+  <% if Array(blocks).empty? %>
+    <p class="content-blocks__empty txt-small txt-subtle margin-none">No blocks yet.</p>
+  <% end %>
+  <div>
+    <button type="button" class="btn txt-small" data-action="sortable-list#openPicker">
+      <%= icon_tag "add" %>
+      <span>Add block</span>
+    </button>
+  </div>
+  <%= render "content_form/block_picker", allowed_types: allowed_types %>
+</div>

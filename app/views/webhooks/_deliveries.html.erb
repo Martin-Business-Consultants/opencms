@@ -1,0 +1,31 @@
+<%# locals: (deliveries:) %>
+<section class="flex flex-column gap-half txt-align-start margin-block-start">
+  <h2 class="txt-medium font-weight-bold margin-none">Recent deliveries</h2>
+  <% if deliveries.any? %>
+    <table class="data-table txt-small">
+      <thead>
+        <tr><th>When</th><th>Event</th><th>Result</th><th class="data-table__number">Time</th><th>Error</th></tr>
+      </thead>
+      <tbody>
+        <% deliveries.each do |delivery| %>
+          <%# herb:key delivery.id %>
+          <tr id="<%= dom_id(delivery) %>">
+            <td class="txt-subtle txt-nowrap"><%= time_ago_tag delivery.created_at %></td>
+            <td class="font-mono txt-x-small"><%= delivery.event %></td>
+            <td>
+              <% if delivery.success %>
+                <%= status_tag((delivery.response_status || "OK").to_s, highlight: true) %>
+              <% else %>
+                <span class="txt-negative font-weight-bold"><%= delivery.response_status || "Failed" %></span>
+              <% end %>
+            </td>
+            <td class="data-table__number txt-subtle"><%= "#{delivery.duration_ms} ms" if delivery.duration_ms %></td>
+            <td class="txt-subtle txt-x-small"><%= delivery.error %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <p class="txt-small txt-subtle margin-none">Nothing delivered yet.</p>
+  <% end %>
+</section>

@@ -1,0 +1,13 @@
+<%# locals: (field:, value:, scope:) %>
+<%# Markdown, stored as typed. Write is a plain monospace textarea; Preview
+    draws it on the server (markdown_editor_controller). A value an earlier
+    rich-text editor saved as HTML shows as it is, and is kept unless edited. %>
+<%= render "content_form/label", field: field, for_id: scope.dom_id %>
+<div class="markdown-editor" data-controller="markdown-editor" data-markdown-editor-url-value="<%= markdown_preview_path %>">
+  <div class="markdown-editor__tabs" role="tablist">
+    <button type="button" class="markdown-editor__tab" role="tab" aria-selected="true" data-markdown-editor-target="writeTab" data-action="markdown-editor#write">Write</button>
+    <button type="button" class="markdown-editor__tab" role="tab" aria-selected="false" data-markdown-editor-target="previewTab" data-action="markdown-editor#preview">Preview</button>
+  </div>
+  <%= text_area_tag scope.name, value, id: scope.dom_id, rows: 10, class: "input full-width markdown-editor__input", spellcheck: true, data: { markdown_editor_target: "input" } %>
+  <div class="markdown-editor__preview" data-markdown-editor-target="output" hidden></div>
+</div>

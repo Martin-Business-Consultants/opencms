@@ -1,0 +1,27 @@
+<% @page_title = "Sessions" %>
+
+<section class="panel shadow settings-page txt-align-start">
+  <section class="settings__section flex flex-column gap">
+    <header><h1 class="divider txt-large">Sessions</h1></header>
+    <p class="txt-small txt-subtle margin-none">Everywhere you’re signed in. Signing a session out ends it on that device.</p>
+
+    <ul class="flex flex-column gap-half margin-none settings-sessions">
+      <% @sessions.each do |session| %>
+        <%# herb:key session.id %>
+        <li id="<%= dom_id(session) %>" class="flex align-center justify-space-between gap">
+          <div class="flex flex-column txt-small min-width">
+            <span class="font-weight-bold overflow-ellipsis"><%= session.user_agent.presence || "Unknown device" %></span>
+            <span class="txt-subtle">
+              <%= session.ip_address.presence || "Unknown address" %> · signed in <%= time_ago_tag session.created_at %>
+            </span>
+          </div>
+          <% if session == Current.session %>
+            <%= status_tag "This device" %>
+          <% else %>
+            <%= button_to "Sign out", session_path(session), method: :delete, class: "btn txt-small" %>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+</section>

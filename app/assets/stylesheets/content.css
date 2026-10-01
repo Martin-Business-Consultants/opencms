@@ -1,0 +1,151 @@
+@layer components {
+  /* Content › Pages: a page sits under its parent, indented by depth. */
+  .page-tree__title {
+    display: inline-block;
+  }
+
+  .page-tree__title[data-depth="1"] { padding-inline-start: 1.25em; }
+  .page-tree__title[data-depth="2"] { padding-inline-start: 2.5em; }
+  .page-tree__title[data-depth="3"] { padding-inline-start: 3.75em; }
+  .page-tree__title[data-depth="4"] { padding-inline-start: 5em; }
+  .page-tree__title[data-depth="5"] { padding-inline-start: 6.25em; }
+  .page-tree__title[data-depth="6"] { padding-inline-start: 7.5em; }
+
+  .page-tree__title:not([data-depth="0"])::before {
+    color: var(--color-ink-light);
+    content: "↳ ";
+  }
+
+  .new-page-dialog__templates {
+    border: 0;
+    margin: 0;
+    max-block-size: 40dvh;
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  .new-page-dialog__template,
+  .new-collection__template {
+    align-items: start;
+    display: flex;
+    gap: 0.5em;
+
+    > span {
+      display: flex;
+      flex-direction: column;
+    }
+  }
+
+  /* A table's inline yes/no switch (entries' boolean fields). */
+  .flag-toggle {
+    --btn-size: auto;
+
+    font-size: var(--text-x-small);
+    min-inline-size: 5ch;
+  }
+
+  .flag-toggle[aria-pressed="true"] {
+    --btn-background: var(--color-selected);
+  }
+
+  /* Collections › schema: the editor beside its settings. */
+  .schema-layout {
+    align-items: start;
+    display: grid;
+    gap: var(--block-space) var(--inline-space);
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+  }
+
+  @media (max-width: 900px) {
+    .schema-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .schema-layout__aside {
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space);
+    text-align: start;
+  }
+}
+
+@layer components {
+  /* The Build board: two equal columns of cards. */
+  .build-board {
+    display: grid;
+    gap: var(--inline-space);
+    grid-template-columns: 1fr 1fr;
+  }
+
+  @media (max-width: 720px) {
+    .build-board {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .build-column {
+    background: var(--color-canvas);
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space-half);
+    min-block-size: 16rem;
+    padding: var(--block-space-half) var(--inline-space-half);
+    text-align: start;
+  }
+
+  .build-column--on {
+    background: var(--color-selected-light, var(--color-canvas));
+  }
+
+  .build-column__empty {
+    border: 1px dashed var(--color-ink-lighter);
+    border-radius: var(--radius);
+    padding: var(--block-space);
+    text-align: center;
+  }
+
+  .build-card {
+    background: var(--color-canvas);
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow, none);
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space-half);
+    padding: var(--block-space-half) var(--inline-space-half);
+  }
+
+  .build-card[draggable="true"] {
+    cursor: grab;
+  }
+
+  .build-card__fields {
+    padding-inline-start: 1.5em;
+  }
+
+  .build-card__field {
+    align-items: center;
+    display: flex;
+    gap: 0.5em;
+    justify-content: space-between;
+  }
+}
+
+@layer components {
+  .block-type-identity {
+    display: grid;
+    gap: var(--inline-space-half) var(--inline-space);
+    grid-template-columns: repeat(auto-fit, minmax(16ch, 1fr));
+  }
+}
+
+@layer components {
+  .schema-layout__aside fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+}

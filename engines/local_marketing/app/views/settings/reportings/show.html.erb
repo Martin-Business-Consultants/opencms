@@ -1,0 +1,137 @@
+<% @page_title = "Reporting" %>
+<% profile = @profile %>
+
+<%= render "layouts/shared/page_header", title: "Reporting" %>
+<% content_for :settings_aside do %>
+  <%= render "settings/save_box", form: "settings_form" %>
+<% end %>
+
+
+<section class="panel shadow settings-page txt-align-start">
+
+  <%= form_with url: settings_reporting_path, id: "settings_form", method: :patch, scope: :settings, class: "flex flex-column gap-double" do |form| %>
+    <section class="settings__section flex flex-column gap">
+      <header><h2 class="divider">DataForSEO</h2></header>
+      <p class="txt-small txt-subtle margin-none">The data behind every report. DataForSEO bills per call against your own account balance, so nothing here runs on a schedule until you turn it on.</p>
+      <div class="settings-fields">
+        <%= settings_field "API login" do %>
+          <%= form.text_field :dataforseo_login, autocomplete: "off", placeholder: (@login_hint ? "Saved — leave blank to keep" : "you@example.com"), class: "input full-width", data: { "1p-ignore": true } %>
+        <% end %>
+        <%= settings_field "API password", hint: "From the API access page of your DataForSEO account — not your dashboard password." do %>
+          <%= form.password_field :dataforseo_password, autocomplete: "new-password", placeholder: (@password_set ? "Saved — leave blank to keep" : "••••••••"), class: "input full-width", data: { "1p-ignore": true } %>
+        <% end %>
+      </div>
+      <%= settings_switch form, :sandbox, "Sandbox mode", checked: @sandbox,
+            hint: "Routes calls to DataForSEO’s sandbox. Free, and the data is fake — for checking the wiring, not the business." %>
+    </section>
+
+    <section class="settings__section flex flex-column gap">
+      <header><h2 class="divider">The business</h2></header>
+      <p class="txt-small txt-subtle margin-none">What the reports are about. Every field here is used by at least one report, and a report whose fields are blank can’t run.</p>
+      <div class="settings-fields">
+        <%= settings_field "Business name", hint: "Exactly as it appears on Google." do %>
+          <%= form.text_field :business_name, value: profile.business_name, placeholder: "Acme Self Storage", class: "input full-width" %>
+        <% end %>
+        <%= settings_field "Domain", hint: "No https:// or www. Defaults to the site URL in General." do %>
+          <%= form.text_field :domain, value: profile.domain, placeholder: "acmestorage.co.uk", class: "input full-width" %>
+        <% end %>
+        <%= settings_field "Location", hint: "Where the business trades, as City,Region,Country. Used by the map-pack and listing reports." do %>
+          <%= form.text_field :location_name, value: profile.location_name, placeholder: "Cardiff,Wales,United Kingdom", class: "input full-width" %>
+        <% end %>
+        <%= settings_field "Location code" do %>
+          <%= form.number_field :location_code, value: profile.location_code, placeholder: "2840", class: "input full-width" %>
+        <% end %>
+        <%= settings_field "Language" do %>
+          <%= form.text_field :language_code, value: profile.language_code, placeholder: "en", class: "input full-width" %>
+        <% end %>
+        <%= settings_field "Country", hint: "Taken from the last part of the location above unless you set it here. The AI reports use this: DataForSEO measures AI assistants per country, never per city." do %>
+          <%= form.text_field :country_name, value: profile.country_name, placeholder: "United Kingdom", class: "input full-width" %>
+        <% end %>
+        <%= settings_field "Google place ID", hint: "Optional, but it pins the business profile report to the right listing instead of searching by name." do %>
+          <%= form.text_field :place_id, value: profile.place_id, placeholder: "ChIJ…", class: "input full-width font-mono" %>
+        <% end %>
+        <%= settings_field "Google CID", hint: "Optional. Used to recognise the business in map-pack results." do %>
+          <%= form.text_field :cid, value: profile.cid, placeholder: "1234567890", class: "input full-width font-mono" %>
+        <% end %>
+      </div>
+      <%= settings_field "Brand terms", hint: "One per line. What an AI assistant would call this business. Defaults to the business name." do %>
+        <%= form.text_area :brand_terms, value: profile.brand_terms.join("\n"), rows: 3, placeholder: "Acme Self Storage\nAcme Storage Cardiff", class: "input full-width" %>
+      <% end %>
+      <%= settings_field "Tracked keywords", hint: "One per line — the queries customers actually type. Local rankings checks the first 25 and costs roughly $0.002 each." do %>
+        <%= form.text_area :tracked_keywords, value: profile.tracked_keywords.join("\n"), rows: 5, placeholder: "storage units cardiff\nself storage near me\ncaravan storage cardiff", class: "input full-width" %>
+      <% end %>
+      <%= settings_field "Pages to audit", hint: "Full URLs, up to 20. Defaults to the home page." do %>
+        <%= form.text_area :audit_urls, value: profile.audit_urls.join("\n"), rows: 3, placeholder: "https://acmestorage.co.uk/\nhttps://acmestorage.co.uk/prices", class: "input full-width font-mono" %>
+      <% end %>
+    </section>
+
+    <section class="settings__section flex flex-column gap">
+      <header><h2 class="divider">Rank map</h2></header>
+      <p class="txt-small txt-subtle margin-none">A grid of Maps searches around the business. Every cell is one paid call per keyword — a 5×5 grid with 3 keywords is 75 searches, about 15¢.</p>
+      <div class="settings-fields">
+        <%= settings_field "Grid" do %>
+          <%= form.select :map_grid_size, [["3 × 3 (9 cells)", 3], ["5 × 5 (25 cells)", 5], ["7 × 7 (49 cells)", 7]], { selected: profile.map_grid_size }, class: "input input--select full-width" %>
+        <% end %>
+        <%= settings_field "Spacing (km)" do %>
+          <%= form.number_field :map_spacing_km, value: profile.map_spacing_km, step: 0.1, min: 0.1, class: "input full-width" %>
+        <% end %>
+      </div>
+      <%= settings_field "Map keywords", hint: "One per line. Defaults to the first three tracked keywords." do %>
+        <%= form.text_area :map_keywords, value: profile.map_keywords.join("\n"), rows: 3, class: "input full-width" %>
+      <% end %>
+    </section>
+
+    <section class="settings__section flex flex-column gap">
+      <header><h2 class="divider">Citations</h2></header>
+      <p class="txt-small txt-subtle margin-none">The name, phone and address every directory listing is checked against. Leave blank to use what Google holds (the latest Business profile run) — the version the others are compared to anyway.</p>
+      <div class="settings-fields">
+        <%= settings_field "Phone" do %>
+          <%= form.telephone_field :phone, value: profile.phone, placeholder: "(555) 123-4567", class: "input full-width" %>
+        <% end %>
+        <%= settings_field "Address" do %>
+          <%= form.text_field :address, value: profile.address, placeholder: "120 Main St, Austin, TX 78701", class: "input full-width" %>
+        <% end %>
+      </div>
+      <%= settings_field "Directories", hint: "Bare domains, one per line. Defaults to the ten that matter for a US business; add the verticals for your trade. Each is one search plus one page read per run." do %>
+        <%= form.text_area :citation_directories, value: profile.citation_directories.join("\n"), rows: 4, class: "input full-width font-mono" %>
+      <% end %>
+    </section>
+
+    <section class="settings__section flex flex-column gap">
+      <header><h2 class="divider">Competitors</h2></header>
+      <%= settings_field "Competitors", hint: "Domains, one per line. Used to label rivals you already know about in the reports." do %>
+        <%= form.text_area :competitors, value: profile.competitors.join("\n"), rows: 3, class: "input full-width font-mono" %>
+      <% end %>
+    </section>
+
+  <% end %>
+
+  <% if Current.user.can?("settings:write") %>
+    <div>
+      <% if @configured %>
+        <%= button_to "Test connection", settings_reporting_test_path, class: "btn txt-small" %>
+      <% else %>
+        <p class="txt-x-small txt-subtle margin-none">Save a login and password to test the connection.</p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <section class="settings__section flex flex-column gap-half">
+    <header><h2 class="divider">What this unlocks</h2></header>
+    <p class="txt-small txt-subtle margin-none">Each report needs a different part of the form above.</p>
+    <ul class="settings-sessions flex flex-column gap-half margin-none txt-small">
+      <% Reports::Catalog.all.each do |definition| %>
+        <%# herb:key definition.key %>
+        <% missing = profile.missing(definition.requires).map(&:to_s) %>
+        <li class="flex align-center justify-space-between gap">
+          <span><%= definition.title %> <span class="txt-subtle">· <%= definition.group %></span></span>
+          <% if missing.empty? %>
+            <%= status_tag "Ready" %>
+          <% else %>
+            <span class="txt-x-small txt-subtle">Needs <%= missing.map(&:humanize).to_sentence.downcase %></span>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+</section>

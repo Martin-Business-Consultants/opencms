@@ -1,0 +1,39 @@
+<%# locals: (global:, open: false) %>
+<%# The New global sheet: a name, a slug, and optionally a description and
+    an icon; its fields come after, on the schema. It opens by itself at
+    /globals/new (the menus link there) and when a submit came back with
+    errors. %>
+<div class="display-contents" data-controller="dialog" data-dialog-modal-value="true" data-dialog-auto-open-value="<%= open %>" data-action="keydown.esc->dialog#close:stop">
+  <button type="button" class="btn btn--labelled btn--circle-mobile" data-keys="n" data-action="dialog#open">
+    <%= icon_tag "add" %>
+    <span class="overflow-ellipsis">New global</span>
+    <kbd class="hide-on-touch">N</kbd>
+  </button>
+  <dialog class="dialog dialog--sheet panel fill-white shadow gap flex-column txt-align-start" data-dialog-target="dialog" aria-label="New global" closedby="any">
+    <h2 class="txt-large font-weight-bold margin-none">New global</h2>
+    <%= render "layouts/shared/errors", record: global %>
+    <%= form_with model: global, url: globals_path, class: "flex flex-column gap txt-medium" do |form| %>
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Name</span>
+        <%= form.text_field :name, class: "input full-width", placeholder: "General", autocomplete: "off" %>
+      </label>
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Slug</span>
+        <%= form.text_field :slug, class: "input full-width font-mono", placeholder: "general", autocomplete: "off", spellcheck: false %>
+        <span class="txt-x-small txt-subtle">How the site and the API name it. It can’t change later.</span>
+      </label>
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Description <span class="font-weight-normal txt-subtle">(optional)</span></span>
+        <%= form.text_area :description, rows: 2, class: "input full-width" %>
+      </label>
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Icon <span class="font-weight-normal txt-subtle">(optional)</span></span>
+        <%= form.text_field :icon, class: "input full-width", placeholder: "Globe", autocomplete: "off" %>
+      </label>
+      <div class="dialog__actions flex gap-half justify-end">
+        <button type="button" class="btn" data-action="dialog#close">Cancel</button>
+        <%= form.button "Create global", class: "btn btn--link" %>
+      </div>
+    <% end %>
+  </dialog>
+</div>

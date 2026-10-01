@@ -1,0 +1,63 @@
+@layer components {
+  /* The roster's "is it working" panel: coloured by its worst item. */
+  .agents-state {
+    border-inline-start: 4px solid var(--color-ink-light);
+  }
+
+  .agents-state--danger { border-inline-start-color: var(--color-negative); }
+  .agents-state--warning { border-inline-start-color: oklch(var(--lch-yellow-dark)); }
+  .agents-state--success { border-inline-start-color: oklch(var(--lch-green-dark)); }
+
+  .agents-state__count + .agents-state__count::before {
+    content: " · ";
+  }
+
+  /* A run's facts, label beside value. */
+  .run-facts {
+    display: grid;
+    gap: var(--block-space-half) var(--inline-space);
+    grid-template-columns: max-content 1fr;
+    margin: 0;
+
+    dd { margin: 0; }
+    dt { color: var(--color-ink-dark); }
+  }
+
+  .run-transcript {
+    list-style: none;
+    padding: 0;
+  }
+
+  .run-transcript__step {
+    border-inline-start: 2px solid var(--color-ink-lighter);
+    padding-inline-start: var(--inline-space);
+  }
+
+  .run-transcript__text {
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  .swarm-seat {
+    display: block;
+  }
+
+  .swarm-seat-fields .input {
+    min-inline-size: 6ch;
+  }
+
+  .agents-ticker {
+    white-space: nowrap;
+  }
+}
+
+@layer components {
+  /* A run, a swarm, and the agent and swarm forms: wider than a centred
+     panel, because they carry tables and the capability groups. */
+  .panel.agents-page {
+    --panel-size: 100%;
+
+    margin-inline: auto;
+    max-inline-size: 110ch;
+  }
+}

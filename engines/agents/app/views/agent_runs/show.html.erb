@@ -1,0 +1,90 @@
+<% @page_title = "Run #" + @run.id.to_s %>
+<%= parent_page "Runs", agent_runs_path %>
+
+<%= render "layouts/shared/page_header", title: @page_title + " · " + @run.agent_name.to_s %>
+
+<%# A run in flight refreshes itself until it finishes; nothing streams. %>
+<%= tag.div class: "panel shadow agents-page flex flex-column gap txt-align-start",
+      data: ({ controller: "refresh", refresh_interval_value: 5 } if @run.active?) do %>
+  <div class="flex align-center justify-space-between gap">
+    <% if @run.active? && !@run.stopping? && Current.user.can?("agents:run") %>
+      <%= button_to "Cancel", agent_run_cancellation_path(@run), class: "btn txt-small txt-negative" %>
+    <% end %>
+  </div>
+
+  <dl class="run-facts txt-small">
+    <dt>Status</dt><dd><%= run_status_tag @run %></dd>
+    <dt>Trigger</dt><dd><%= @run.trigger %><%= " by " + @run.triggered_by.email if @run.triggered_by %></dd>
+    <% if @run.swarm %>
+      <dt>Swarm</dt><dd><%= link_to @run.swarm.name, swarm_path(@run.swarm), class: "txt-link" %><%= " · " + @run.swarm_member.display_name if @run.swarm_member %></dd>
+    <% end %>
+    <dt>Queued</dt><dd><%= time_ago_tag @run.created_at %></dd>
+    <dt>Worker</dt><dd><%= @run.claimed_by || "—" %><%= " · attempt " + @run.attempts.to_s if @run.attempts.to_i > 1 %></dd>
+    <dt>Took</dt><dd><%= run_duration(@run.duration_seconds) %></dd>
+    <dt>Tokens</dt><dd><%= number_with_delimiter(@run.input_tokens.to_i) %> in · <%= number_with_delimiter(@run.output_tokens.to_i) %> out · <%= @run.cost %></dd>
+    <% if @run.lease_expires_at && @run.active? %>
+      <dt>Lease</dt><dd>until <%= l(@run.lease_expires_at, format: :long) %></dd>
+    <% end %>
+  </dl>
+
+  <% if @run.summary.present? %>
+    <section class="flex flex-column gap-half">
+      <h2 class="divider txt-medium">Summary</h2>
+      <div class="txt-small"><%= simple_format(@run.summary) %></div>
+    </section>
+  <% end %>
+  <% if @run.error.present? %>
+    <section class="flex flex-column gap-half">
+      <h2 class="divider txt-medium txt-negative">What went wrong</h2>
+      <pre class="run-transcript__text txt-small"><%= @run.error %></pre>
+    </section>
+  <% end %>
+
+  <section class="flex flex-column gap-half">
+    <h2 class="divider txt-medium">What it filed</h2>
+    <% if @recommendations.any? %>
+      <ul class="flex flex-column gap-half margin-none txt-small">
+        <% @recommendations.each do |recommendation| %>
+          <%# herb:key recommendation.id %>
+          <li>
+            <%= link_to recommendation.title, recommendation_path(recommendation), class: "txt-link" %>
+            <span class="txt-subtle">· <%= recommendation.kind_label %><%= " · impact " + recommendation.impact.to_s if recommendation.impact.to_i.positive? %> · <%= recommendation.status %><%= " · " + recommendation.subject_label.to_s if recommendation.subject_label.present? %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="txt-small txt-subtle margin-none">No findings.</p>
+    <% end %>
+    <% if @revisions.any? %>
+      <p class="txt-small margin-none">Changes proposed while it ran (API writes in its window):</p>
+      <ul class="flex flex-column gap-half margin-none txt-small">
+        <% @revisions.each do |revision| %>
+          <%# herb:key revision.id %>
+          <li><%= link_to revision.label, revision_path(revision), class: "txt-link" %> <span class="txt-subtle">· <%= revision.state %> · <%= Array(revision.changed_keys).join(", ") %></span></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+
+  <section class="flex flex-column gap-half">
+    <h2 class="divider txt-medium">Transcript <span class="txt-small txt-subtle font-weight-normal">(<%= pluralize(Array(@run.transcript).size, "step") %>)</span></h2>
+    <% if Array(@run.transcript).any? %>
+      <ol class="run-transcript flex flex-column gap-half margin-none txt-small">
+        <% Array(@run.transcript).each_with_index do |step, index| %>
+          <%# herb:key index %>
+          <li class="run-transcript__step">
+            <span class="txt-x-small txt-subtle font-mono"><%= step.is_a?(Hash) ? [step["at"], step["kind"] || step["type"], step["tool"]].compact.join(" · ") : "" %></span>
+            <div class="run-transcript__text"><%= transcript_line(step) %></div>
+          </li>
+        <% end %>
+      </ol>
+    <% else %>
+      <p class="txt-small txt-subtle margin-none">Nothing reported yet.</p>
+    <% end %>
+  </section>
+
+  <details class="flex flex-column gap-half">
+    <summary class="txt-small font-weight-bold">The brief it was given</summary>
+    <pre class="run-transcript__text txt-x-small"><%= JSON.pretty_generate(@run.brief || {}) %></pre>
+  </details>
+<% end %>

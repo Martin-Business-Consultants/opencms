@@ -1,0 +1,28 @@
+<%# locals: (version:, restore_path:, can_restore:, gated:) %>
+<%# What restoring a version would change, as the review queue's diff shows a
+    revision: the record as it is now, and what the version would bring back. %>
+<% diff = version.changes_from_current %>
+<p class="txt-small margin-none">
+  Saved <%= site_time_tag version.created_at %><% if version.author %> by <strong><%= version.author.name.presence || version.author.email %></strong><% end %>.
+  <% if diff[:fields].empty? %>
+    It matches the content as it is now.
+  <% else %>
+    Below, “before” is the content now and “after” is this version.
+  <% end %>
+</p>
+
+<% diff[:fields].each do |field| %>
+  <%# herb:key field[:key] %>
+  <%= render "revisions/field", field: field %>
+<% end %>
+
+<% if can_restore && diff[:fields].any? %>
+  <%= form_with url: restore_path, class: "flex flex-column gap-half" do %>
+    <% if gated %>
+      <p class="txt-small txt-subtle margin-none">This is live and your role can’t publish it, so restoring files the version as a revision for review.</p>
+    <% end %>
+    <div class="flex justify-end">
+      <button type="submit" class="btn btn--link"><%= gated ? "Submit this version for review" : "Restore this version" %></button>
+    </div>
+  <% end %>
+<% end %>

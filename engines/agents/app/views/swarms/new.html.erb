@@ -1,0 +1,9 @@
+<% @page_title = "New swarm" %>
+<%= parent_page "Swarms", swarms_path %>
+
+<%= render "layouts/shared/page_header", title: @page_title %>
+
+<div class="panel shadow agents-page flex flex-column gap-half txt-align-start">
+  <p class="txt-small txt-subtle margin-none">A team of agents on a rota. It starts off.</p>
+  <%= render "swarms/form", swarm: @swarm %>
+</div>

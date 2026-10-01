@@ -1,0 +1,151 @@
+@layer components {
+  /* A settings screen: the page in two thirds, its sidebar in one
+     (layouts/settings). */
+  .settings-screen {
+    inline-size: 100%;
+  }
+
+  .settings-sections {
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space-half);
+  }
+
+  .settings-sections__list {
+    display: flex;
+    flex-direction: column;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .settings-sections__link {
+    border-radius: var(--radius);
+    color: var(--color-ink);
+    display: block;
+    font-size: var(--text-small);
+    padding: 0.2em 0.5em;
+    text-decoration: none;
+
+    &:hover { background-color: var(--color-ink-lightest); }
+  }
+
+  .settings-sections__link--current {
+    background-color: var(--color-selected);
+    font-weight: 600;
+  }
+
+  /* Cards two to a row (an API token's capabilities). */
+  .settings-cards {
+    display: grid;
+    gap: var(--block-space-half);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+
+    @media (max-width: 40rem) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .settings-cards__card {
+    --panel-padding: var(--block-space-half) var(--inline-space);
+    --panel-size: 100%;
+
+    display: flex;
+    flex-direction: column;
+    gap: 0.3em;
+  }
+
+  /* One settings page's panel. */
+  .settings-page {
+    --panel-padding: var(--block-space-double);
+    --panel-size: 100%;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space-double);
+  }
+
+  .settings-index {
+    display: grid;
+    gap: var(--block-space);
+    grid-template-columns: repeat(auto-fill, minmax(26ch, 1fr));
+    margin: 0;
+  }
+
+  .settings-index__item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2em;
+  }
+
+  /* A secret, code or command shown for copying. */
+  .settings-code {
+    background: var(--color-ink-lightest);
+    border-radius: var(--radius);
+    font-family: var(--font-mono);
+    font-size: var(--text-small);
+    overflow-wrap: anywhere;
+    padding: 0.5em 0.75em;
+    white-space: pre-wrap;
+  }
+
+  .settings-codes {
+    display: grid;
+    gap: var(--block-space-half);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .settings-fields {
+    display: grid;
+    gap: var(--block-space);
+    grid-template-columns: minmax(0, 1fr);
+
+    @media (min-width: 640px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .settings-fields--thirds {
+    @media (min-width: 640px) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+}
+
+@layer components {
+  .settings-sessions {
+    list-style: none;
+    padding: 0;
+
+    > li + li {
+      border-block-start: var(--border);
+      padding-block-start: var(--block-space-half);
+    }
+  }
+}
+
+@layer components {
+  /* A form's fields grouped so a read-only role sees them disabled at once. */
+  .settings-fieldset {
+    border: 0;
+    margin: 0;
+    min-inline-size: 0;
+    padding: 0;
+  }
+}
+
+@layer components {
+  /* A settings page's title sits in its first section's header row, like the
+     section names (Fizzy's rule only covers h2). */
+  .settings__section > header h1.divider {
+    flex: 1;
+    margin: 0;
+    min-inline-size: 0;
+
+    &::before { display: none; }
+  }
+}

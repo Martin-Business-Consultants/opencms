@@ -1,0 +1,32 @@
+<%# locals: () %>
+<head>
+  <meta charset="utf-8">
+  <%= page_title_tag %>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="view-transition" content="same-origin">
+  <meta name="color-scheme" content="light dark">
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+
+  <% turbo_refreshes_with method: :morph, scroll: :preserve %>
+
+  <%= render "layouts/theme_preference" %>
+  <%= render "layouts/menu_preference" %>
+  <%= app_stylesheet_tags %>
+  <%= branding_stylesheet_tags %>
+  <%= javascript_importmap_tags %>
+
+  <%= yield :parent_page %>
+  <%= yield :head %>
+
+  <% branding = current_branding %>
+  <% if branding[:favicon_url].present? %>
+    <link rel="icon" href="<%= branding[:favicon_url] %>" type="<%= branding[:favicon_type] %>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<%= branding[:favicon_url_180].presence || branding[:favicon_url] %>">
+  <% else %>
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+  <% end %>
+</head>

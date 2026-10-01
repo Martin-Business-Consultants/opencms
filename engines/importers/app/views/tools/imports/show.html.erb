@@ -1,0 +1,25 @@
+<% @page_title = "Import" %>
+<%= render "layouts/shared/page_header", title: "Import",
+      description: "Move content into “" + Site.key + "” from another CMS. Imports run in the background." %>
+
+<section class="panel shadow center import-page flex flex-column gap txt-align-start">
+  <% if @adapters.any? %>
+    <nav class="import-tabs flex flex-wrap gap-half" aria-label="Import from">
+      <% @adapters.each do |key, adapter| %>
+        <%# herb:key key %>
+        <%= link_to adapter.label, tools_import_path(tab: key), class: "btn txt-small import-tabs__tab",
+              aria: { current: ("page" if key == @source) } %>
+      <% end %>
+    </nav>
+
+    <% adapter = @adapters[@source] %>
+    <p class="txt-small txt-subtle margin-none"><%= adapter.description %></p>
+    <% if adapter.form_partial %>
+      <%= render partial: adapter.form_partial, locals: { adapter: adapter } %>
+    <% end %>
+  <% else %>
+    <p class="txt-small margin-none">No import sources are switched on.</p>
+  <% end %>
+</section>
+
+<%= render "tools/imports/wipe", counts: @wipe_counts, tab: @source %>

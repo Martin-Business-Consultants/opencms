@@ -1,0 +1,19 @@
+<%# locals: (view: nil, extra_views: nil, new_text: nil, new_path: nil) %>
+<%# An index page's top row: the page's filter pills (content_for
+    :index_filters), and across from them the view toggle and New button. The nav underline says which index this is, so there's no heading. %>
+<% content_for :index_toolbar, "yes" %>
+<div class="index-toolbar flex align-center justify-space-between gap margin-block-end">
+  <div class="index-toolbar__filters flex flex-wrap align-center gap-half">
+    <% if content_for?(:index_filters) %>
+      <div class="filters"><%= content_for(:index_filters) %></div>
+    <% end %>
+  </div>
+  <div class="flex align-center gap flex-item-no-shrink">
+    <% if view %>
+      <%= render "layouts/shared/view_toggle", current: view, extra: extra_views %>
+    <% end %>
+    <% if new_path %>
+      <%= render "layouts/shared/new_link", text: new_text, path: new_path %>
+    <% end %>
+  </div>
+</div>

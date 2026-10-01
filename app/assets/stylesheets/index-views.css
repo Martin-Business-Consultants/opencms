@@ -1,0 +1,111 @@
+/* Indexes show records as Fizzy cards (cards--grid, colored by status from Fizzy's card
+/* palette) or as a table. Fizzy has no table styles, so these follow its list rows:
+/* hairline rules, small uppercase headings, no boxes. */
+@layer components {
+  .card--tone-positive { --card-color: var(--color-card-4); }
+  .card--tone-negative { --card-color: var(--color-card-8); }
+  .card--tone-waiting { --card-color: var(--color-card-3); }
+  .card--tone-progress { --card-color: var(--color-card-default); }
+  .card--tone-neutral { --card-color: var(--color-card-complete); }
+
+  .index-table {
+    --panel-size: 100%;
+
+    overflow-x: auto;
+  }
+
+  .data-table {
+    border-collapse: collapse;
+    font-size: var(--text-small);
+    inline-size: 100%;
+    text-align: start;
+
+    th {
+      border-block-end: 1px solid var(--color-ink-light);
+      color: var(--color-ink-dark);
+      font-size: var(--text-x-small);
+      font-weight: 700;
+      padding: 0.5em 0.75em;
+      text-align: start;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    td {
+      border-block-end: 1px solid var(--color-ink-lighter);
+      padding: 0.6em 0.75em;
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+      border-block-end: 0;
+    }
+
+    tbody tr:hover td {
+      background-color: var(--color-ink-lightest);
+    }
+
+    .data-table__number {
+      font-variant-numeric: tabular-nums;
+      text-align: end;
+      white-space: nowrap;
+    }
+  }
+}
+
+/* Edit and delete sit at the end of each row, quiet until the row is hovered. */
+@layer components {
+  .data-table__actions {
+    inline-size: 1%;
+    white-space: nowrap;
+
+    dialog {
+      white-space: normal;
+    }
+  }
+
+  .row-action {
+    --btn-size: 1.6em;
+
+    opacity: 0.5;
+
+    tr:hover &,
+    &:focus-visible {
+      opacity: 1;
+    }
+  }
+}
+
+/* The Cards / Table (/ Board) toggle: a small pill of icons, the current one filled. */
+@layer components {
+  .view-toggle {
+    border: 1px solid var(--color-ink-light);
+    border-radius: var(--radius);
+    display: inline-flex;
+    gap: 0.15em;
+    padding: 0.2em;
+  }
+
+  .view-toggle__option {
+    --icon-size: 1.1em;
+
+    border-radius: var(--radius);
+    color: var(--color-ink-dark);
+    display: inline-grid;
+    padding: 0.45em 0.7em;
+    place-items: center;
+
+    @media (any-hover: hover) {
+      &:hover { background-color: var(--color-ink-lightest); }
+    }
+  }
+
+  .view-toggle__option--current {
+    background-color: var(--color-ink);
+    color: var(--color-ink-inverted);
+
+    @media (any-hover: hover) {
+      &:hover { background-color: var(--color-ink); }
+    }
+  }
+}

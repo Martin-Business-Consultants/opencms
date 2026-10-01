@@ -1,0 +1,18 @@
+<%# locals: (param:, current:, options:) %>
+<%# A list's status filter as WordPress shows it: "All (12) | Published (8) |
+    Draft (4)". options: [[label, value, count], …], the first usually All
+    with value nil. Each link swaps one query param, so filters are bookmarkable. %>
+<ul class="subsubsub">
+  <% options.each do |label, value, count| %>
+    <%# herb:key label %>
+    <li>
+      <%= link_to url_for(request.query_parameters.except("page").merge(param.to_s => value.presence).compact),
+            aria: { current: ("page" if value.to_s == current.to_s) } do %>
+        <%= label %>
+        <% if count %>
+          <span class="count">(<%= count %>)</span>
+        <% end %>
+      <% end %>
+    </li>
+  <% end %>
+</ul>

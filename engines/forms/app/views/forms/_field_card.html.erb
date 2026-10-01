@@ -1,0 +1,28 @@
+<%# locals: (key:) %>
+<%# A field on the builder's canvas: a preview of it as the site shows it
+    (drawn by the builder from the field's settings), picked to edit and
+    dragged to reorder. Its settings are in the side panel (forms/_field_settings);
+    the hidden _row comes first so the row posts in the canvas's order. %>
+<li class="form-card" tabindex="0" draggable="true" data-key="<%= key %>" data-forms--builder-target="card"
+    data-action="click->forms--builder#pick keydown.enter->forms--builder#pick">
+  <%= hidden_field_tag "form[fields][" + key + "][_row]", "", id: nil %>
+  <div class="form-card__preview" data-role="preview"></div>
+  <div class="form-card__tools">
+    <button type="button" class="btn btn--circle btn--plain" title="Move up" data-action="forms--builder#moveUp">
+      <%= icon_tag "arrow-up" %>
+      <span class="for-screen-reader">Move up</span>
+    </button>
+    <button type="button" class="btn btn--circle btn--plain form-card__down" title="Move down" data-action="forms--builder#moveDown">
+      <%= icon_tag "arrow-up" %>
+      <span class="for-screen-reader">Move down</span>
+    </button>
+    <button type="button" class="btn btn--circle btn--plain" title="Duplicate" data-action="forms--builder#duplicate">
+      <%= icon_tag "copy-paste" %>
+      <span class="for-screen-reader">Duplicate</span>
+    </button>
+    <button type="button" class="btn btn--circle btn--plain txt-negative" title="Delete" data-action="forms--builder#remove">
+      <%= icon_tag "trash" %>
+      <span class="for-screen-reader">Delete</span>
+    </button>
+  </div>
+</li>

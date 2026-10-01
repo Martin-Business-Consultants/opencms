@@ -1,0 +1,12 @@
+<%# locals: () %>
+<%# Puts back the boxes this browser left collapsed before the editor paints,
+    so they don't open and then snap shut (postbox_controller keeps it current). %>
+<%= javascript_tag nonce: true do %>
+  {
+    let closed = []
+    try { closed = JSON.parse(localStorage.getItem("postboxes-closed") || "[]") } catch (error) {}
+    for (const box of document.querySelectorAll("details.postbox")) {
+      if (closed.includes(box.dataset.postbox)) box.open = false
+    }
+  }
+<% end %>

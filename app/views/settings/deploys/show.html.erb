@@ -1,0 +1,72 @@
+<% @page_title = "Deploy" %>
+<% log = Array(@settings["log"]) %>
+<% scheduled = @settings["scheduled_at"].present? && @settings["last_status"] != "scheduled" && Time.zone.parse(@settings["scheduled_at"].to_s).to_i > 90.seconds.ago.to_i %>
+
+<%= render "layouts/shared/page_header", title: "Deploy" %>
+<% content_for :settings_aside do %>
+  <%= render "settings/save_box", form: "settings_form" %>
+<% end %>
+
+
+<section class="panel shadow settings-page txt-align-start">
+  <section class="settings__section flex flex-column gap">
+    <p class="txt-small txt-subtle margin-none">When content is published or updated, the CMS asks the site to rebuild. Edits are debounced for 60s so a burst of changes produces one deploy.</p>
+
+    <%= form_with url: settings_deploy_path, id: "settings_form", method: :patch, scope: :settings, class: "flex flex-column gap" do |form| %>
+      <%= tag.fieldset class: "settings-fieldset flex flex-column gap", disabled: !Current.user.can?("settings:write") do %>
+        <%= settings_field "Provider", hint: "GitHub sends a repository_dispatch (type “cms-publish”) to the repository in Settings › GitHub, using its token; the site’s workflow builds on it. A build hook is a URL the CMS POSTs to." do %>
+          <%= form.select :provider, Deploys.providers.map { |key, provider| [provider.label, key] }, { selected: @provider.key }, class: "input input--select full-width" %>
+        <% end %>
+        <% if @provider.key == "github" %>
+          <p class="txt-small margin-none">
+            <% if @provider.configured? %>
+              Builds go to <span class="font-mono"><%= @provider.target %></span>.
+            <% else %>
+              Set the repository and a token in <%= link_to "Settings › GitHub", settings_github_path, class: "txt-link" %> first.
+            <% end %>
+          </p>
+        <% end %>
+        <%= settings_field "Build hook URL", hint: "For the build-hook provider. Find this in Cloudflare Pages → your project → Settings → Builds & deployments → Deploy hooks. Same idea on Vercel and Netlify." do %>
+          <%= form.url_field :url, value: @settings["url"], autocomplete: "off", placeholder: "https://api.cloudflare.com/client/v4/pages/.../deploy_hooks/...", class: "input full-width font-mono" %>
+        <% end %>
+        <%= settings_switch form, :paused, "Pause auto-deploys", checked: @settings["paused"] == true,
+              hint: "Stop firing the hook on content changes. Useful while you’re doing a big edit-pass and don’t want every save to trigger a build." %>
+      <% end %>
+    <% end %>
+
+    <% if @provider.configured? %>
+      <% if Current.user.can?("settings:write") %>
+        <div><%= button_to "Deploy now", settings_deploy_trigger_path, class: "btn txt-small" %></div>
+      <% end %>
+    <% end %>
+  </section>
+
+  <section class="settings__section flex flex-column gap-half">
+    <header><h2 class="divider">Recent activity</h2></header>
+    <p class="txt-small txt-subtle margin-none">Last 20 deploy attempts. A scheduled entry means an edit just happened — the hook fires after the debounce window.</p>
+    <% if log.empty? && !scheduled %>
+      <p class="txt-small txt-subtle margin-none">Nothing yet.</p>
+    <% else %>
+      <ul class="settings-sessions flex flex-column gap-half margin-none txt-small">
+        <% if scheduled %>
+          <li><%= status_tag "scheduled" %><% if @settings["last_reason"].present? %> <span class="txt-subtle">· <%= @settings["last_reason"] %></span><% end %></li>
+        <% end %>
+        <% log.each_with_index do |entry, index| %>
+          <%# herb:key index %>
+          <li class="flex flex-column">
+            <span>
+              <%= status_tag entry["status"].to_s %>
+              <% if entry["reason"].present? %><span class="txt-subtle"> · <%= entry["reason"] %></span><% end %>
+              <% if entry["http_status"] %><span class="txt-subtle"> · HTTP <%= entry["http_status"] %></span><% end %>
+              <% if entry["duration_ms"] %><span class="txt-subtle"> · <%= entry["duration_ms"] %>ms</span><% end %>
+              <span class="txt-subtle"> · <%= entry["at"].present? ? time_ago_tag(Time.zone.parse(entry["at"].to_s)) : "—" %></span>
+            </span>
+            <% if entry["error"].present? %>
+              <span class="txt-x-small txt-negative overflow-ellipsis"><%= entry["error"] %></span>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+</section>

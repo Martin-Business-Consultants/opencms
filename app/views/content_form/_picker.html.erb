@@ -1,0 +1,20 @@
+<%# locals: (name:, value:, url:, label:, dom_id:, placeholder:, extra_class: nil, aria_label: nil, mode: nil) %>
+<%# A searchable picker (picker_controller): `name` posts `value`, as a select
+    did. label: what the stored value is called (its title), shown in the
+    search box. Without JavaScript the text input is the field. %>
+<% frame_id = "picker_" + dom_id %>
+<div class="<%= class_names("picker", extra_class) %>" data-controller="picker" data-picker-url-value="<%= url %>" data-picker-mode-value="<%= mode %>"
+     data-action="keydown->picker#navigate click@document->picker#dismiss">
+  <% if name %>
+    <input type="text" name="<%= name %>" value="<%= value %>" id="<%= dom_id %>" class="input font-mono full-width" autocomplete="off"
+           placeholder="<%= placeholder %>" aria-label="<%= aria_label %>" data-picker-target="value">
+  <% else %>
+    <input type="hidden" id="<%= dom_id %>" data-picker-target="value">
+  <% end %>
+  <input type="search" class="input full-width picker__query" value="<%= label %>" placeholder="Search…" autocomplete="off" hidden
+         aria-label="<%= aria_label || "Search" %>" aria-autocomplete="list"
+         data-picker-target="query" data-action="input->picker#search focus->picker#open change->picker#clear">
+  <div class="picker__results" data-picker-target="results" hidden>
+    <turbo-frame id="<%= frame_id %>" data-picker-target="frame"></turbo-frame>
+  </div>
+</div>

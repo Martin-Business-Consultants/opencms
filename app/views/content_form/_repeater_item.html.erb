@@ -1,0 +1,21 @@
+<%# locals: (field:, item:, scope:, depth:, index: nil) %>
+<% summary = content_summary(item, field["of"]) %>
+<li class="content-item" data-sortable-list-target="item">
+  <%= content_tag :details, class: "content-item__details", open: index.nil? do %>
+    <summary class="content-item__summary flex align-center gap-half">
+      <span class="content-handle" title="Drag to reorder" data-action="mousedown->sortable-list#grab touchstart->sortable-list#grab">⠿</span>
+      <span class="content-item__title txt-small overflow-ellipsis flex-item-grow">
+        <% if summary %>
+          <%= summary %>
+        <% else %>
+          <span class="txt-subtle">Item <%= index ? index + 1 : "" %></span>
+        <% end %>
+      </span>
+      <%= render "content_form/row_moves", noun: "item" %>
+    </summary>
+    <div class="content-item__body">
+      <%= hidden_field_tag scope[ContentForm::ORIGINAL].name, (item.is_a?(Hash) && item.any? ? item.to_json : nil), id: nil %>
+      <%= render "content_form/fields", fields: field["of"], values: item, scope: scope, depth: depth + 1 %>
+    </div>
+  <% end %>
+</li>

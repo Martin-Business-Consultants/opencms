@@ -1,0 +1,19 @@
+<%# locals: (placeholder: nil) %>
+<%# The list's search box, top right as WordPress puts it. Enter searches the
+    whole list on the server (?s=, keeping the list's other filters); typing
+    filters the rows already on the page as it goes ("/" focuses it; Fizzy's
+    filter controller). It takes the place of the admin bar's "/" filter. %>
+<% content_for :list_search, "yes" %>
+<% label = placeholder || "Search this list…" %>
+<form class="list-search" method="get" action="<%= request.path %>" role="search">
+  <% request.query_parameters.except("s", "page").each do |name, value| %>
+    <%# herb:key name %>
+    <% if value.is_a?(String) %>
+      <input type="hidden" name="<%= name %>" value="<%= value %>">
+    <% end %>
+  <% end %>
+  <label class="for-screen-reader" for="list_search_s"><%= label %></label>
+  <input type="search" id="list_search_s" name="s" value="<%= search_term %>" class="input list-search__input txt-small" placeholder="<%= label %>" autocomplete="off" autocorrect="off" data-1p-ignore="true"
+    data-filter-target="input" data-keys="/" data-keys-focus
+    data-action="input->filter#filter keydown.esc->filter#clearInput keydown.esc->filter#filter:stop">
+</form>

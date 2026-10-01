@@ -1,0 +1,14 @@
+<%# locals: (reference:) %>
+<%# How the API and the `cms` CLI name this record, with a copy button. %>
+<div class="content-reference flex align-center gap-half">
+  <span class="flex flex-column min-width-0 flex-item-grow">
+    <span class="txt-x-small txt-uppercase txt-subtle">Reference</span>
+    <code class="txt-small overflow-ellipsis"><%= reference %></code>
+  </span>
+  <button type="button" class="btn btn--circle btn--plain" title="Copy the reference"
+          data-controller="copy-to-clipboard" data-copy-to-clipboard-content-value="<%= reference %>"
+          data-copy-to-clipboard-success-class="btn--success" data-action="copy-to-clipboard#copy">
+    <%= icon_tag "copy-paste" %>
+    <span class="for-screen-reader">Copy the reference</span>
+  </button>
+</div>

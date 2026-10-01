@@ -1,0 +1,31 @@
+key: law_firm
+version: 1
+name: Law firm
+description: A practice with a few practice areas — high-value, high-CPC queries; reputation and content carry it.
+category: Law firm
+schema_type: LegalService
+footprint: storefront
+services: [personal injury lawyer, car accident lawyer, family lawyer, divorce attorney, criminal defense attorney, estate planning attorney, DUI lawyer]
+keyword_patterns: ["{service} {city}", "{service} near me", "{modifier} {service} {city}"]
+modifiers: [best, top rated, free consultation]
+directories: [avvo.com, justia.com, findlaw.com, lawyers.com, martindale.com]
+reports:
+  - {kind: site_audit, cadence: weekly}
+  - {kind: business_profile, cadence: weekly}
+  - {kind: google_reviews, cadence: weekly}
+  - {kind: local_rankings, cadence: weekly}
+  - {kind: ranked_keywords, cadence: weekly}
+  - {kind: competitors, cadence: monthly}
+  - {kind: keyword_demand, cadence: monthly}
+  - {kind: keyword_opportunities, cadence: monthly}
+  - {kind: citations, cadence: monthly}
+  - {kind: backlinks, cadence: monthly}
+  - {kind: page_health, cadence: weekly}
+  - {kind: ai_answers, cadence: weekly}
+agents: [reporting_analyst, content_gap, metadata_optimizer, internal_linking]
+targets: {map_pack_share: 40, rating: 4.8, reviews: 60, top_3: 10, page_score: 85, ai_mention_rate: 15, citations_consistent: 12}
+content_scaffold:
+  - {slug: practice-areas, title: Practice areas, kind: services}
+  - {slug: attorneys, title: Our attorneys, kind: page}
+  - {slug: case-results, title: Case results, kind: page}
+  - {slug: reviews, title: Client reviews, kind: reviews}

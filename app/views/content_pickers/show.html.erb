@@ -1,0 +1,17 @@
+<turbo-frame id="<%= @frame %>">
+  <% if @choices.any? %>
+    <ul class="picker__list" role="listbox">
+      <% @choices.each do |label, value, detail| %>
+        <%# herb:key value %>
+        <li role="option">
+          <button type="button" class="picker__choice" data-value="<%= value %>" data-label="<%= label %>" data-action="picker#choose">
+            <span class="picker__choice-label"><%= label %></span>
+            <span class="picker__choice-detail txt-x-small txt-subtle font-mono"><%= detail %></span>
+          </button>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="picker__empty txt-small txt-subtle margin-none">Nothing matches.</p>
+  <% end %>
+</turbo-frame>

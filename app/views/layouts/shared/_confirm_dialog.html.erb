@@ -1,0 +1,17 @@
+<%# locals: (label:, title:, path:, method: nil, message: nil, button: nil, negative: nil, trigger_class: nil, params: nil) %>
+<%# A button that asks once in a modal before it acts (restore, purge, approve…).
+    The delete-with-a-trash-icon case is layouts/shared/delete_dialog. %>
+<% tone = negative ? "txt-negative" : nil %>
+<div class="display-contents" data-controller="dialog" data-dialog-modal-value="true" data-action="keydown.esc->dialog#close:stop">
+  <button type="button" class="<%= class_names("btn txt-small", tone, trigger_class) %>" data-action="dialog#open"><%= label %></button>
+  <dialog class="dialog dialog--action panel fill-white shadow gap flex-column txt-align-start" data-dialog-target="dialog">
+    <h3 class="txt-large font-weight-bold margin-none"><%= title %></h3>
+    <% if message %>
+      <p class="txt-medium margin-block-half"><%= message %></p>
+    <% end %>
+    <div class="flex gap-half justify-center margin-block-start">
+      <button type="button" class="btn" data-action="dialog#close">Cancel</button>
+      <%= button_to(button || label, path, method: method || :post, params: params || {}, class: class_names("btn", tone), data: { turbo_frame: "_top" }) %>
+    </div>
+  </dialog>
+</div>

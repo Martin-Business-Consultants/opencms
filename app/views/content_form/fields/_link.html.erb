@@ -1,0 +1,19 @@
+<%# locals: (field:, value:, scope:) %>
+<%# A typed link: a URL, a page (by slug) or an entry (collection/slug). The
+    chosen kind decides which control shows (content.css) and which one counts
+    (ContentForm.link). %>
+<% link = value.is_a?(Hash) ? value : {} %>
+<% kind = link["kind"].to_s %>
+<%= render "content_form/label", field: field, for_id: scope.dom_id %>
+<div class="content-link flex flex-wrap align-center gap-half">
+  <%= select_tag scope["kind"].name, options_for_select([ [ "No link", "" ], [ "URL", "url" ], [ "Page", "page" ], [ "Entry", "entry" ] ], kind),
+        id: scope.dom_id, class: "input input--select content-link__kind" %>
+  <%= text_field_tag scope["url"].name, (kind == "url" ? link["value"] : nil), id: nil, placeholder: "https://… or /path",
+        class: "input font-mono content-link__url", autocomplete: "off", aria: { label: "URL" } %>
+  <%= render "content_form/picker", name: scope["page"].name, value: (kind == "page" ? link["value"].to_s : ""), dom_id: scope["page"].dom_id,
+        url: content_picker_path(kind: "pages"), label: (kind == "page" ? content_link_label(link) : ""),
+        placeholder: "page-slug", aria_label: "Page", extra_class: "content-link__page" %>
+  <%= render "content_form/picker", name: scope["entry"].name, value: content_link_entry_value(link).to_s, dom_id: scope["entry"].dom_id,
+        url: content_picker_path(kind: "link_entries"), label: (kind == "entry" ? content_link_label(link) : ""),
+        placeholder: "collection/entry-slug", aria_label: "Entry", extra_class: "content-link__entry" %>
+</div>

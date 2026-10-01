@@ -1,0 +1,34 @@
+<%# locals: (line:, currency:, key:) %>
+<%# One invoice line, posted as invoice[line_items][<key>][…]. The schema
+    editor's controller adds, removes and reorders the rows. %>
+<% name = "invoice[line_items][" + key + "]" %>
+<li class="schema-field invoice-line" data-schema-editor-target="row">
+  <label class="invoice-line__description">
+    <span class="txt-x-small font-weight-bold">Description</span>
+    <%= text_field_tag name + "[description]", line["description"], id: nil, class: "input full-width", placeholder: "What was sold",
+          autocomplete: "off", data: { schema_editor_target: "name" } %>
+  </label>
+  <label>
+    <span class="txt-x-small font-weight-bold">SKU</span>
+    <%= text_field_tag name + "[sku]", line["sku"], id: nil, class: "input full-width font-mono", autocomplete: "off" %>
+  </label>
+  <label>
+    <span class="txt-x-small font-weight-bold">Qty</span>
+    <%= number_field_tag name + "[quantity]", line["quantity"] || 1, id: nil, class: "input full-width", min: 1 %>
+  </label>
+  <label>
+    <span class="txt-x-small font-weight-bold">Unit price</span>
+    <%= text_field_tag name + "[unit_price]", money_input_value(line["unit_price_cents"], currency), id: nil, class: "input full-width",
+          inputmode: "decimal", autocomplete: "off", placeholder: "0.00" %>
+  </label>
+  <div class="invoice-line__actions flex align-center gap-half">
+    <button type="button" class="btn btn--circle btn--plain" title="Move up" data-action="schema-editor#moveUp">
+      <%= icon_tag "arrow-up" %>
+      <span class="for-screen-reader">Move up</span>
+    </button>
+    <button type="button" class="btn btn--circle btn--plain txt-negative" title="Remove line" data-action="schema-editor#remove">
+      <%= icon_tag "trash" %>
+      <span class="for-screen-reader">Remove line</span>
+    </button>
+  </div>
+</li>

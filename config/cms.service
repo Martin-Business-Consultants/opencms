@@ -1,0 +1,25 @@
+# A systemd unit for a plain install (docs/install.md). Copy to
+# /etc/systemd/system/cms.service, set the paths and user, then:
+#   sudo systemctl enable --now cms
+#
+# Thruster fronts Puma (gzip, asset caching, and https itself when TLS_DOMAIN
+# is set in .env). It listens on HTTP_PORT (default 80), which a non-root user
+# may bind thanks to the capability below; drop that line and set
+# HTTP_PORT=8080 in .env to sit behind your own proxy instead.
+[Unit]
+Description=CMS
+After=network.target
+
+[Service]
+Type=simple
+User=cms
+Group=cms
+WorkingDirectory=/opt/cms
+EnvironmentFile=/opt/cms/.env
+ExecStart=/opt/cms/bin/thrust /opt/cms/bin/rails server
+Restart=always
+RestartSec=3
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target

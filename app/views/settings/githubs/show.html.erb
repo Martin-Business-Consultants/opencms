@@ -1,0 +1,25 @@
+<% @page_title = "GitHub" %>
+
+<%= render "layouts/shared/page_header", title: "GitHub" %>
+<% content_for :settings_aside do %>
+  <%= render "settings/save_box", form: "settings_form" %>
+<% end %>
+
+
+<section class="panel shadow settings-page txt-align-start">
+  <section class="settings__section flex flex-column gap">
+    <p class="txt-small txt-subtle margin-none">Personal access token used by features that talk to GitHub — currently the Astro importer. Public repos work without a token but hit GitHub’s anonymous rate limit (60 requests an hour).</p>
+
+    <%= form_with url: settings_github_path, id: "settings_form", method: :patch, scope: :settings, class: "flex flex-column gap" do |form| %>
+      <%= tag.fieldset class: "settings-fieldset flex flex-column gap", disabled: !Current.user.can?("settings:write") do %>
+        <%= settings_field "Personal access token" do %>
+          <%= form.password_field :token, autocomplete: "off", placeholder: (@token_hint ? "Already set · ends in " + @token_hint : "ghp_…"), class: "input full-width font-mono", data: { "1p-ignore": true } %>
+        <% end %>
+        <p class="txt-x-small txt-subtle margin-none">Needs the <code>repo</code> scope. Create one at <a href="https://github.com/settings/tokens" class="txt-link" target="_blank" rel="noreferrer">github.com/settings/tokens</a>. Leave blank to keep the existing value.</p>
+        <%= settings_field "Frontend repo", hint: "owner/name — the Astro site this workspace publishes. Agents clone it for site work." do %>
+          <%= form.text_field :frontend_github_repo, value: @frontend_github_repo, placeholder: "acme/acme-site", class: "input full-width font-mono" %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </section>
+</section>

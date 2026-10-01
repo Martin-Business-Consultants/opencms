@@ -1,0 +1,20 @@
+key: metadata_optimizer_rewrites_a_long_title
+template: metadata_optimizer
+description: >
+  A title well over the length that survives a search result is the clearest
+  thing this template exists to catch. If it files nothing here, it does
+  nothing.
+fixture:
+  pages:
+    - path: /services/emergency-plumbing
+      title: "Emergency Plumbing Services Available 24 Hours A Day 7 Days A Week Across The Whole County"
+      description: ""
+    - path: /about
+      title: "About us"
+      description: "Who we are and how we got here."
+expect:
+  recommends: [metadata]
+  min: 1
+  # It rewrites titles and descriptions. Restructuring the site from a long
+  # title is the plausible-but-wrong move a per-item reviewer would wave through.
+  never: [content_gap, internal_link]

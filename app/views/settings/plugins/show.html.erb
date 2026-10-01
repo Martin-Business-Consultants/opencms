@@ -1,0 +1,42 @@
+<% @page_title = @plugin.name %>
+<%= parent_page "Plugins", settings_plugins_path %>
+<% additions = Cms::Plugins.additions(@plugin.key) %>
+
+<%= render "layouts/shared/page_header", title: @plugin.name %>
+
+<section class="panel shadow settings-page txt-align-start">
+  <section class="settings__section flex flex-column gap">
+    <p class="txt-small margin-none"><%= @plugin.description %></p>
+
+    <dl class="settings-index">
+      <div class="settings-index__item"><dt class="font-weight-bold txt-small">Version</dt><dd class="txt-small margin-none"><%= @plugin.version %></dd></div>
+      <div class="settings-index__item"><dt class="font-weight-bold txt-small">Source</dt><dd class="txt-small margin-none"><%= @plugin.bundled ? "Bundled with the CMS" : "Installed in plugins/" %></dd></div>
+      <% if @plugin.author.present? %>
+        <div class="settings-index__item"><dt class="font-weight-bold txt-small">Author</dt><dd class="txt-small margin-none"><%= @plugin.author %></dd></div>
+      <% end %>
+      <% if @plugin.requires.present? %>
+        <div class="settings-index__item"><dt class="font-weight-bold txt-small">Needs CMS</dt><dd class="txt-small margin-none"><%= @plugin.requires %> (this is <%= cms_version %>)</dd></div>
+      <% end %>
+      <% if @plugin.depends_on.any? %>
+        <div class="settings-index__item"><dt class="font-weight-bold txt-small">Needs plugins</dt><dd class="txt-small margin-none"><%= @plugin.depends_on.map { |dependency| Cms::Plugins.manifests[dependency]&.name || dependency.to_s }.to_sentence %></dd></div>
+      <% end %>
+      <% if @plugin.homepage.present? %>
+        <div class="settings-index__item"><dt class="font-weight-bold txt-small">Homepage</dt><dd class="txt-small margin-none"><%= link_to @plugin.homepage, @plugin.homepage, class: "txt-link", rel: "noopener" %></dd></div>
+      <% end %>
+    </dl>
+  </section>
+
+  <section class="settings__section flex flex-column gap-half">
+    <header><h2 class="divider">What it adds</h2></header>
+    <% if additions.any? %>
+      <ul class="margin-none txt-small">
+        <% additions.each do |addition| %>
+          <%# herb:key addition %>
+          <li><%= addition %></li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="txt-small txt-subtle margin-none">Nothing the core shows.</p>
+    <% end %>
+  </section>
+</section>

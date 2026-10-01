@@ -1,0 +1,53 @@
+<% @page_title = "Review: " + @revision.label.to_s %>
+<%= parent_page "Pending changes", revisions_path %>
+
+<% pending = @revision.pending? %>
+<%= render "layouts/shared/page_header", title: @revision.label %>
+
+<div class="panel panel--centered panel--wide flex flex-column gap txt-align-start">
+  <header class="flex flex-column gap-half">
+    <p class="txt-small txt-subtle margin-none">
+      <%= @revision.revisable_type %> · proposed by <%= @revision.proposed_by %> via <%= @revision.source %> · <%= time_ago_tag @revision.created_at %>
+      · <%= status_tag @revision.state.humanize, highlight: @revision.state == "applied" %>
+    </p>
+    <% if @revision.revisable && (path = admin_record_path(@revision.revisable)) %>
+      <%= link_to "Open the record", path, class: "txt-link txt-small" %>
+    <% end %>
+  </header>
+
+  <% if @revision.note.present? %>
+    <p class="txt-small margin-none">“<%= @revision.note %>”</p>
+  <% end %>
+
+  <% if @diff[:stale] && pending %>
+    <div class="panel txt-small revision-diff__warning">
+      <strong>The record changed after this was proposed.</strong>
+      The diff below compares against the content as it was then<% if @diff[:drifted].any? %>; since edited: <code><%= @diff[:drifted].join(", ") %></code><% end %>.
+      Applying overwrites what landed in between.
+    </div>
+  <% end %>
+
+  <% @diff[:fields].each do |field| %>
+    <%# herb:key field[:key] %>
+    <%= render "revisions/field", field: field %>
+  <% end %>
+
+  <% if pending && can_decide_revision?(@revision) %>
+    <%= form_with url: revision_approval_path(@revision), class: "flex flex-column gap-half" do |form| %>
+      <%= form.text_area :comment, rows: 2, class: "input full-width txt-small", placeholder: "Optional note for whoever proposed this" %>
+      <div class="flex gap-half justify-end">
+        <button type="submit" class="btn txt-negative" formaction="<%= revision_rejection_path(@revision) %>">Reject</button>
+        <% if @diff[:stale] %>
+          <button type="submit" class="btn btn--link" name="force" value="1">Apply anyway</button>
+        <% else %>
+          <button type="submit" class="btn btn--link">Approve and apply</button>
+        <% end %>
+      </div>
+    <% end %>
+  <% elsif !pending %>
+    <p class="txt-small txt-subtle margin-none">
+      <%= @revision.state.humanize %> by <%= @revision.decided_by&.email || "—" %> <%= time_ago_tag @revision.decided_at %>
+      <%= "· “" + @revision.decision_comment + "”" if @revision.decision_comment.present? %>
+    </p>
+  <% end %>
+</div>

@@ -1,0 +1,68 @@
+<% @page_title = "Service tokens" %>
+<% can_manage = Current.user.can?("settings:write") %>
+
+<%= render "layouts/shared/page_header", title: "Service tokens" %>
+
+<section class="panel shadow settings-page txt-align-start">
+  <section class="settings__section flex flex-column gap">
+    <p class="txt-small txt-subtle margin-none">Credentials for machines — a published site, a build, an agent. They belong to this workspace rather than to a person, so rotating your own token or changing your role can’t take production down.</p>
+
+    <div class="flex flex-column gap-half txt-small">
+      <strong>Which token goes where</strong>
+      <ul class="flex flex-column gap-half margin-none">
+        <li><code>PRODUCTION_TOKEN</code> — the published site. Issue it against <strong>Production site</strong> (read-only): the site renders, it never edits, so a leaked secret reads only what the site already shows the world.</li>
+        <li><code>USER_AGENT_TOKEN</code> — agents and scripts. Issue it against <strong>Agent</strong> (write, no publish): edits to already-published records become revisions for review instead of going live.</li>
+      </ul>
+    </div>
+
+    <% unless can_manage %>
+      <p class="txt-small txt-subtle margin-none">Your role can see these tokens but not issue, reveal or change them (that needs settings:write).</p>
+    <% end %>
+  </section>
+
+  <% if can_manage %>
+    <section class="settings__section flex flex-column gap">
+      <header><h2 class="divider">Issue a token</h2></header>
+      <%= form_with url: settings_service_tokens_path, class: "flex flex-column gap" do |form| %>
+        <div class="settings-fields">
+          <%= settings_field "Name" do %>
+            <%= form.text_field :name, required: true, placeholder: "Production site", class: "input full-width" %>
+          <% end %>
+          <%= settings_field "Role" do %>
+            <%= form.select :role_id, @roles.map { |role| [role.name, role.id] }, { include_blank: "Pick a role" }, required: true, class: "input input--select full-width" %>
+          <% end %>
+        </div>
+        <%= settings_field "What it’s for (optional)" do %>
+          <%= form.text_field :description, placeholder: "Cloudflare — robinsonfirm.com", class: "input full-width" %>
+        <% end %>
+        <div><button type="submit" class="btn btn--link">Issue token</button></div>
+      <% end %>
+    </section>
+  <% end %>
+
+  <section class="settings__section flex flex-column gap">
+    <header><h2 class="divider">Live</h2></header>
+    <% if @live.any? %>
+      <ul class="settings-sessions flex flex-column gap margin-none">
+        <% @live.each do |token| %>
+          <%# herb:key token.id %>
+          <%= render "settings/service_tokens/service_token", service_token: token, can_manage: can_manage %>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="txt-small txt-subtle margin-none">No service tokens yet.</p>
+    <% end %>
+  </section>
+
+  <% if @revoked.any? %>
+    <section class="settings__section flex flex-column gap">
+      <header><h2 class="divider">Revoked</h2></header>
+      <ul class="settings-sessions flex flex-column gap margin-none">
+        <% @revoked.each do |token| %>
+          <%# herb:key token.id %>
+          <%= render "settings/service_tokens/service_token", service_token: token, can_manage: can_manage %>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+</section>

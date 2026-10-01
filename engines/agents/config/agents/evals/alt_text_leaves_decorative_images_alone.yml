@@ -1,0 +1,18 @@
+key: alt_text_leaves_decorative_images_alone
+template: alt_text
+description: >
+  The failure mode worth testing is not "misses an image" — it is filling
+  every decorative divider with invented prose, which makes a page worse for
+  the screen-reader users the work is for.
+fixture:
+  assets:
+    - path: /images/team-photo.jpg
+      alt: ""
+      used_on: /about
+    - path: /images/divider.svg
+      alt: ""
+      decorative: true
+expect:
+  recommends: [alt_text]
+  min: 1
+  never: [metadata]

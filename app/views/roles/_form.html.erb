@@ -1,0 +1,71 @@
+<%# locals: (role:) %>
+<%# A role, laid out like the editors: its name, description and the
+    capabilities it grants in the wider column; who holds it, and saving (or
+    deleting it) in the narrower one. A system role is shown but locked. %>
+<% locked = role.system? %>
+<% removable = role.persisted? && !locked && Current.user.can?("roles:delete") %>
+<%= render "layouts/shared/errors", record: role %>
+
+<%= form_with model: role, id: "role_form", class: "content-form content-form--thirds",
+      data: { controller: "form", action: "keydown.esc->form#cancel" } do |form| %>
+  <div class="content-form__main flex flex-column gap">
+    <%= postbox "role-details", "Role" do %>
+      <div class="flex flex-column gap">
+        <%= settings_field "Name" do %>
+          <%= form.text_field :name, required: true, disabled: locked, class: "input full-width", autofocus: role.new_record?, autocomplete: "off", placeholder: "Editor" %>
+        <% end %>
+        <%= settings_field "Description" do %>
+          <%= form.text_area :description, rows: 2, disabled: locked, class: "input full-width", placeholder: "What this role is for." %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%= postbox "role-permissions", "Permissions" do %>
+      <%= tag.fieldset class: "flex flex-column gap txt-align-start role-permissions", disabled: locked do %>
+        <legend class="for-screen-reader">Permissions</legend>
+        <p class="txt-small txt-subtle margin-none">Pick which capabilities this role grants. Users with this role can do only what’s ticked.</p>
+        <%= hidden_field_tag "role[permissions][]", "", id: nil %>
+        <div class="role-permissions__groups role-permissions__groups--pairs">
+          <% Permissions.catalog.each do |group, capabilities| %>
+            <%# herb:key group %>
+            <fieldset class="panel role-permissions__group" data-controller="select-all">
+              <legend class="txt-small font-weight-bold">
+                <label class="flex align-center gap-half">
+                  <input type="checkbox" aria-label="Every <%= group %> capability" data-select-all-target="all" data-action="select-all#toggle">
+                  <span><%= group %></span>
+                </label>
+              </legend>
+              <% capabilities.each do |capability| %>
+                <%# herb:key capability %>
+                <label class="flex align-center gap-half txt-small">
+                  <%= check_box_tag "role[permissions][]", capability, role.admin? || role.permissions.include?(capability), id: "role_permission_" + capability.tr(":", "_"), data: { select_all_target: "box", action: "select-all#sync" } %>
+                  <span class="font-mono txt-x-small"><%= capability %></span>
+                  <span class="txt-subtle txt-x-small"><%= capability_action_label(capability) %></span>
+                </label>
+              <% end %>
+            </fieldset>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+
+  <aside class="content-form__aside flex flex-column gap">
+    <% note = capture do %>
+      <% if locked %>
+        <p class="txt-small txt-subtle margin-none">A system role. It can’t be edited or deleted.</p>
+      <% end %>
+    <% end %>
+    <%= render "layouts/shared/save_box", key: "role-save", title: (role.new_record? ? "Add role" : "Save"),
+          button: (locked ? nil : (role.new_record? ? "Add role" : "Save changes")),
+          lines: (role.persisted? ? [ [ "everyone", "Users", role.users.count ] ] : nil), extra: (note if locked),
+          trash_name: role.name, trash_path: (role_path(role) if removable), trash_form: ("role_delete_form" if removable),
+          trash_message: "Users holding it are left with no role." %>
+  </aside>
+
+  <%= link_to "Cancel and go back", roles_path, data: { form_target: "cancel" }, hidden: true %>
+<% end %>
+<% if removable %>
+  <%= render "layouts/shared/delete_form", id: "role_delete_form", path: role_path(role) %>
+<% end %>
+<%= render "content_form/postbox_state" %>

@@ -1,0 +1,71 @@
+<% @page_title = "AI" %>
+
+<%= render "layouts/shared/page_header", title: "AI" %>
+<% content_for :settings_aside do %>
+  <%= render "settings/save_box", form: "settings_form" %>
+<% end %>
+
+
+<section class="panel shadow settings-page txt-align-start">
+  <section class="settings__section flex flex-column gap">
+    <p class="txt-small txt-subtle margin-none">One credential, two jobs: the CMS’s own short helpers (drafting instructions, summarising a swarm cycle), and running agents in-process — with a key saved, dispatched runs execute right here against OpenCode Zen instead of waiting for a worker box.</p>
+    <% if @spend %>
+      <p class="flex align-center gap-half txt-small margin-none">
+        <span class="txt-subtle">Agent runs execute</span>
+        <%= status_tag(@in_process ? "in-process, via Zen" : "on the worker", highlight: @in_process) %>
+      </p>
+    <% end %>
+
+    <%= form_with url: settings_ai_path, id: "settings_form", method: :patch, scope: :settings, class: "flex flex-column gap" do |form| %>
+      <%= tag.fieldset class: "settings-fieldset flex flex-column gap", disabled: !Current.user.can?("settings:write") do %>
+        <%= settings_field "OpenCode Zen API key", hint: "Without a key the helpers are absent and runs queue for the worker — nothing breaks either way. Leave blank to keep the existing value." do %>
+          <%= form.password_field :opencode_zen_api_key, autocomplete: "off", placeholder: (@key_hint ? "Already set · ends in " + @key_hint : "From opencode.ai/zen"), class: "input full-width font-mono", data: { "1p-ignore": true } %>
+        <% end %>
+        <%= settings_field "Default tier", hint: "What an agent runs on when it does not pick for itself. A tier, not a model — it says what the work needs, so a change of provider does not leave every agent naming a model that no longer exists." do %>
+          <%= form.select :default_tier, Ai::Models.tier_options.map { |option| [option[:label], option[:value]] }, { selected: @default_tier }, class: "input input--select full-width" %>
+        <% end %>
+        <ul class="flex flex-column gap-half margin-none txt-x-small">
+          <% Ai::Models.all.each do |id, spec| %>
+            <%# herb:key id %>
+            <li><strong><%= spec[:name] %></strong> <span class="txt-subtle">(<%= spec[:tier] %>) — <%= spec[:note] %></span></li>
+          <% end %>
+        </ul>
+        <%= settings_field "Extra model id", hint: "One more id from Zen’s catalogue, for running a model that has just landed before it is worth a deploy. Blank is the norm." do %>
+          <%= form.text_field :extra_model, value: @extra_model, autocomplete: "off", spellcheck: false, placeholder: "e.g. deepseek-v4-pro", class: "input full-width font-mono" %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <% if @key_hint %>
+      <% if Current.user.can?("settings:write") %>
+        <div><%= button_to "Test the key", settings_ai_test_path, class: "btn txt-small", title: "Ask Zen for one word, on the cheapest model" %></div>
+      <% end %>
+    <% else %>
+      <p class="txt-x-small txt-subtle margin-none">Save a key to test it.</p>
+    <% end %>
+  </section>
+
+  <% if @spend && @spend[:runs].positive? %>
+    <section class="settings__section flex flex-column gap-half">
+      <header><h2 class="divider">Spend</h2></header>
+      <p class="txt-small margin-none">What agent runs have cost, priced from the tokens each run actually spent: <strong><%= @spend[:window] %></strong> over <%= @spend[:window_days] %> days, <strong><%= @spend[:today] %></strong> today, across <%= pluralize(@spend[:runs], "run") %>.</p>
+      <table class="data-table txt-small">
+        <thead>
+          <tr><th>Model</th><th class="data-table__number">Runs</th><th class="data-table__number">Tokens in</th><th class="data-table__number">Tokens out</th><th class="data-table__number">Cost</th></tr>
+        </thead>
+        <tbody>
+          <% @spend[:by_model].each do |row| %>
+            <%# herb:key row[:model] %>
+            <tr>
+              <td class="font-mono"><%= row[:model] %></td>
+              <td class="data-table__number"><%= row[:runs] %></td>
+              <td class="data-table__number"><%= number_with_delimiter(row[:input_tokens]) %></td>
+              <td class="data-table__number"><%= number_with_delimiter(row[:output_tokens]) %></td>
+              <td class="data-table__number"><%= number_to_currency(row[:cents] / 100.0) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </section>
+  <% end %>
+</section>

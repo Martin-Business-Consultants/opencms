@@ -1,0 +1,67 @@
+<%# locals: (page:, invalid_json: nil) %>
+<%# A page's editor, laid out like WordPress's: the title, the page's
+    fields, blocks and SEO in the main column; the Publish box, Page
+    Attributes (slug and permalink, parent, locale) and taxonomy down the
+    side. %>
+<% parents = Page.order(:path).where.not(id: [ page.id, *(page.persisted? ? page.descendants.map(&:id) : []) ].compact) %>
+<% trash = page.persisted? && Current.user.can?("pages:delete") %>
+<%= form_with model: page, url: (page.persisted? ? page_path(page.path) : pages_path), scope: :page, id: "page_form",
+      class: "content-form", data: { controller: "form", action: "keydown.esc->form#cancel" } do |form| %>
+  <div class="content-form__main flex flex-column gap">
+    <div class="editor-title">
+      <label class="for-screen-reader" for="page_title">Title</label>
+      <%= form.text_field :title, required: true, class: "input editor-title__input", placeholder: "Add title", autofocus: page.new_record? %>
+    </div>
+
+    <% if page.fields.any? %>
+      <%= postbox "page-fields", "Fields" do %>
+        <%= render "content_form/fields", fields: page.fields, values: page.frontmatter, scope: content_scope("page")["frontmatter"], depth: 1 %>
+      <% end %>
+    <% end %>
+
+    <section class="editor-box">
+      <h2 class="editor-box__header">Blocks</h2>
+      <div class="editor-box__body">
+        <%= render "content_form/blocks", blocks: page.blocks, scope: content_scope("page")["blocks"], depth: 1, record: page %>
+      </div>
+      <p class="editor-box__status"><%= editor_status_line(page) %></p>
+    </section>
+
+    <%= render "content_form/seo", record: page, scope: "page", invalid_json: invalid_json %>
+  </div>
+
+  <aside class="content-form__aside flex flex-column gap">
+    <%= render "content_form/publish_box", record: page, form: form, scope: "page", prefix: "pages", statuses: Page::STATUSES.sort,
+          trash_name: "this page", trash_path: (page_path(page.path) if trash), trash_form: ("page_trash_form" if trash) %>
+
+    <%= postbox "page-attributes", "Page Attributes" do %>
+      <%= render "content_form/permalink", record: page, form: form, required: true, hint: "Lowercase letters, digits and dashes." %>
+      <label class="content-field flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Parent</span>
+        <%= form.select :parent_id, parents.map { [ ("  " * it.depth.to_i) + "/" + it.path, it.id ] }, { include_blank: "No parent (top level)" },
+              class: "input input--select" %>
+        <span class="txt-x-small txt-subtle">Nests this page under another; its URL becomes the parent’s path plus its slug.</span>
+      </label>
+      <label class="content-field flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Locale</span>
+        <%= form.text_field :locale, required: true, class: "input", placeholder: "en", autocomplete: "off" %>
+      </label>
+      <% if page.persisted? %>
+        <%= render "content_form/reference", reference: "/" + page.path %>
+      <% end %>
+    <% end %>
+
+    <% if page.category_pool || page.tag_pool %>
+      <%= postbox "page-taxonomy", "Categories & Tags" do %>
+        <%= render "content_form/taxonomy", record: page, scope: "page" %>
+      <% end %>
+    <% end %>
+  </aside>
+
+  <%= link_to "Cancel and go back", pages_path, data: { form_target: "cancel" }, hidden: true %>
+<% end %>
+<% if trash %>
+  <%= render "layouts/shared/delete_form", id: "page_trash_form", path: page_path(page.path) %>
+<% end %>
+<%= render "content_form/asset_picker" %>
+<%= render "content_form/postbox_state" %>

@@ -1,0 +1,7 @@
+<%# locals: (field:, value:, scope:) %>
+<%# Stored as an ISO timestamp (UTC); shown and typed in the site's time zone
+    (Settings › General). ContentForm reads the typed value back in that zone,
+    and an untouched field saves back what it held. %>
+<%= render "content_form/label", field: field, for_id: scope.dom_id %>
+<%= datetime_local_field_tag scope.name, content_datetime_input(value), id: scope.dom_id, class: "input", step: 1, autocomplete: "off" %>
+<span class="txt-x-small txt-subtle"><%= Time.zone.tzinfo.name %></span>

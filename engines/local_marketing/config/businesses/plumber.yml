@@ -1,0 +1,29 @@
+key: plumber
+version: 1
+name: Plumber
+description: A plumbing company that travels to the customer — service-area, emergency-heavy, town-by-town pages.
+category: Plumber
+schema_type: Plumber
+footprint: service_area
+services: [plumber, emergency plumber, water heater repair, drain cleaning, leak repair, sewer line repair, toilet repair, repiping]
+keyword_patterns: ["{service} {city}", "{service} near me", "{modifier} {service} {city}"]
+modifiers: [24 hour, licensed, same day]
+directories: [angi.com, homeadvisor.com, thumbtack.com, houzz.com]
+reports:
+  - {kind: site_audit, cadence: weekly}
+  - {kind: business_profile, cadence: weekly}
+  - {kind: google_reviews, cadence: weekly}
+  - {kind: local_rankings, cadence: weekly}
+  - {kind: rank_map, cadence: weekly}
+  - {kind: ranked_keywords, cadence: weekly}
+  - {kind: keyword_opportunities, cadence: monthly}
+  - {kind: citations, cadence: monthly}
+  - {kind: page_health, cadence: weekly}
+  - {kind: ai_answers, cadence: weekly}
+agents: [reporting_analyst, content_gap, metadata_optimizer, technical_seo]
+targets: {map_pack_share: 45, rating: 4.7, reviews: 120, top_3: 20, page_score: 85, ai_mention_rate: 20, citations_consistent: 11}
+content_scaffold:
+  - {slug: services, title: Plumbing services, kind: services}
+  - {slug: service-area, title: Areas we serve, kind: location}
+  - {slug: emergency, title: Emergency plumbing, kind: page}
+  - {slug: reviews, title: Reviews, kind: reviews}

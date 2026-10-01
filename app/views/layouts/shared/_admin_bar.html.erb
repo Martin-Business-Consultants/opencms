@@ -1,0 +1,70 @@
+<%# locals: () %>
+<%# The admin bar: the site, "+ New", the update notice, plugins' items, the
+    "/" filter, the theme and the signed-in person. Its menus open on hover
+    and on keyboard focus (admin.css), with no JavaScript. %>
+<% site_url = public_site_url %>
+<% new_items = admin_new_items %>
+<header class="admin-bar" id="header">
+  <button type="button" class="admin-bar__item admin-bar__drawer-toggle" aria-controls="admin-menu" aria-expanded="false"
+    data-admin-menu-target="drawerToggle" data-action="admin-menu#toggleDrawer">
+    <%= icon_tag "menu" %>
+    <span class="for-screen-reader">Menu</span>
+  </button>
+
+  <div class="admin-bar__group admin-bar__dropdown">
+    <%= link_to dashboard_path, class: "admin-bar__item admin-bar__site", title: "Dashboard (g h)", data: { keys: "g h" } do %>
+      <%= icon_tag "home" %>
+      <span class="admin-bar__label"><%= current_branding[:site_title].presence || Site.key %></span>
+    <% end %>
+    <% if site_url %>
+      <ul class="admin-bar__menu">
+        <li><%= link_to "View site", site_url, class: "admin-bar__menu-link", target: "_blank", rel: "noopener" %></li>
+      </ul>
+    <% end %>
+  </div>
+
+  <% if new_items.any? %>
+    <div class="admin-bar__group admin-bar__dropdown">
+      <%= link_to new_items.first.last, class: "admin-bar__item", title: "New (n)" do %>
+        <%= icon_tag "add" %>
+        <span class="admin-bar__label">New</span>
+      <% end %>
+      <ul class="admin-bar__menu">
+        <% new_items.each do |label, url| %>
+          <%# herb:key label %>
+          <li><%= link_to label, url, class: "admin-bar__menu-link" %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <% if UpdateCheck.update_available? && Current.user.can?("settings:read") %>
+    <%= link_to settings_updates_path, class: "admin-bar__item admin-bar__update", title: "A newer version is available" do %>
+      <%= icon_tag "refresh" %>
+      <span class="admin-bar__label">Version <%= UpdateCheck.latest_version %> available</span>
+    <% end %>
+  <% end %>
+
+  <div class="admin-bar__group admin-bar__slots">
+    <%= plugin_slots(:nav_actions) %>
+  </div>
+
+  <div class="admin-bar__end">
+    <% unless content_for?(:list_search) %>
+      <%= render "layouts/shared/nav_filter" %>
+    <% end %>
+    <%= render "layouts/shared/theme_toggle" %>
+    <div class="admin-bar__group admin-bar__dropdown admin-bar__dropdown--end">
+      <%= link_to settings_profile_path, class: "admin-bar__item" do %>
+        <span class="admin-bar__label">Howdy, <%= Current.user.name.to_s.split.first.presence || Current.user.email %></span>
+        <%= icon_tag "person" %>
+      <% end %>
+      <ul class="admin-bar__menu">
+        <li class="admin-bar__menu-note"><%= Current.user.email %></li>
+        <li><%= link_to "Edit profile", settings_profile_path, class: "admin-bar__menu-link" %></li>
+        <li><%= link_to "Settings", settings_path, class: "admin-bar__menu-link", data: { keys: "g s" } %></li>
+        <li><%= button_to "Sign out", session_path(Current.session), method: :delete, class: "admin-bar__menu-link", form_class: "display-contents" %></li>
+      </ul>
+    </div>
+  </div>
+</header>

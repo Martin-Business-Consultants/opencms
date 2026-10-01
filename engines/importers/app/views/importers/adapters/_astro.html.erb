@@ -1,0 +1,43 @@
+<%# locals: (adapter:) %>
+<% defaults = adapter::DEFAULTS %>
+<%= form_with url: tools_import_run_path(adapter.key), class: "flex flex-column gap" do |form| %>
+  <label class="flex flex-column gap-half">
+    <span class="txt-small font-weight-bold">GitHub repository URL</span>
+    <%= form.url_field :repo, required: true, placeholder: "https://github.com/owner/repo", class: "input full-width font-mono", autocomplete: "off" %>
+    <% unless adapter.github_token_set? %>
+      <span class="txt-x-small txt-subtle">A private repo needs a token in <%= link_to "Settings › GitHub", settings_github_path, class: "txt-link" %>.</span>
+    <% end %>
+  </label>
+  <div class="import-fields">
+    <label class="flex flex-column gap-half">
+      <span class="txt-small font-weight-bold">Branch or ref</span>
+      <%= form.text_field :ref, placeholder: defaults[:ref], class: "input full-width font-mono", autocomplete: "off" %>
+    </label>
+    <label class="flex flex-column gap-half">
+      <span class="txt-small font-weight-bold">Content path</span>
+      <%= form.text_field :content_path, placeholder: defaults[:content_path], class: "input full-width font-mono", autocomplete: "off" %>
+    </label>
+    <label class="flex flex-column gap-half">
+      <span class="txt-small font-weight-bold">Pages path</span>
+      <%= form.text_field :pages_path, placeholder: defaults[:pages_path], class: "input full-width font-mono", autocomplete: "off" %>
+    </label>
+    <label class="flex flex-column gap-half">
+      <span class="txt-small font-weight-bold">Assets path</span>
+      <%= form.text_field :assets_path, placeholder: defaults[:assets_path], class: "input full-width font-mono", autocomplete: "off" %>
+    </label>
+  </div>
+  <label class="flex align-center gap-half">
+    <%= form.hidden_field :rewrite_images, value: "false", id: nil %>
+    <%= form.check_box :rewrite_images, { checked: true }, "true", nil %>
+    <span class="txt-small">Point image references in the content at the imported assets</span>
+  </label>
+  <button type="submit" class="btn btn--link">
+    <span>Start import</span>
+    <%= icon_tag "arrow-right" %>
+  </button>
+<% end %>
+
+<p class="txt-x-small txt-subtle margin-none">
+  The repo's tarball is downloaded from GitHub, then its assets, content collections and file-based pages are imported
+  in the background. Running it again is safe: everything is matched by slug.
+</p>

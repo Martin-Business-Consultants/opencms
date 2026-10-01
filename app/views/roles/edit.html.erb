@@ -1,0 +1,6 @@
+<% @page_title = @role.name %>
+<%= parent_page "Roles", roles_path %>
+
+<%= render "layouts/shared/page_header", title: @page_title %>
+
+<%= render "roles/form", role: @role %>

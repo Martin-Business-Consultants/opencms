@@ -1,0 +1,60 @@
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f5;padding:24px 0;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e7e5e4;border-radius:8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1c1917;">
+
+        <% if @logo_url.present? %>
+        <tr>
+          <td align="center" style="padding:24px 24px 8px;">
+            <img src="<%= @logo_url %>" alt="<%= @collection.name %>" style="max-height:48px;max-width:200px;display:block;margin:0 auto;">
+          </td>
+        </tr>
+        <% end %>
+
+        <tr>
+          <td style="padding:16px 32px 8px;font-size:15px;line-height:1.55;">
+            <p style="margin:0 0 12px;">
+              An entry in <strong><%= @collection.name %></strong> was just
+              <strong><%= @verb %></strong>.
+            </p>
+            <table role="presentation" width="100%" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+              <tr>
+                <td valign="top" style="border:1px solid #e7e5e4;background:#fafaf9;font-weight:600;width:120px;">Title</td>
+                <td style="border:1px solid #e7e5e4;"><%= @entry&.title || @payload["title"] || "(untitled)" %></td>
+              </tr>
+              <tr>
+                <td valign="top" style="border:1px solid #e7e5e4;background:#fafaf9;font-weight:600;">Slug</td>
+                <td style="border:1px solid #e7e5e4;"><code><%= @entry&.slug || @payload["slug"] %></code></td>
+              </tr>
+              <tr>
+                <td valign="top" style="border:1px solid #e7e5e4;background:#fafaf9;font-weight:600;">Status</td>
+                <td style="border:1px solid #e7e5e4;"><%= @entry&.status || @payload["status"] || "—" %></td>
+              </tr>
+              <tr>
+                <td valign="top" style="border:1px solid #e7e5e4;background:#fafaf9;font-weight:600;">Event</td>
+                <td style="border:1px solid #e7e5e4;"><code><%= @event %></code></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <% if @entry_url.present? %>
+        <tr>
+          <td style="padding:16px 32px 24px;">
+            <a href="<%= @entry_url %>" style="display:inline-block;padding:8px 14px;background:#1c1917;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;">
+              Open entry
+            </a>
+          </td>
+        </tr>
+        <% end %>
+
+        <tr>
+          <td style="padding:12px 32px;border-top:1px solid #e7e5e4;font-size:12px;color:#a8a29e;">
+            You're receiving this because <%= @collection.name %> is configured to notify on
+            <code><%= @event %></code>. Adjust subscriptions in the collection's schema editor.
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

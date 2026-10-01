@@ -1,0 +1,127 @@
+<% @page_title = "Scripts" %>
+
+<% content_for :page_actions do %>
+  <% if Current.user.can?("scripts:write") %>
+    <%# New script: a sheet that starts from a custom script or a preset
+        (scripts/new_form, in the new_script frame). It opens by itself at
+        /scripts/new and when an add came back refused. %>
+    <div class="display-contents" data-controller="dialog" data-dialog-modal-value="true" data-dialog-auto-open-value="<%= @new_script.present? %>"
+         data-action="keydown.esc->dialog#close:stop">
+      <button type="button" class="btn btn--labelled btn--circle-mobile" data-keys="n" data-action="dialog#open">
+        <%= icon_tag "add" %>
+        <span class="overflow-ellipsis">New script</span>
+        <kbd class="hide-on-touch">N</kbd>
+      </button>
+      <dialog class="dialog dialog--sheet panel fill-white shadow gap flex-column txt-align-start" data-dialog-target="dialog" aria-label="New script" closedby="any">
+        <h2 class="txt-large font-weight-bold margin-none">New script</h2>
+        <%= render "scripts/new_form", script: @new_script || Script.new(category: "analytics", placement: "head", async: true, active: true), preset: @preset %>
+      </dialog>
+    </div>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title,
+      description: "The third-party tags the public site loads: analytics, pixels, chat. Each is filed under a consent category; the banner asks about the category, and the script only runs once it’s granted." %>
+
+<% waiting = @scripts.count { |s| s.active && !s.necessary? } %>
+<section class="panel shadow center flex flex-column gap-half txt-align-start margin-block-end txt-small">
+  <strong class="txt-medium">
+    <% if @consent.enabled? %>
+      Consent banner is on (<%= @consent.mode == "opt_in" ? "opt-in" : "opt-out" %>)
+    <% else %>
+      Consent banner is off
+    <% end %>
+  </strong>
+  <p class="margin-none">
+    <% if !@consent.enabled? %>
+      Scripts here aren’t served to the public site until the banner is switched on. Nothing loads without it.
+    <% elsif waiting.positive? %>
+      <%= pluralize(waiting, "active script") %> wait for the visitor’s choice; necessary scripts load right away.
+    <% else %>
+      No scripts wait for consent yet.
+    <% end %>
+  </p>
+  <p class="margin-none txt-subtle">
+    <%= link_to "Consent settings", settings_consent_path, class: "txt-link" %> · embed:
+    <code class="font-mono txt-x-small">&lt;script src="<%= consent_script_url %>" defer&gt;&lt;/script&gt;</code>
+  </p>
+</section>
+
+<% if @site_audit&.readable_by?(Current.user) %>
+  <div class="flex align-center justify-space-between gap margin-block-end txt-small">
+    <span class="txt-subtle">
+      <% if @audit&.dig(:measured_at) %>
+        Checked on the live site <%= time_ago_tag @audit[:measured_at] %>: <%= script_audit_verdict(@scripts, @audit) %>.
+        <%= link_to "Full audit", @audit[:path], class: "txt-link" %>
+      <% else %>
+        Not yet checked against the live site.
+      <% end %>
+    </span>
+    <% if @site_audit.runnable_by?(Current.user) %>
+      <% if @audit&.dig(:running) %>
+        <span class="txt-subtle">Checking…</span>
+      <% else %>
+        <%= button_to @audit&.dig(:measured_at) ? "Check again" : "Check the site", @site_audit.run_path, class: "btn txt-small" %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>
+
+<div class="filters margin-block-end">
+  <%= render "layouts/shared/quick_filter", title: "Category", param: :category, options: script_category_options, current: params[:category].presence %>
+</div>
+
+<% if @scripts.any? %>
+  <% can_write = Current.user.can?("scripts:write") %>
+  <section class="panel shadow center index-table">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Script</th>
+          <th>Category</th>
+          <th>Loads</th>
+          <th>On the site</th>
+          <th>Active</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @scripts.each do |script| %>
+          <%# herb:key script.id %>
+          <tr id="<%= dom_id(script) %>" data-filter-target="item">
+            <td>
+              <% if can_write %>
+                <%= link_to script.name, edit_script_path(script), class: "txt-ink font-weight-bold" %>
+              <% else %>
+                <span class="font-weight-bold"><%= script.name %></span>
+              <% end %>
+              <% if script.vendor.present? %>
+                <div class="txt-x-small txt-subtle"><%= script.vendor %></div>
+              <% end %>
+  <%= render "layouts/shared/row_links", name: script.name,
+                  edit_path: (edit_script_path(script) if can_write),
+                  delete_path: (script_path(script) if Current.user.can?("scripts:delete")),
+                  delete_message: "It stops being served with the next load of the public site. To pause it instead, switch it off." %>
+            </td>
+            <td><%= status_tag Script::CATEGORY_LABELS[script.category], highlight: script.necessary? %></td>
+            <td class="txt-subtle font-mono txt-x-small"><%= script_loads(script) %></td>
+            <td><%= script_site_status(script, @audit) %></td>
+            <td>
+              <% if can_write %>
+                <%= button_to script.active ? "On" : "Off", script_path(script), method: :patch, params: { script: { active: !script.active } },
+                      class: class_names("btn txt-x-small", "txt-subtle": !script.active),
+                      title: (script.active ? "Turn off " : "Turn on ") + script.name %>
+              <% else %>
+                <%= script.active ? "On" : "Off" %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+<% else %>
+  <div class="panel panel--centered center">
+    <p class="txt-medium margin-none">No scripts yet.<%= " Add one from a preset: GA4, Meta Pixel and friends only need an ID." if Current.user.can?("scripts:write") %></p>
+  </div>
+<% end %>
+
+<p class="txt-x-small txt-subtle margin-block-start">Also available to a build as <a href="/api/scripts" class="txt-link font-mono">/api/scripts</a>.</p>

@@ -1,0 +1,3 @@
+<%# locals: (field:, value:, scope:) %>
+<%= render "content_form/label", field: field, for_id: scope.dom_id %>
+<%= text_area_tag scope.name, value, id: scope.dom_id, rows: 3, class: "input full-width" %>

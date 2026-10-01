@@ -1,0 +1,5 @@
+<%# locals: (field:, value:, scope:) %>
+<% choices = field["choices"] || Array(field["options"]).map(&:to_s).sort.map { [ it, it ] } %>
+<%= render "content_form/label", field: field, for_id: scope.dom_id %>
+<%= select_tag scope.name, options_for_select(content_options_with(choices, value.to_s), value.to_s),
+      include_blank: "—", id: scope.dom_id, class: "input input--select" %>

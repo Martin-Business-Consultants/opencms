@@ -1,0 +1,6 @@
+<% @page_title = "Add New Agent" %>
+<%= parent_page "Agents", agents_path %>
+
+<%= render "layouts/shared/page_header", title: @page_title,
+      description: "Instructions, the slice of the site it works, what it may use, and how often. It starts off." %>
+<%= render "agents/form", agent: @agent %>

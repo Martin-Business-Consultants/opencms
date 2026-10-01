@@ -1,0 +1,73 @@
+<% @page_title = "Review requests" %>
+<%= parent_page "Approvals", approvals_path %>
+
+<%= render "layouts/shared/page_header", title: @page_title,
+      description: "Editorial approvals: authors submit, publishers decide. Approving publishes the underlying record." %>
+
+<section class="flex flex-column gap margin-block-end">
+  <h2 class="txt-medium font-weight-bold margin-none">Pending (<%= @pending.size %>)</h2>
+  <% if @pending.any? %>
+    <% @pending.each do |request| %>
+      <%# herb:key request.id %>
+      <% record = request.reviewable %>
+      <article id="<%= dom_id(request) %>" class="panel shadow flex flex-column gap-half txt-align-start" data-filter-target="item">
+        <header class="flex align-center justify-space-between gap">
+          <span>
+            <% path = admin_record_path(record) %>
+            <% if path %>
+              <%= link_to reviewable_label(record), path, class: "txt-ink font-weight-bold" %>
+            <% else %>
+              <strong><%= reviewable_label(record) %></strong>
+            <% end %>
+            <span class="txt-x-small txt-subtle"><%= request.reviewable_type %><%= " · " + record.status.to_s if record.respond_to?(:status) %></span>
+          </span>
+          <span class="txt-x-small txt-subtle"><%= request.requested_by&.email %> · <%= time_ago_tag request.created_at %></span>
+        </header>
+        <% if request.comment.present? %>
+          <p class="txt-small margin-none">“<%= request.comment %>”</p>
+        <% end %>
+
+        <div class="flex flex-wrap align-center gap-half">
+          <% if can_decide_review?(request) %>
+            <%= form_with url: review_request_approval_path(request), class: "flex flex-wrap align-center gap-half flex-item-grow", namespace: dom_id(request) do |form| %>
+              <%= form.text_field :comment, class: "input txt-small flex-item-grow", placeholder: "Optional comment for the author", autocomplete: "off" %>
+              <button type="submit" class="btn txt-small" formaction="<%= review_request_change_request_path(request) %>">Request changes</button>
+              <button type="submit" class="btn btn--link txt-small">Approve &amp; publish</button>
+            <% end %>
+          <% end %>
+          <% if request.requested_by_id == Current.user.id %>
+            <%= render "layouts/shared/confirm_dialog", label: "Cancel", title: "Cancel this review request?",
+                  button: "Cancel request", path: review_request_cancellation_path(request), negative: true %>
+          <% end %>
+        </div>
+      </article>
+    <% end %>
+  <% else %>
+    <p class="txt-small txt-subtle margin-none">No pending reviews.</p>
+  <% end %>
+</section>
+
+<% if @resolved.any? %>
+  <section class="flex flex-column gap-half">
+    <h2 class="txt-medium font-weight-bold margin-none">Recently decided</h2>
+    <section class="panel shadow center index-table">
+      <table class="data-table">
+        <thead>
+          <tr><th>Record</th><th>Outcome</th><th>By</th><th>Comment</th><th>When</th></tr>
+        </thead>
+        <tbody>
+          <% @resolved.each do |request| %>
+            <%# herb:key request.id %>
+            <tr id="<%= dom_id(request) %>" data-filter-target="item">
+              <td><%= reviewable_label(request.reviewable) %></td>
+              <td><%= status_tag request.state.humanize, highlight: request.state == "approved" %></td>
+              <td class="txt-subtle"><%= request.reviewer&.email || request.requested_by&.email %></td>
+              <td class="txt-subtle txt-small"><%= request.decision_comment %></td>
+              <td class="txt-subtle txt-small"><%= time_ago_tag request.decided_at %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </section>
+  </section>
+<% end %>

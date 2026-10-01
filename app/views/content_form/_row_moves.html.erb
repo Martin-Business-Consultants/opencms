@@ -1,0 +1,29 @@
+<%# locals: (noun:, duplicate: nil, add_below: nil) %>
+<%# The move / duplicate / remove buttons of a list row. `:prevent` keeps a
+    click in a <summary> from also opening or closing the row. %>
+<span class="content-row-moves flex align-center flex-item-no-shrink">
+  <button type="button" class="btn btn--circle btn--plain" title="Move up" data-action="sortable-list#moveUp:prevent">
+    <%= icon_tag "arrow-up" %>
+    <span class="for-screen-reader">Move <%= noun %> up</span>
+  </button>
+  <button type="button" class="btn btn--circle btn--plain content-row-moves__down" title="Move down" data-action="sortable-list#moveDown:prevent">
+    <%= icon_tag "arrow-up" %>
+    <span class="for-screen-reader">Move <%= noun %> down</span>
+  </button>
+  <% if add_below %>
+    <button type="button" class="btn btn--circle btn--plain" title="Add a block below" data-action="sortable-list#openPicker:prevent">
+      <%= icon_tag "add" %>
+      <span class="for-screen-reader">Add a block below</span>
+    </button>
+  <% end %>
+  <% if duplicate %>
+    <button type="button" class="btn btn--circle btn--plain" title="Duplicate" data-action="sortable-list#duplicate:prevent">
+      <%= icon_tag "copy-paste" %>
+      <span class="for-screen-reader">Duplicate <%= noun %></span>
+    </button>
+  <% end %>
+  <button type="button" class="btn btn--circle btn--plain txt-negative" title="Remove" data-action="sortable-list#remove:prevent">
+    <%= icon_tag "trash" %>
+    <span class="for-screen-reader">Remove <%= noun %></span>
+  </button>
+</span>

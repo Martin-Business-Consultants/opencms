@@ -1,0 +1,39 @@
+<% @page_title = "Set up this CMS" %>
+
+<div class="panel panel--centered center flex flex-column gap-half">
+  <h1 class="txt-x-large font-weight-black margin-none">Create the owner account</h1>
+  <p class="txt-small txt-subtle margin-none">The first account runs this CMS. Everyone after it is added from Access › Users.</p>
+
+  <%= render "layouts/shared/errors", record: @user %>
+
+  <%= form_with url: sign_up_path, class: "flex flex-column gap txt-medium margin-block-start", data: { controller: "form" } do |form| %>
+    <label class="flex flex-column gap-half txt-align-start">
+      <span class="txt-small font-weight-bold">Name</span>
+      <%= form.text_field :name, required: true, autofocus: true, autocomplete: "name", class: "input full-width", placeholder: "Full name", value: @user.name %>
+    </label>
+
+    <label class="flex flex-column gap-half txt-align-start">
+      <span class="txt-small font-weight-bold">Email address</span>
+      <%= form.email_field :email, required: true, autocomplete: "email", class: "input full-width", placeholder: "email@example.com", value: @user.email %>
+    </label>
+
+    <label class="flex flex-column gap-half txt-align-start">
+      <span class="txt-small font-weight-bold">Password</span>
+      <%= form.password_field :password, required: true, autocomplete: "new-password", class: "input full-width", placeholder: "Password" %>
+    </label>
+
+    <label class="flex flex-column gap-half txt-align-start">
+      <span class="txt-small font-weight-bold">Confirm password</span>
+      <%= form.password_field :password_confirmation, required: true, autocomplete: "new-password", class: "input full-width", placeholder: "Confirm password" %>
+    </label>
+
+    <button type="submit" class="btn btn--link center" data-form-target="submit">
+      <span>Create account</span>
+      <%= icon_tag "arrow-right" %>
+    </button>
+  <% end %>
+
+  <p class="txt-small txt-subtle margin-block-start">
+    Already have an account? <%= link_to "Log in", sign_in_path, class: "txt-link" %>
+  </p>
+</div>

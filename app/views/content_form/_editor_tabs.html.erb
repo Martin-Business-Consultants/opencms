@@ -1,0 +1,25 @@
+<%# locals: (record:, kind:) %>
+<%# An editor's two tabs: Edit (the form, yielded) and JSON, the record as
+    the API hands it to the site (api_previews#show, loaded when the tab is
+    first opened). A record not saved yet has only the form. %>
+<% if record.persisted? %>
+  <div class="editor-tabs" data-controller="tabs">
+    <nav class="editor-tabs__bar" role="tablist" aria-label="View">
+      <a href="#edit" role="tab" class="editor-tabs__tab" data-tab="edit" data-tabs-target="tab" data-action="tabs#select">Edit</a>
+      <a href="#json" role="tab" class="editor-tabs__tab" data-tab="json" data-tabs-target="tab" data-action="tabs#select">
+        <%= icon_tag "code" %>
+        <span>JSON</span>
+      </a>
+    </nav>
+    <div data-tab="edit" data-tabs-target="panel">
+      <%= yield %>
+    </div>
+    <section class="panel shadow editor-tabs__json" data-tab="json" data-tabs-target="panel" hidden>
+      <turbo-frame id="api_preview" src="<%= api_preview_path(kind, record.id) %>" loading="lazy">
+        <p class="txt-small txt-subtle">Loading…</p>
+      </turbo-frame>
+    </section>
+  </div>
+<% else %>
+  <%= yield %>
+<% end %>

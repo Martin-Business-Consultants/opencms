@@ -1,0 +1,23 @@
+<%# locals: (field:, value:, scope:, depth:) %>
+<%# Items of the field's sub-fields, each keyed opaquely and carrying the value
+    it was rendered from (`_original`), so reordering can't confuse them. %>
+<% token = "__KEY" + depth.to_s + "__" %>
+<%= render "content_form/label", field: field, for_id: nil %>
+<div class="content-repeater flex flex-column gap-half" data-controller="sortable-list" data-sortable-list-token-value="<%= token %>">
+  <%= hidden_field_tag scope[ContentForm::LIST_MARKER].name, "1", id: nil %>
+  <ol class="content-repeater__items flex flex-column gap-half" data-sortable-list-target="list">
+    <% Array(value).each_with_index do |item, index| %>
+      <%# herb:key index %>
+      <%= render "content_form/repeater_item", field: field, item: item, scope: scope[content_row_key], depth: depth, index: index %>
+    <% end %>
+  </ol>
+  <template data-sortable-list-target="template">
+    <%= render "content_form/repeater_item", field: field, item: {}, scope: scope[token], depth: depth, index: nil %>
+  </template>
+  <div>
+    <button type="button" class="btn txt-small" data-action="sortable-list#add">
+      <%= icon_tag "add" %>
+      <span>Add <%= content_field_label(field).singularize.downcase %></span>
+    </button>
+  </div>
+</div>

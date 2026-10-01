@@ -1,0 +1,86 @@
+<% @page_title = "Redirects" %>
+
+<%= render "layouts/shared/page_header", title: @page_title %>
+
+<%# The redirects as a list table. New and Edit open in a sheet beside it
+    (tools/redirects/sheet, into the redirect_sheet frame); at their own
+    addresses, and when a save is refused, the list opens with it. %>
+<div class="display-contents" data-controller="dialog" data-dialog-modal-value="true" data-dialog-auto-open-value="<%= @sheet_redirect.present? %>"
+     data-action="keydown.esc->dialog#close:stop">
+<div class="index-toolbar flex align-center justify-space-between gap margin-block-end">
+  <div class="flex flex-column gap-half txt-align-start">
+    <p class="txt-small txt-subtle margin-none">URL rules applied at the edge by the public site, and to the CMS preview routes.</p>
+  </div>
+
+  <div class="flex align-center gap-half flex-item-no-shrink">
+    <% if Current.user.can?("redirects:write") %>
+      <%= form_with url: tools_redirects_import_path, class: "display-contents", data: { controller: "form" } do |form| %>
+        <label class="btn txt-small" title="Import CSV">
+          <span>Import CSV</span>
+          <%= form.file_field :file, accept: ".csv,text/csv", hidden: true, data: { action: "change->form#submit" } %>
+        </label>
+      <% end %>
+    <% end %>
+    <%= link_to tools_redirects_export_path, class: "btn txt-small", data: { turbo: false } do %>
+      <span>Export</span>
+    <% end %>
+    <% if Current.user.can?("redirects:write") %>
+      <%= link_to new_tools_redirect_path, class: "btn btn--labelled btn--circle-mobile", data: { keys: "n", turbo_frame: "redirect_sheet", action: "dialog#open" } do %>
+        <%= icon_tag "add" %>
+        <span class="overflow-ellipsis">New redirect</span>
+        <kbd class="hide-on-touch">N</kbd>
+      <% end %>
+    <% end %>
+  </div>
+</div>
+
+<% if @redirects.any? %>
+  <% can_delete = Current.user.can?("redirects:delete") %>
+  <% if can_delete %>
+    <%= render "layouts/shared/bulk_deletion", id: "redirects_bulk_deletion", path: tools_redirects_bulk_deletions_path,
+          noun: "redirect", message: "These rules stop being enforced. This can’t be undone." %>
+  <% end %>
+
+  <section class="panel shadow center index-table" data-controller="select-all">
+    <table class="data-table" data-controller="pagination" data-pagination-paginate-on-intersection-value="true" data-pagination-discard-frame-value="true">
+      <thead>
+        <tr>
+          <% if can_delete %>
+            <th class="data-table__check"><input type="checkbox" aria-label="Select every row" data-select-all-target="all" data-action="select-all#toggle"></th>
+          <% end %>
+          <th>Source</th>
+          <th>Destination</th>
+          <th>Status</th>
+          <th>State</th>
+          <th class="data-table__number">Hits</th>
+        </tr>
+      </thead>
+      <tbody id="<%= pagination_frame_id_for(:redirects_rows, @page.number) %>">
+        <% @redirects.each do |redirect| %>
+          <%# herb:key redirect.id %>
+          <%= render "tools/redirects/redirect", redirect: redirect, can_delete: can_delete %>
+        <% end %>
+        <%= table_next_page_row :redirects_rows, @page, columns: can_delete ? 6 : 5 %>
+      </tbody>
+    </table>
+  </section>
+<% else %>
+  <div class="panel panel--centered center flex flex-column gap-half">
+    <p class="txt-medium">No redirects yet. Add one, or import a CSV.</p>
+    <% if Current.user.can?("redirects:write") %>
+      <%= link_to new_tools_redirect_path, class: "btn btn--link center", data: { turbo_frame: "redirect_sheet", action: "dialog#open" } do %>
+        <span>Add a redirect</span>
+        <%= icon_tag "arrow-right" %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>
+
+<dialog class="dialog dialog--sheet panel fill-white shadow gap flex-column txt-align-start" data-dialog-target="dialog" aria-label="Redirect" closedby="any">
+  <% if @sheet_redirect %>
+    <%= render "tools/redirects/sheet", redirect: @sheet_redirect %>
+  <% else %>
+    <turbo-frame id="redirect_sheet"><p class="txt-small txt-subtle">Loading…</p></turbo-frame>
+  <% end %>
+</dialog>
+</div>

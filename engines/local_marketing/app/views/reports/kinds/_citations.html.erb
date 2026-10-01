@@ -1,0 +1,51 @@
+<%# locals: (report:, extra:) %>
+<%# Each directory: what the audit found, and what a person has done about it
+    (Reports::CitationStatuses) — editable without a paid run. %>
+<% statuses = (extra[:citation_statuses] || {}).to_h %>
+<% can_run = Current.user.can?("reports:run") %>
+<section class="panel shadow center index-table">
+  <h2 class="txt-medium font-weight-bold margin-none">Directories</h2>
+  <p class="txt-small txt-subtle margin-none">Checked against <%= report_value(report.data.dig("nap", "name")) %>, <%= report_value(report.data.dig("nap", "phone")) %>, <%= report_value(report.data.dig("nap", "address")) %>.</p>
+  <table class="data-table">
+    <thead>
+      <tr><th>Directory</th><th>Listing</th><th>Details match</th><th>What you’ve done</th></tr>
+    </thead>
+    <tbody>
+      <% Array(report.data["directories"]).each do |row| %>
+        <% domain = row["domain"].to_s %>
+        <% entry = statuses[domain] || {} %>
+        <%# herb:key domain %>
+        <tr data-filter-target="item">
+          <td class="font-weight-bold"><%= domain %></td>
+          <td class="txt-small">
+            <% if row["manual_only"] %>
+              Check by hand — <%= row["reason"] %>
+            <% elsif row["found"] %>
+              <%= report_value(row["url"]) %>
+            <% else %>
+              <span class="txt-negative">Not found</span>
+            <% end %>
+          </td>
+          <td class="txt-small">
+            <% if row["found"] %>
+              <%= row["consistent"] ? "Yes" : "No — " + row["checks"].to_h.select { |_, ok| ok == false }.map { |name, _| name.to_s.humanize.downcase }.to_sentence %>
+            <% else %>
+              —
+            <% end %>
+          </td>
+          <td>
+            <% if can_run %>
+              <%= form_with url: citation_status_path(directory: domain), method: :patch, class: "flex align-center gap-half" do |form| %>
+                <%= form.select :status, Reports::CitationStatuses::STATUSES.map { [it.humanize, it] }, { selected: entry["status"] || "todo" }, class: "input input--select txt-x-small" %>
+                <%= form.text_field :note, value: entry["note"], placeholder: "Note", class: "input txt-x-small" %>
+                <%= form.submit "Save", class: "btn txt-x-small" %>
+              <% end %>
+            <% else %>
+              <%= (entry["status"] || "todo").humanize %><% if entry["note"].present? %> — <%= entry["note"] %><% end %>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>

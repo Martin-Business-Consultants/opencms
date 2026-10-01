@@ -1,0 +1,44 @@
+<%# locals: (title:, description: nil, icon: nil) %>
+<%# An admin page's title row, as WordPress sets it: the title, its primary
+    action as a button beside it (content_for :page_actions), a line on what
+    the page is for, then the page's notices. On a Settings page it goes above
+    the page and its sidebar (layouts/settings) rather than where it's rendered. %>
+<% content_for :notices_shown, "yes" %>
+<% header = capture do %>
+<div class="page-title">
+  <h1 class="page-title__heading">
+    <% if icon %>
+      <%= icon_tag icon, class: "page-title__icon" %>
+    <% end %>
+    <%= title %>
+  </h1>
+  <% if content_for?(:page_actions) %>
+    <div class="page-title__actions">
+      <%= content_for(:page_actions) %>
+    </div>
+  <% end %>
+</div>
+<% if description %>
+  <p class="page-title__description"><%= description %></p>
+<% end %>
+<% if (cli = cli_command_hint) %>
+  <p class="page-title__cli txt-x-small">
+    <span class="txt-subtle">From the CLI or MCP:</span>
+    <code><%= cli %></code>
+    <button type="button" class="btn btn--plain txt-x-small" title="Copy the command" data-controller="copy-to-clipboard"
+            data-copy-to-clipboard-content-value="<%= cli %>" data-copy-to-clipboard-success-class="btn--success" data-action="copy-to-clipboard#copy">Copy</button>
+  </p>
+<% end %>
+<% if search_term %>
+  <p class="page-title__search txt-small">
+    Search results for “<strong><%= search_term %></strong>”
+    <%= link_to "Clear", url_for(request.query_parameters.except("s", "page")), class: "txt-link" %>
+  </p>
+<% end %>
+<%= render "layouts/shared/flash" %>
+<% end %>
+<% if settings_screen? %>
+  <% content_for :settings_header, header %>
+<% else %>
+  <%= header %>
+<% end %>

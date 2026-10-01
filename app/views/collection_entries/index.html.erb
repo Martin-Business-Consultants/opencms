@@ -1,0 +1,89 @@
+<% @page_title = @collection.name %>
+<%= parent_page "Collections", collections_path %>
+<% can_write = Current.user.can?("entries:write") %>
+<% can_publish = Current.user.can?("entries:publish") %>
+<% can_delete = Current.user.can?("entries:delete") %>
+<% ticks = can_publish || can_delete %>
+<% columns = 4 + @flag_fields.size + (ticks ? 1 : 0) %>
+
+<% content_for :page_actions do %>
+  <% if @collection.build_board? %>
+    <%= link_to "Build", build_collection_entries_path(@collection.slug), class: "btn txt-small" %>
+  <% end %>
+  <% if Current.user.can?("collections:write") %>
+    <%= link_to "Schema", collection_schema_path(@collection.slug), class: "btn txt-small" %>
+  <% end %>
+  <% if can_write %>
+    <%= render "layouts/shared/new_link", text: "New entry", path: new_collection_entry_path(@collection.slug) %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title, icon: @collection.admin_icon, description: "Entries in this collection, newest change first." %>
+
+<%= render "layouts/shared/status_links", param: :status, current: @status.to_s,
+      options: [ [ "All", nil, @status_counts.values.sum ] ] + CollectionEntry::STATUSES.filter_map { |status| [ status.humanize, status, @status_counts[status] ] if @status_counts[status].to_i.positive? } %>
+
+<%= render "layouts/shared/bulk_actions", id: "entries_bulk", noun: "entry",
+      status_path: (collection_entries_bulk_status_changes_path(@collection.slug) if can_publish), statuses: CollectionEntry::STATUSES,
+      deletion_path: (collection_entries_bulk_deletions_path(@collection.slug) if can_delete) %>
+
+<% if @entries.any? %>
+  <section class="panel shadow center index-table" data-controller="select-all">
+    <table class="data-table" data-controller="pagination" data-pagination-paginate-on-intersection-value="true" data-pagination-discard-frame-value="true">
+      <thead>
+        <tr>
+          <% if ticks %>
+            <th class="data-table__check"><input type="checkbox" aria-label="Select every row" data-select-all-target="all" data-action="select-all#toggle"></th>
+          <% end %>
+          <th>Title</th>
+          <th>Slug</th>
+          <th>Status</th>
+          <% @flag_fields.each do |field| %>
+            <%# herb:key field["name"] %>
+            <th><%= field_label_text(field) %></th>
+          <% end %>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody id="<%= pagination_frame_id_for(:entries_rows, @page.number) %>">
+        <% @entries.each do |entry| %>
+          <%# herb:key entry.id %>
+          <tr id="<%= dom_id(entry) %>" data-filter-target="item">
+            <% if ticks %>
+              <td class="data-table__check"><input type="checkbox" data-select-all-target="box" data-action="select-all#sync" name="slugs[]" value="<%= entry.slug %>" form="entries_bulk" aria-label="Select <%= entry.title %>"></td>
+            <% end %>
+            <td>
+              <%= link_to entry.title, edit_collection_entry_path(@collection.slug, entry.slug), class: "txt-ink font-weight-bold" %>
+              <%= render "layouts/shared/row_links", name: entry.title,
+                  edit_path: (edit_collection_entry_path(@collection.slug, entry.slug) if can_write),
+                  delete_path: (collection_entry_path(@collection.slug, entry.slug) if can_delete),
+                  delete_message: "It goes to the trash, where it can be restored." %>
+            </td>
+            <td class="txt-subtle font-mono"><%= entry.slug %></td>
+            <td><%= status_tag entry.status %></td>
+            <% @flag_fields.each do |field| %>
+              <%# herb:key field["name"] %>
+              <td><%= render "collection_entries/flag", collection: @collection, entry: entry, field: field, can_write: can_write %></td>
+            <% end %>
+            <td class="txt-subtle txt-small"><%= time_ago_tag entry.updated_at %></td>
+          </tr>
+        <% end %>
+        <%= table_next_page_row :entries_rows, @page, columns: columns %>
+      </tbody>
+    </table>
+  </section>
+<% elsif @status %>
+  <div class="blank-slate">
+    No <%= @status %> entries.
+    <%= link_to "Show all", collection_entries_path(@collection.slug), class: "txt-link" %>
+  </div>
+<% else %>
+  <div class="panel panel--centered center flex flex-column gap-half">
+    <p class="txt-medium">No entries yet.</p>
+    <% if can_write %>
+      <%= link_to new_collection_entry_path(@collection.slug), class: "btn btn--link center" do %>
+        <span>Add the first one</span>
+        <%= icon_tag "arrow-right" %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

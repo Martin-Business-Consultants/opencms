@@ -1,0 +1,17 @@
+<%# locals: (name:, edit_path: nil, delete_path: nil, delete_message: nil) %>
+<%# A table row's last cell: edit and delete. Pass nil for an action the record
+    doesn't allow or the role doesn't grant. %>
+<td class="data-table__actions">
+  <div class="flex align-center justify-end gap-half">
+    <% if edit_path %>
+      <% edit_label = "Edit " + name %>
+      <%= link_to edit_path, class: "btn btn--circle borderless row-action", title: edit_label, data: { keys: "e" } do %>
+        <%= icon_tag "pencil" %>
+        <span class="for-screen-reader"><%= edit_label %></span>
+      <% end %>
+    <% end %>
+    <% if delete_path %>
+      <%= render "layouts/shared/delete_dialog", name: name, path: delete_path, message: delete_message, trigger_class: "row-action", keys: "d" %>
+    <% end %>
+  </div>
+</td>

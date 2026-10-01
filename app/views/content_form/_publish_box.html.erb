@@ -1,0 +1,89 @@
+<%# locals: (record:, form:, scope:, prefix:, trash_name:, trash_path: nil, trash_form: nil, statuses: nil) %>
+<%# The editor's first box, WordPress's Publish box: Save Draft; the status,
+    schedule and revisions, each with an Edit that opens it in place; the
+    review-gate notice; Move to Trash on the left and the one primary action
+    on the right (publish_action). A record without a status (a global) has
+    only the notice and Update, or Submit for review. %>
+<% can_publish = can_publish_content?(prefix) %>
+<% statusful = record.respond_to?(:status) %>
+<% label, sets_status = statusful ? publish_action(record, can_publish: can_publish) : [ (can_publish ? "Update" : "Submit for review"), nil ] %>
+<% status = statusful ? (record.status.presence || "draft") : nil %>
+<%= postbox "publish", "Publish", klass: "publish-box" do %>
+  <div data-controller="publish-box">
+    <% if statusful && status == "draft" %>
+      <div class="publish-box__minor">
+        <button type="submit" class="btn txt-small" data-action="publish-box#submit" data-publish-box-status-param="draft">Save Draft</button>
+      </div>
+    <% end %>
+
+    <div class="publish-box__misc">
+      <% if statusful %>
+        <div class="publish-box__line">
+          <%= icon_tag "pinned", class: "publish-box__icon" %>
+          <span>Status: <strong><%= status.humanize %></strong></span>
+          <details class="inline-edit">
+            <summary class="txt-link">Edit</summary>
+            <label class="inline-edit__field">
+              <span class="for-screen-reader">Status</span>
+              <%= form.select :status, statuses, {}, class: "input input--select txt-small", data: { publish_box_target: "status" } %>
+            </label>
+          </details>
+        </div>
+
+        <div class="publish-box__line">
+          <%= icon_tag "history", class: "publish-box__icon" %>
+          <span>
+            <% if record.publish_at.present? && record.publish_at > Time.current && status != "published" %>
+              Scheduled for <strong><%= site_time_tag(record.publish_at) %></strong>
+            <% elsif status == "published" && record.respond_to?(:published_at) && record.published_at.present? %>
+              Published on <strong><%= site_time_tag(record.published_at) %></strong>
+            <% else %>
+              Publish <strong>immediately</strong>
+            <% end %>
+          </span>
+          <details class="inline-edit">
+            <summary class="txt-link">Edit</summary>
+            <div class="inline-edit__field flex flex-column gap">
+              <%= render "content_form/schedule", record: record, scope: scope %>
+            </div>
+          </details>
+        </div>
+        <% if record.unpublish_at.present? && record.unpublish_at > Time.current && status == "published" %>
+          <p class="content-panel__note txt-x-small margin-none">Will unpublish <%= site_time_tag(record.unpublish_at) %>.</p>
+        <% end %>
+      <% end %>
+
+      <% if record.persisted? && record.respond_to?(:versions) && (count = record.versions.size).positive? %>
+        <div class="publish-box__line">
+          <%= icon_tag "refresh", class: "publish-box__icon" %>
+          <span>Revisions: <strong><%= count %></strong></span>
+          <% if (browse = versions_path_for(record)) %>
+            <%= link_to "Browse", browse, class: "txt-link" %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <% if record.persisted? %>
+        <%= render "content_form/review_notice", record: record, prefix: prefix %>
+      <% end %>
+      <% if statusful && status == "draft" && !can_publish %>
+        <% waiting = record.persisted? && ReviewRequest.pending.for_reviewable(record).first %>
+        <p class="content-panel__note txt-x-small margin-none">
+          <% if waiting %>
+            Waiting for review since <%= site_time_tag(waiting.created_at) %>. A reviewer publishes it.
+          <% else %>
+            Your role can't publish. Submit for review saves the draft and asks a reviewer to publish it.
+          <% end %>
+        </p>
+      <% end %>
+    </div>
+
+    <div class="publish-box__major">
+      <% if trash_path %>
+        <%= render "layouts/shared/delete_dialog", name: trash_name, path: trash_path, trigger_text: "Move to Trash", form: trash_form,
+              message: "It goes to the trash, where it can be restored." %>
+      <% end %>
+      <button type="submit" class="btn btn--link publish-box__primary" data-action="publish-box#submit" data-publish-box-status-param="<%= sets_status %>"><%= label %></button>
+    </div>
+  </div>
+<% end %>

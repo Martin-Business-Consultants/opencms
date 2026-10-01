@@ -1,0 +1,62 @@
+<%# locals: (recommendation:, next_recommendation: nil) %>
+<section id="review" class="panel shadow flex flex-column gap-half txt-align-start">
+  <header class="flex flex-column gap-half">
+    <h2 class="txt-large font-weight-bold margin-none"><%= recommendation.title %></h2>
+    <span class="flex flex-wrap align-center gap-half txt-x-small txt-subtle">
+      <%= status_tag recommendation.kind_label %>
+      <%= status_tag recommendation.status.humanize, highlight: recommendation.accepted? %>
+      <% if recommendation.impact.to_i.positive? %>
+        <span>impact <%= recommendation.impact %></span>
+      <% end %>
+      <% if recommendation.filed_by %>
+        <% if recommendation.filed_by_link && Cms::Plugins.provided(:agents) %>
+          <%= link_to "from " + recommendation.filed_by.to_s, url_for(recommendation.filed_by_link), class: "txt-link" %>
+        <% else %>
+          <span>from <%= recommendation.filed_by %></span>
+        <% end %>
+      <% end %>
+      <%= time_ago_tag recommendation.created_at %>
+    </span>
+    <% if recommendation.subject_type %>
+      <span class="txt-small">About <%= recommendation.subject_type.underscore.humanize.downcase %> <strong><%= recommendation.subject_label %></strong></span>
+    <% end %>
+  </header>
+
+  <% if recommendation.body.present? %>
+    <div class="txt-small"><%= simple_format(recommendation.body) %></div>
+  <% end %>
+
+  <% if recommendation.proposed_changes.present? %>
+    <div class="flex flex-column gap-half">
+      <strong class="txt-small">Proposed change</strong>
+      <p class="txt-x-small txt-subtle margin-none">Accepting records the decision; it doesn’t apply this. Making the change still goes through the normal edit and review path.</p>
+      <pre class="revision-diff__value"><%= JSON.pretty_generate(recommendation.proposed_changes) %></pre>
+    </div>
+  <% end %>
+
+  <% if recommendation.evidence.present? %>
+    <details>
+      <summary class="txt-small font-weight-bold">Evidence</summary>
+      <pre class="revision-diff__value"><%= JSON.pretty_generate(recommendation.evidence) %></pre>
+    </details>
+  <% end %>
+
+  <% if recommendation.decision_comment.present? %>
+    <p class="txt-small margin-none">“<%= recommendation.decision_comment %>”</p>
+  <% end %>
+
+  <% if recommendation.open? && Current.user.can?("recommendations:resolve") %>
+    <%= form_with url: recommendation_acceptance_path(recommendation), class: "flex flex-column gap-half" do |form| %>
+      <% if next_recommendation && next_recommendation != recommendation %>
+        <%= hidden_field_tag :next_id, next_recommendation.id %>
+      <% end %>
+      <%= form.text_area :comment, rows: 2, class: "input full-width txt-small", placeholder: "Optional note: why you’re accepting, dismissing, or marking this done." %>
+      <div class="flex flex-wrap gap-half">
+        <button type="submit" class="btn btn--link txt-small">Accept</button>
+        <button type="submit" class="btn txt-small" formaction="<%= recommendation_completion_path(recommendation) %>">Already done</button>
+        <button type="submit" class="btn txt-small txt-negative" formaction="<%= recommendation_dismissal_path(recommendation) %>">Dismiss</button>
+      </div>
+      <p class="txt-x-small txt-subtle margin-none">“Accept” means this is worth doing. “Already done” means someone has since handled it.</p>
+    <% end %>
+  <% end %>
+</section>

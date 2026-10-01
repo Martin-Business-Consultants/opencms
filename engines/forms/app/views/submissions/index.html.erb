@@ -1,0 +1,56 @@
+<% @page_title = "Submissions" %>
+<%= parent_page "Forms", forms_path %>
+
+<%= render "layouts/shared/page_header", title: @page_title, description: "Everything sent through every form, newest first." %>
+
+<div class="filters margin-block-end">
+  <%= render "layouts/shared/quick_filter", title: "Form", param: :form, options: submission_form_options(@forms), current: @form&.slug %>
+</div>
+
+<% if @submissions.any? %>
+  <% can_delete = Current.user.can?("submissions:delete") %>
+  <% if can_delete %>
+    <%= render "layouts/shared/bulk_deletion", id: "submissions_bulk_deletion", path: submissions_bulk_deletions_path,
+          noun: "submission", message: "The submissions and any files attached to them are removed. This can’t be undone." %>
+  <% end %>
+
+  <section class="panel shadow center index-table" data-controller="select-all">
+    <table class="data-table" data-controller="pagination" data-pagination-paginate-on-intersection-value="true" data-pagination-discard-frame-value="true">
+      <thead>
+        <tr>
+          <% if can_delete %>
+            <th class="data-table__check"><input type="checkbox" aria-label="Select every row" data-select-all-target="all" data-action="select-all#toggle"></th>
+          <% end %>
+          <th>Form</th>
+          <th>Preview</th>
+          <th class="data-table__number">Files</th>
+          <th>IP</th>
+          <th>Received</th>
+        </tr>
+      </thead>
+      <tbody id="<%= pagination_frame_id_for(:submissions_rows, @page.number) %>">
+        <% @submissions.each do |submission| %>
+          <%# herb:key submission.id %>
+          <tr id="<%= dom_id(submission) %>" data-filter-target="item">
+            <% if can_delete %>
+              <td class="data-table__check"><input type="checkbox" data-select-all-target="box" data-action="select-all#sync" name="ids[]" value="<%= submission.id %>" form="submissions_bulk_deletion" aria-label="Select submission <%= submission.id %>"></td>
+            <% end %>
+            <td><%= link_to submission.form.title, form_path(submission.form.slug), class: "txt-ink font-weight-bold" %></td>
+            <td>
+              <% preview = submission_preview(submission) %>
+              <%= link_to preview.presence || "Empty submission", form_submission_path(submission.form.slug, submission.id), class: "txt-subtle" %>
+            </td>
+            <td class="data-table__number"><%= submission.files.count %></td>
+            <td class="txt-subtle font-mono txt-small"><%= submission.ip %></td>
+            <td class="txt-subtle txt-small"><%= time_ago_tag submission.created_at %></td>
+          </tr>
+        <% end %>
+        <%= table_next_page_row :submissions_rows, @page, columns: can_delete ? 6 : 5 %>
+      </tbody>
+    </table>
+  </section>
+<% else %>
+  <div class="panel panel--centered center">
+    <p class="txt-medium margin-none">No submissions<%= " for " + @form.title if @form %> yet.</p>
+  </div>
+<% end %>

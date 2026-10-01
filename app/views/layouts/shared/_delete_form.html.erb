@@ -1,0 +1,5 @@
+<%# locals: (id:, path:) %>
+<%# An empty delete form for a delete_dialog that lives inside another form
+    (delete_dialog's form: local), rendered after that form. %>
+<%= form_with url: path, method: :delete, id: id, hidden: true, data: { turbo_frame: "_top" } do %>
+<% end %>

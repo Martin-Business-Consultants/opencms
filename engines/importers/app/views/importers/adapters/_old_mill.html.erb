@@ -1,0 +1,28 @@
+<%# locals: (adapter:) %>
+<%= form_with url: tools_import_run_path(adapter.key), multipart: true, class: "flex flex-column gap" do |form| %>
+  <label class="flex flex-column gap-half">
+    <span class="txt-small font-weight-bold">WXR file</span>
+    <%= form.file_field :file, accept: ".xml,application/xml,text/xml", required: true, class: "input full-width" %>
+  </label>
+  <button type="submit" class="btn btn--link">
+    <span>Start import</span>
+    <%= icon_tag "arrow-right" %>
+  </button>
+<% end %>
+
+<div class="flex flex-column gap-half txt-small">
+  <h3 class="txt-small font-weight-bold margin-none">Exporting from WordPress</h3>
+  <ol class="margin-none">
+    <li>In wp-admin, open <strong>Tools → Export</strong>.</li>
+    <li>Choose <strong>All content</strong> and download the .xml file.</li>
+    <li>Upload it here. Uploading again is safe: entries are matched by slug.</li>
+  </ol>
+  <h3 class="txt-small font-weight-bold margin-none">What comes across</h3>
+  <ul class="margin-none">
+    <li>Media, copied here as assets</li>
+    <li>Pages</li>
+    <li>The custom post types <code>beer</code>, <code>food</code> and <code>special</code>, as collections</li>
+    <li>Site identity, contact details and hours, into the general global</li>
+  </ul>
+  <p class="txt-x-small txt-subtle margin-none">Large sites take several minutes, because media is fetched over the network. You can leave this page.</p>
+</div>

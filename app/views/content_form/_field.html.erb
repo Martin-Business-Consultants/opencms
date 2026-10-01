@@ -1,0 +1,45 @@
+<%# locals: (field:, value:, scope:, depth:) %>
+<% type = field["type"].to_s %>
+<%= tag.div class: "content-field content-field--" + type.dasherize, data: { field_name: field["name"], **content_show_if_data(field) } do %>
+  <% case type %>
+  <% when "string", "url" %>
+    <%= render "content_form/fields/string", field: field, value: value, scope: scope %>
+  <% when "plain_text" %>
+    <%= render "content_form/fields/plain_text", field: field, value: value, scope: scope %>
+  <% when "code", "json" %>
+    <%= render "content_form/fields/code", field: field, value: value, scope: scope %>
+  <% when "text" %>
+    <%= render "content_form/fields/rich_text", field: field, value: value, scope: scope %>
+  <% when "markdown" %>
+    <%= render "content_form/fields/markdown", field: field, value: value, scope: scope %>
+  <% when "integer" %>
+    <%= render "content_form/fields/integer", field: field, value: value, scope: scope %>
+  <% when "boolean" %>
+    <%= render "content_form/fields/boolean", field: field, value: value, scope: scope %>
+  <% when "select" %>
+    <%= render "content_form/fields/select", field: field, value: value, scope: scope %>
+  <% when "datetime" %>
+    <%= render "content_form/fields/datetime", field: field, value: value, scope: scope %>
+  <% when "link" %>
+    <%= render "content_form/fields/link", field: field, value: value, scope: scope %>
+  <% when "asset" %>
+    <%= render "content_form/fields/asset", field: field, value: value, scope: scope %>
+  <% when "record_ref" %>
+    <%= render "content_form/fields/record_ref", field: field, value: value, scope: scope %>
+  <% when "record_refs", "string_list" %>
+    <%= render "content_form/fields/list", field: field, value: value, scope: scope, depth: depth %>
+  <% when "repeater" %>
+    <%= render "content_form/fields/repeater", field: field, value: value, scope: scope, depth: depth %>
+  <% when "group" %>
+    <%= render "content_form/fields/group", field: field, value: value, scope: scope, depth: depth %>
+  <% when "blocks" %>
+    <%= render "content_form/label", field: field, for_id: nil %>
+    <%= render "content_form/blocks", blocks: value, scope: scope, allowed_types: field["allowed_types"], depth: depth + 1, record: nil %>
+  <% else %>
+    <%= render "content_form/label", field: field, for_id: nil %>
+    <p class="txt-x-small txt-subtle margin-none">This field’s type (<code><%= type %></code>) has no editor; its value is kept as it is.</p>
+  <% end %>
+  <% if field["help"].present? %>
+    <p class="content-field__help txt-x-small txt-subtle margin-none"><%= field["help"] %></p>
+  <% end %>
+<% end %>

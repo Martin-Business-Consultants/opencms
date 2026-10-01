@@ -1,0 +1,47 @@
+/* "/" filters the rows of the current page (Fizzy's filter controller on #global-container).
+/* In the nav it's just the key until focused or holding text, when it opens into a field. It
+/* only shows on pages that have rows to filter, and a filtered-out row stays hidden even when
+/* its own class sets a display. */
+@layer components {
+  .nav-filter {
+    align-items: center;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    cursor: text;
+    display: inline-flex;
+    gap: 0.4em;
+
+    #global-container:not(:has([data-filter-target~="item"])) & {
+      display: none;
+    }
+
+    &:is(:focus-within, :has(.nav-filter__input:not(:placeholder-shown))) {
+      background-color: var(--color-canvas);
+      border-color: var(--color-ink-light);
+
+      .nav-filter__input {
+        inline-size: 20ch;
+      }
+    }
+  }
+
+  .nav-filter__key {
+    flex-shrink: 0;
+  }
+
+  .nav-filter__input {
+    background: none;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    font-size: var(--text-small);
+    inline-size: 0;
+    outline: none;
+    padding: 0;
+    transition: inline-size 150ms ease;
+  }
+
+  [data-filter-target~="item"][hidden] {
+    display: none !important;
+  }
+}

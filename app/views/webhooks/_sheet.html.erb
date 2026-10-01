@@ -1,0 +1,97 @@
+<%# locals: (webhook:, deliveries: []) %>
+<%# A webhook in the list's sheet (the webhook_sheet frame): new, or one
+    being edited with its signing secret, a test send and its recent
+    deliveries. Everything in it acts across the whole page (turbo_frame
+    _top): saved, created, rotated or tested, the list comes back with the
+    sheet open on it; refused, the same, with the errors. %>
+<turbo-frame id="webhook_sheet">
+  <div class="flex flex-column gap txt-align-start">
+    <h2 class="txt-large font-weight-bold margin-none"><%= webhook.new_record? ? "New webhook" : webhook.name_was.presence || "Webhook" %></h2>
+
+    <% if webhook.persisted? %>
+      <div class="flex align-center gap-half">
+        <%= button_to "Send a test", webhook_test_delivery_path(webhook), class: "btn txt-small", data: { turbo_frame: "_top" } %>
+        <% if Current.user.can?("webhooks:delete") %>
+          <%= render "layouts/shared/delete_dialog", name: webhook.name_was.to_s, path: webhook_path(webhook), trigger_text: "Delete",
+                message: "Its receiver stops hearing about changes. Its delivery log goes too." %>
+        <% end %>
+      </div>
+
+      <section class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Signing secret</span>
+        <div class="flex align-center gap-half">
+          <span class="secret-field flex-item-grow" data-controller="reveal">
+            <input type="password" value="<%= webhook.secret %>" readonly class="input full-width font-mono txt-small" aria-label="Signing secret" data-reveal-target="input">
+            <button type="button" class="btn btn--circle btn--plain secret-field__eye" title="Show" aria-pressed="false" data-reveal-target="button" data-action="reveal#toggle">
+              <%= icon_tag "eye", class: "secret-field__show" %>
+              <%= icon_tag "eye-off", class: "secret-field__hide" %>
+              <span class="for-screen-reader">Show or hide</span>
+            </button>
+          </span>
+          <button type="button" class="btn txt-small" data-controller="copy-to-clipboard" data-copy-to-clipboard-content-value="<%= webhook.secret %>" data-copy-to-clipboard-success-class="btn--success" data-action="copy-to-clipboard#copy">Copy</button>
+          <%= render "layouts/shared/confirm_dialog", label: "Rotate", title: "Rotate the signing secret?",
+                message: "Existing receivers will need the new value.", path: webhook_secret_rotation_path(webhook) %>
+        </div>
+        <span class="txt-x-small txt-subtle">Receivers verify deliveries with <code>HMAC_SHA256(body, secret) === request.headers["x-cms-signature"].slice(7)</code>.</span>
+      </section>
+    <% end %>
+
+    <%= render "layouts/shared/errors", record: webhook %>
+    <%= form_with model: webhook, class: "flex flex-column gap txt-medium", data: { turbo_frame: "_top" } do |form| %>
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Name</span>
+        <%= form.text_field :name, required: true, class: "input full-width", autofocus: webhook.new_record?, autocomplete: "off", placeholder: "Astro frontend revalidation" %>
+      </label>
+
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">URL</span>
+        <%= form.url_field :url, required: true, class: "input full-width font-mono", autocomplete: "off", placeholder: "https://hooks.example.com/cms" %>
+        <span class="txt-x-small txt-subtle">Each delivery carries an <code>X-CMS-Signature</code> header (HMAC-SHA256 over the raw body).</span>
+      </label>
+
+      <label class="flex align-center gap-half">
+        <%= form.check_box :active %>
+        <span class="txt-small font-weight-bold">Active</span>
+        <span class="txt-x-small txt-subtle">Inactive webhooks are skipped: events aren’t queued or retried.</span>
+      </label>
+
+      <fieldset class="flex flex-column gap-half role-permissions">
+        <legend class="txt-small font-weight-bold">Events</legend>
+        <%= hidden_field_tag "webhook[events][]", "", id: nil %>
+        <div class="role-permissions__groups">
+          <% webhook_event_groups.each do |group, events| %>
+            <%# herb:key group %>
+            <fieldset class="panel role-permissions__group">
+              <legend class="txt-small font-weight-bold"><%= group %></legend>
+              <% events.each do |event| %>
+                <%# herb:key event %>
+                <label class="flex align-center gap-half txt-small">
+                  <%= check_box_tag "webhook[events][]", event, Array(webhook.events).include?(event), id: "webhook_event_" + event.tr(".", "_") %>
+                  <span class="font-mono txt-x-small"><%= event %></span>
+                </label>
+              <% end %>
+            </fieldset>
+          <% end %>
+        </div>
+      </fieldset>
+
+      <%# Per-event filters a plugin adds (the Forms plugin: which forms send submission.created). %>
+      <%= plugin_slots(:webhook_filters, webhook: webhook) %>
+
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Custom headers <span class="font-weight-normal txt-subtle">(optional)</span></span>
+        <%= form.text_area :headers_text, rows: 3, class: "input full-width font-mono txt-small", spellcheck: false, placeholder: "Authorization: Bearer xyz" %>
+        <span class="txt-x-small txt-subtle">One “Name: value” per line.</span>
+      </label>
+
+      <div class="flex gap-half justify-end">
+        <button type="button" class="btn" data-action="dialog#close">Cancel</button>
+        <%= form.button (webhook.new_record? ? "Add webhook" : "Save changes"), class: "btn btn--link" %>
+      </div>
+    <% end %>
+
+    <% if webhook.persisted? %>
+      <%= render "webhooks/deliveries", deliveries: deliveries %>
+    <% end %>
+  </div>
+</turbo-frame>

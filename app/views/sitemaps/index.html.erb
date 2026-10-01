@@ -1,0 +1,114 @@
+<% @page_title = "Sitemap" %>
+<% xml_url = @base_url.chomp("/") + "/sitemap.xml" %>
+<% can_write = Current.user.can?("pages:write") %>
+<% included = @entries.count(&:included?) %>
+
+<% content_for :page_actions do %>
+  <%= link_to "View sitemap.xml", "/sitemap.xml", class: "btn txt-small", target: "_blank", rel: "noopener" %>
+  <button type="button" class="btn txt-small" data-controller="copy-to-clipboard" data-copy-to-clipboard-content-value="<%= xml_url %>" data-copy-to-clipboard-success-class="btn--success" data-action="copy-to-clipboard#copy">Copy URL</button>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title,
+      description: "Every URL the public sitemap publishes, and the ones it leaves out. Quick edit a row to change its status, priority or indexing." %>
+
+<%= render "layouts/shared/status_links", param: :show, current: @filter.to_s,
+      options: [ [ "All", nil, @entries.size ], [ "Included", "included", included ], [ "Excluded", "excluded", @entries.size - included ] ] %>
+
+<div class="tablenav">
+  <p class="tablenav__actions txt-x-small txt-subtle margin-none">
+    Published at <span class="font-mono"><%= xml_url %></span>, and to a build as <a href="/api/sitemap" class="txt-link font-mono">/api/sitemap</a>.
+  </p>
+  <div class="tablenav__search">
+    <%= render "layouts/shared/list_search", placeholder: "Search the sitemap…" %>
+  </div>
+</div>
+
+<% if @shown.any? %>
+  <section class="panel shadow center index-table">
+    <table class="data-table sitemap-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th class="data-table__number">Priority</th>
+          <th>Change freq.</th>
+          <th>Last modified</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @shown.each do |entry| %>
+          <%# herb:key "#{entry.source}-#{entry.id}" %>
+          <% record = @records.dig(entry.source, entry.id) %>
+          <% edit_path = (admin_record_path(record) if record && can_write) %>
+          <% live_url = @sitemap.absolute_url(entry.loc, @base_url) %>
+          <tr id="sitemap_<%= entry.source %>_<%= entry.id %>" data-filter-target="item">
+            <td>
+              <% if edit_path %>
+                <%= link_to entry.title, edit_path, class: "txt-ink font-weight-bold" %>
+              <% else %>
+                <span class="font-weight-bold"><%= entry.title %></span>
+              <% end %>
+              <div class="txt-x-small txt-subtle font-mono"><%= entry.loc %></div>
+              <div class="row-actions sitemap-table__actions">
+                <% if edit_path %>
+                  <span><%= link_to "Edit", edit_path, class: "row-actions__link" %></span>
+                <% end %>
+                <% if external_url?(live_url) %>
+                  <span><%= external_link live_url, "View", link_class: "row-actions__link" %></span>
+                <% end %>
+                <% if can_write %>
+                  <details class="quick-edit">
+                    <summary class="row-actions__link">Quick edit</summary>
+                    <%= form_with url: sitemap_entry_path(entry.source, entry.id), method: :patch, namespace: "sitemap_#{entry.source}_#{entry.id}",
+                          class: "quick-edit__form txt-small" do %>
+                      <%= hidden_field_tag :show, @filter, id: nil %>
+                      <% if Current.user.can?(Sitemap.publish_capability(entry.source)) %>
+                        <label class="quick-edit__field">
+                          <span class="font-weight-bold">Status</span>
+                          <%= select_tag "entry[status]", options_for_select(Page::STATUSES, entry.status), class: "input input--select txt-small", id: nil %>
+                        </label>
+                      <% end %>
+                      <label class="quick-edit__field">
+                        <span class="font-weight-bold">Priority</span>
+                        <%= number_field_tag "entry[sitemap_priority]", entry.priority, step: 0.1, min: 0, max: 1, class: "input txt-small", id: nil %>
+                      </label>
+                      <label class="quick-edit__field">
+                        <span class="font-weight-bold">Change freq.</span>
+                        <%= select_tag "entry[sitemap_changefreq]", options_for_select(Sitemap::CHANGEFREQS, entry.changefreq), class: "input input--select txt-small", id: nil %>
+                      </label>
+                      <label class="quick-edit__check">
+                        <%= hidden_field_tag "entry[noindex]", "false", id: nil %>
+                        <%= check_box_tag "entry[noindex]", "true", entry.noindex, id: nil %>
+                        <span>noindex</span>
+                      </label>
+                      <label class="quick-edit__check">
+                        <%= hidden_field_tag "entry[nofollow]", "false", id: nil %>
+                        <%= check_box_tag "entry[nofollow]", "true", entry.nofollow, id: nil %>
+                        <span>nofollow</span>
+                      </label>
+                      <button type="submit" class="btn txt-small">Update</button>
+                    <% end %>
+                  </details>
+                <% end %>
+              </div>
+            </td>
+            <td class="txt-subtle"><%= entry.collection_slug ? entry.collection_slug.humanize : "Page" %></td>
+            <td>
+              <%= status_tag entry.status, highlight: entry.included? %>
+              <% if entry.noindex %>
+                <%= status_tag "noindex" %>
+              <% end %>
+            </td>
+            <td class="data-table__number"><%= format("%.2f", entry.priority.to_f) %></td>
+            <td class="txt-subtle"><%= entry.changefreq %></td>
+            <td class="txt-subtle txt-small"><%= entry.lastmod.present? ? time_ago_tag(Time.zone.parse(entry.lastmod.to_s)) : "—" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+<% else %>
+  <div class="panel panel--centered center">
+    <p class="txt-medium margin-none">Nothing to show.</p>
+  </div>
+<% end %>

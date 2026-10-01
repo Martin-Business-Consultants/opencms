@@ -1,0 +1,58 @@
+<%# locals: (global:) %>
+<%# A global's editor, laid out like WordPress's: its name as the title and
+    its data, grouped by the schema's `tab` (General when unset), in the main
+    column; the Publish box and the global's identity down the side. %>
+<% tabs = global.fields.group_by { it["tab"].presence || "General" } %>
+<% data_scope = content_scope("global")["data"] %>
+<% trash = Current.user.can?("globals:delete") %>
+<%= form_with model: global, url: global_path(global.slug), scope: :global, id: "global_form", class: "content-form",
+      data: { controller: "form", action: "keydown.esc->form#cancel" } do |form| %>
+  <div class="content-form__main flex flex-column gap">
+    <div class="editor-title">
+      <label class="for-screen-reader" for="global_name">Name</label>
+      <%= form.text_field :name, required: true, class: "input editor-title__input", placeholder: "Add name" %>
+    </div>
+
+    <% if tabs.empty? %>
+      <section class="editor-box">
+        <div class="editor-box__body">
+          <p class="txt-small txt-subtle margin-none">This global has no fields yet. <%= link_to "Define its fields", global_schema_path(global.slug), class: "txt-link" %>.</p>
+        </div>
+      </section>
+    <% end %>
+    <% tabs.each do |tab, fields| %>
+      <%# herb:key tab %>
+      <%= postbox "global-" + tab.parameterize, tab do %>
+        <%= render "content_form/fields", fields: fields, values: global.data, scope: data_scope, depth: 1 %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <aside class="content-form__aside flex flex-column gap">
+    <%= render "content_form/publish_box", record: global, form: form, scope: "global", prefix: "globals",
+          trash_name: "this global", trash_path: (global_path(global.slug) if trash), trash_form: ("global_trash_form" if trash) %>
+
+    <%= postbox "global-identity", "Global" do %>
+      <label class="content-field flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Slug</span>
+        <%= form.text_field :slug, required: true, class: "input full-width font-mono", autocomplete: "off" %>
+      </label>
+      <label class="content-field flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Description</span>
+        <%= form.text_field :description, class: "input full-width" %>
+      </label>
+      <label class="content-field flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Icon</span>
+        <%= form.text_field :icon, class: "input full-width", autocomplete: "off" %>
+      </label>
+      <%= render "content_form/reference", reference: "globals/" + global.slug %>
+    <% end %>
+  </aside>
+
+  <%= link_to "Cancel and go back", globals_path, data: { form_target: "cancel" }, hidden: true %>
+<% end %>
+<% if trash %>
+  <%= render "layouts/shared/delete_form", id: "global_trash_form", path: global_path(global.slug) %>
+<% end %>
+<%= render "content_form/asset_picker" %>
+<%= render "content_form/postbox_state" %>

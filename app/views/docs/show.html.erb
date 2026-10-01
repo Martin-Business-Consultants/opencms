@@ -1,0 +1,12 @@
+<% @page_title = @guide.title %>
+<%= parent_page "Docs", docs_path %>
+<%= render "layouts/shared/page_header", title: @guide.title, description: @guide.summary %>
+
+<div class="content-form content-form--thirds">
+  <article class="content-form__main panel shadow docs-article lexxy-content">
+    <%= sanitize @guide.html(cms_url: request.base_url), tags: Markdown::TAGS, attributes: Markdown::ATTRIBUTES %>
+  </article>
+  <aside class="content-form__aside flex flex-column gap">
+    <%= render "docs/nav", guides: @guides, current: @guide.slug %>
+  </aside>
+</div>

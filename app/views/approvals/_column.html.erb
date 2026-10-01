@@ -1,0 +1,40 @@
+<%# locals: (title:, count:, items:, empty:, more_path:) %>
+<section class="panel shadow flex flex-column gap-half txt-align-start approvals__column">
+  <header class="flex align-center justify-space-between gap-half">
+    <h2 class="txt-medium font-weight-bold margin-none"><%= title %></h2>
+    <span class="txt-small txt-subtle"><%= count %></span>
+  </header>
+  <% if items.any? %>
+    <ul class="approvals__list">
+      <% items.each do |item| %>
+        <%# herb:key "#{item[:kind]}-#{item[:id]}" %>
+        <li class="flex flex-column gap-quarter" data-filter-target="item">
+          <%= link_to item[:title], item[:href], class: "txt-ink font-weight-bold" %>
+          <span class="txt-x-small txt-subtle"><%= item[:subtitle] %></span>
+          <span class="flex align-center gap-half txt-x-small txt-subtle">
+            <% if item[:stale] %>
+              <%= status_tag "Stale" %>
+            <% end %>
+            <% if item[:finding_kind_label] %>
+              <%= status_tag item[:finding_kind_label] %>
+            <% end %>
+            <% if item[:impact] %>
+              <span>impact <%= item[:impact] %></span>
+            <% end %>
+            <span><%= item[:author] || item[:agent] %></span>
+            <%= time_ago_tag item[:created_at] %>
+            <% unless item[:can_decide] %>
+              <span>· view only</span>
+            <% end %>
+          </span>
+          <% if item[:comment].present? %>
+            <span class="txt-small">“<%= item[:comment] %>”</span>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="txt-small txt-subtle margin-none"><%= empty %></p>
+  <% end %>
+  <%= link_to "Open the full list", more_path, class: "txt-link txt-small margin-block-start" %>
+</section>

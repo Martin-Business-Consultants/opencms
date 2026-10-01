@@ -1,0 +1,68 @@
+/* Commerce: quote requests and invoices (engines/commerce). */
+@layer components {
+  .commerce-columns {
+    display: grid;
+    gap: var(--block-space);
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+
+    @media (max-width: 60rem) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .commerce-fields {
+    display: grid;
+    gap: var(--block-space-half) var(--inline-space);
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  }
+
+  .commerce-facts {
+    display: grid;
+    gap: var(--block-space-half) var(--inline-space);
+    grid-template-columns: max-content minmax(0, 1fr);
+    margin: 0;
+
+    dt { color: var(--color-ink-dark); font-size: var(--text-small); }
+    dd { margin: 0; min-inline-size: 0; }
+  }
+
+  .commerce-totals {
+    display: grid;
+    gap: var(--block-space-half) var(--inline-space);
+    grid-template-columns: 1fr max-content;
+    margin: 0 0 0 auto;
+    min-inline-size: min(20rem, 100%);
+
+    dd { margin: 0; text-align: end; font-variant-numeric: tabular-nums; }
+  }
+
+  .commerce-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space-half);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .commerce-details > summary {
+    list-style: none;
+    inline-size: fit-content;
+  }
+
+  /* One invoice line: description, SKU, quantity, unit price, and its buttons. */
+  .invoice-line {
+    align-items: end;
+    display: grid;
+    gap: var(--inline-space-half);
+    grid-template-columns: minmax(12rem, 1fr) 8rem 5rem 9rem max-content;
+
+    label { display: flex; flex-direction: column; gap: var(--block-space-half); }
+
+    @media (max-width: 48rem) {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+
+      .invoice-line__description { grid-column: 1 / -1; }
+    }
+  }
+}

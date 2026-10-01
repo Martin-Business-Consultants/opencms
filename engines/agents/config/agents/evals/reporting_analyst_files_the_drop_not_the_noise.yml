@@ -1,0 +1,26 @@
+key: reporting_analyst_files_the_drop_not_the_noise
+template: reporting_analyst
+description: >
+  The failure mode is not "misses a finding" — it is filing eight findings
+  about figures that wobbled by one, so the queue fills with noise and the
+  one real drop (a page that stopped crawling) gets the same weight as a
+  keyword that moved from #7 to #8.
+fixture:
+  reports:
+    - kind: page_health
+      metrics:
+        average_score: { now: 61, previous: 84 }
+        critical: { now: 1, previous: 0 }
+      detail: "/prices returned 500 on this crawl; last week it scored 79."
+    - kind: ranked_keywords
+      metrics:
+        total_count: { now: 512, previous: 511 }
+        top_3: { now: 19, previous: 20 }
+    - kind: google_reviews
+      metrics:
+        unanswered: { now: 3, previous: 3 }
+        recent_low: { now: 0, previous: 0 }
+expect:
+  recommends: [technical]
+  min: 1
+  never: [content_gap, cannibalization]

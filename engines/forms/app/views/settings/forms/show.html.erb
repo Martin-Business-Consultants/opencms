@@ -1,0 +1,51 @@
+<% @page_title = "Forms" %>
+<% can_write = Current.user.can?("forms:write") %>
+
+<%= render "layouts/shared/page_header", title: "Forms" %>
+<% content_for :settings_aside do %>
+  <%= render "settings/save_box", form: "settings_form", capability: "forms:write" %>
+<% end %>
+
+
+<section class="panel shadow settings-page txt-align-start">
+
+  <%= form_with url: settings_forms_path, id: "settings_form", method: :patch, scope: :settings, class: "flex flex-column gap-double" do |form| %>
+    <%= tag.fieldset class: "settings-fieldset flex flex-column gap-double", disabled: !can_write do %>
+      <section class="settings__section flex flex-column gap">
+        <header><h2 class="divider">Sender</h2></header>
+        <p class="txt-small txt-subtle margin-none">How form notifications and confirmations are signed.</p>
+        <div class="settings-fields">
+          <%= settings_field "From name" do %>
+            <%= form.text_field :from_name, value: @settings["from_name"], class: "input full-width", placeholder: "Old Mill Forms" %>
+          <% end %>
+          <%= settings_field "From address" do %>
+            <%= form.email_field :from_email, value: @settings["from_email"], class: "input full-width", placeholder: "forms@example.com" %>
+          <% end %>
+        </div>
+      </section>
+
+      <section class="settings__section flex flex-column gap">
+        <header><h2 class="divider">Spam protection</h2></header>
+        <p class="txt-small txt-subtle margin-none">A submission has to pass this check before it reaches the inbox. The site shows the widget with the site key.</p>
+        <%= settings_field "Check with" do %>
+          <%= form.select :captcha_provider, Settings::FormsController::CAPTCHA_PROVIDERS.invert.to_a, { selected: @settings["captcha_provider"] }, class: "input input--select full-width" %>
+        <% end %>
+        <div class="settings-fields">
+          <%= settings_field "Turnstile site key" do %>
+            <%= form.text_field :turnstile_site_key, value: @settings["turnstile_site_key"], class: "input full-width font-mono", autocomplete: "off" %>
+          <% end %>
+          <%= settings_field "Turnstile secret key" do %>
+            <%= form.password_field :turnstile_secret_key, class: "input full-width font-mono", autocomplete: "new-password", placeholder: (@secrets_set["turnstile_secret_key"] ? "Saved — leave blank to keep" : ""), data: { "1p-ignore": true } %>
+          <% end %>
+          <%= settings_field "reCAPTCHA site key" do %>
+            <%= form.text_field :recaptcha_site_key, value: @settings["recaptcha_site_key"], class: "input full-width font-mono", autocomplete: "off" %>
+          <% end %>
+          <%= settings_field "reCAPTCHA secret key" do %>
+            <%= form.password_field :recaptcha_secret_key, class: "input full-width font-mono", autocomplete: "new-password", placeholder: (@secrets_set["recaptcha_secret_key"] ? "Saved — leave blank to keep" : ""), data: { "1p-ignore": true } %>
+          <% end %>
+        </div>
+      </section>
+
+    <% end %>
+  <% end %>
+</section>

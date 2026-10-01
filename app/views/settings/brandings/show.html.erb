@@ -1,0 +1,61 @@
+<% @page_title = "Branding" %>
+<% image_options = @images.map { |asset| [asset.name.presence || asset.filename, asset.id] } %>
+
+<%= render "layouts/shared/page_header", title: "Branding" %>
+<% content_for :settings_aside do %>
+  <%= render "settings/save_box", form: "settings_form" %>
+<% end %>
+
+
+<section class="panel shadow settings-page txt-align-start">
+  <section class="settings__section flex flex-column gap">
+    <p class="txt-small txt-subtle margin-none">Logo, palette, and surface tokens that flow into the public site. The admin uses the colour and font too.</p>
+  </section>
+
+  <%= form_with url: settings_branding_path, id: "settings_form", method: :patch, scope: :branding, class: "flex flex-column gap-double" do |form| %>
+    <%= tag.fieldset class: "settings-fieldset flex flex-column gap", disabled: !Current.user.can?("settings:write") do %>
+      <section class="settings__section flex flex-column gap">
+        <header><h2 class="divider">Identity</h2></header>
+        <div class="settings-fields">
+          <%= settings_field "Logo", hint: "An image from the file manager." do %>
+            <%= form.select :logo_id, image_options, { include_blank: "No logo", selected: @branding[:logo_id] }, class: "input input--select full-width" %>
+          <% end %>
+          <%= settings_field "Favicon", hint: "Square works best; resized for browsers." do %>
+            <%= form.select :favicon_id, image_options, { include_blank: "Default icon", selected: @branding[:favicon_id] }, class: "input input--select full-width" %>
+          <% end %>
+        </div>
+        <% if image_options.empty? %>
+          <p class="txt-x-small txt-subtle margin-none">No images yet — upload one in the <%= link_to "file manager", file_manager_path, class: "txt-link" %> first.</p>
+        <% end %>
+      </section>
+
+      <section class="settings__section flex flex-column gap">
+        <header><h2 class="divider">Colour</h2></header>
+        <div class="settings-fields">
+          <%= settings_field "Primary colour", hint: "A hex value, like #b45309." do %>
+            <%= form.text_field :primary_color, value: @branding[:primary_color], pattern: "#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})", placeholder: "#b45309", class: "input full-width font-mono" %>
+          <% end %>
+          <%= settings_field "Secondary colour", hint: "Used by the public site only." do %>
+            <%= form.text_field :secondary_color, value: @branding[:secondary_color], pattern: "#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})", placeholder: "#1c1917", class: "input full-width font-mono" %>
+          <% end %>
+        </div>
+      </section>
+
+      <section class="settings__section flex flex-column gap">
+        <header><h2 class="divider">Type and surface</h2></header>
+        <div class="settings-fields settings-fields--thirds">
+          <%= settings_field "Font" do %>
+            <%= form.select :font, Branding::FONTS.invert.to_a, { include_blank: "Default", selected: @branding[:font] }, class: "input input--select full-width" %>
+          <% end %>
+          <%= settings_field "Corners" do %>
+            <%= form.select :border_radius, Branding::RADII.map { |value| [value.humanize, value] }, { include_blank: "Default", selected: @branding[:border_radius] }, class: "input input--select full-width" %>
+          <% end %>
+          <%= settings_field "Shadow", hint: "Used by the public site only." do %>
+            <%= form.select :box_shadow, Branding::SHADOWS.map { |value| [value.humanize, value] }, { include_blank: "Default", selected: @branding[:box_shadow] }, class: "input input--select full-width" %>
+          <% end %>
+        </div>
+      </section>
+
+    <% end %>
+  <% end %>
+</section>

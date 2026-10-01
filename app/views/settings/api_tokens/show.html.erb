@@ -1,0 +1,61 @@
+<% @page_title = "API token" %>
+<% install_command = "curl -fsSL " + request.base_url + "/agent/install.sh | sh" %>
+
+<%= render "layouts/shared/page_header", title: "API token" %>
+
+<section class="panel shadow settings-page txt-align-start">
+  <section class="settings__section flex flex-column gap">
+    <p class="txt-small txt-subtle margin-none">Your personal token for the API and the <code>cms</code> CLI. It can do exactly what your role allows — no more — and changes with your role.</p>
+
+    <%= render "settings/secret", frame_id: "api_token_secret", masked: @token.masked, visible: @token.visible?,
+          reveal_path: settings_api_token_reveal_path %>
+
+    <p class="txt-x-small txt-subtle margin-none">
+      Created <%= time_ago_tag @token.created_at %> ·
+      <% if @token.last_used_at %>
+        last used <%= time_ago_tag @token.last_used_at %><% if @token.last_used_ip.present? %> from <%= @token.last_used_ip %><% end %>
+      <% else %>
+        never used
+      <% end %>
+    </p>
+
+    <div>
+      <%= render "layouts/shared/confirm_dialog", label: "Rotate token", title: "Rotate this token?",
+            message: "The current one stops working immediately, and anything using it will start getting 401s.",
+            path: settings_api_token_rotation_path, button: "Rotate", negative: true %>
+    </div>
+  </section>
+
+  <section class="settings__section flex flex-column gap-half">
+    <header><h2 class="divider">Using it</h2></header>
+    <p class="txt-small margin-none">Send it as a bearer token. In an Astro site this is the <code>USER_AGENT_TOKEN</code> value. A published site should use a read-only service token instead — see <%= link_to "Service tokens", settings_service_tokens_path, class: "txt-link" %>.</p>
+    <pre class="settings-code margin-none">curl -H "Authorization: Bearer <%= @token.prefix %>…" \
+  <%= request.base_url %>/api/pages</pre>
+  </section>
+
+  <section class="settings__section flex flex-column gap-half">
+    <header><h2 class="divider">Using it from an agent</h2></header>
+    <p class="txt-small margin-none">Run this on your own machine to set up Claude Code, opencode or Codex against this workspace. It installs the <code>cms</code> CLI, saves your token, and writes an <code>AGENTS.md</code> the agent reads — including a slot for the Astro repo it should clone.</p>
+    <div class="flex align-center gap-half">
+      <code class="settings-code flex-item-grow"><%= install_command %></code>
+      <%= copy_button install_command %>
+    </div>
+  </section>
+
+  <section class="settings__section flex flex-column gap-half">
+    <header><h2 class="divider">What it can do</h2></header>
+    <% if @capabilities.empty? %>
+      <p class="txt-small txt-subtle margin-none">Nothing yet — your role grants no capabilities.</p>
+    <% else %>
+      <dl class="settings-cards">
+        <% @capabilities.each do |group, caps| %>
+          <%# herb:key group %>
+          <div class="panel settings-cards__card">
+            <dt class="txt-small font-weight-bold"><%= group %></dt>
+            <dd class="txt-x-small txt-subtle margin-none font-mono"><%= caps.join(", ") %></dd>
+          </div>
+        <% end %>
+      </dl>
+    <% end %>
+  </section>
+</section>

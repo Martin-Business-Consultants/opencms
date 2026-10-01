@@ -1,0 +1,119 @@
+<% @page_title = "Schema: " + @collection.name %>
+<%= parent_page @collection.name, collection_entries_path(@collection.slug) %>
+<% settings = @collection.build_settings %>
+<% booleans = @collection.fields.select { it["type"] == "boolean" } %>
+<% card_candidates = @collection.fields.select { Collection::BUILD_INLINE_TYPES.include?(it["type"]) && it["name"] != settings["field"] } %>
+
+<% content_for :page_actions do %>
+  <%= link_to "Entries", collection_entries_path(@collection.slug), class: "btn txt-small" %>
+  <% if @collection.build_board? %>
+    <%= link_to "Build", build_collection_entries_path(@collection.slug), class: "btn txt-small" %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title, description: "The shape of an entry in “" + @collection.name + "”, and how the collection behaves." %>
+
+<%= render "layouts/shared/errors", record: @collection %>
+
+<div class="schema-layout">
+  <%= form_with url: collection_schema_path(@collection.slug), method: :patch, id: "collection_schema", class: "flex flex-column gap" do %>
+    <%= render "schemas/editor", fields: @collection.fields, scope: "collection", field_types: Collection::FIELD_TYPES,
+          collection_slugs: Collection.where.not(id: @collection.id).order(:slug).pluck(:slug) %>
+    <div>
+      <button type="submit" class="btn btn--link">Save schema</button>
+    </div>
+  <% end %>
+
+  <aside class="schema-layout__aside">
+    <section class="panel flex flex-column gap-half">
+      <h2 class="txt-medium font-weight-bold margin-none">Blocks</h2>
+      <label class="flex align-center gap-half txt-small">
+        <%= hidden_field_tag "collection[enable_blocks]", "0", id: nil, form: "collection_schema" %>
+        <%= check_box_tag "collection[enable_blocks]", "1", @collection.enable_blocks, id: nil, form: "collection_schema" %>
+        <span>Compose each entry from the block library, like pages</span>
+      </label>
+    </section>
+
+    <section class="panel flex flex-column gap-half">
+      <h2 class="txt-medium font-weight-bold margin-none">Build board</h2>
+      <p class="txt-x-small txt-subtle margin-none">Two columns standing for one yes/no field; dragging a card across is the edit. Fields added above can be picked once the schema is saved.</p>
+      <label class="flex flex-column gap-half txt-small">
+        <span class="font-weight-bold">Column field</span>
+        <%= select_tag "collection[build_config][field]", options_for_select(booleans.map { [ field_label_text(it), it["name"] ] }, settings["field"]),
+              include_blank: "No board", id: nil, class: "input input--select", form: "collection_schema" %>
+      </label>
+      <div class="flex gap-half">
+        <label class="flex flex-column gap-half txt-small flex-item-grow">
+          <span class="font-weight-bold">Left column</span>
+          <%= text_field_tag "collection[build_config][off_label]", settings["off_label"], id: nil, class: "input", placeholder: "Off", form: "collection_schema" %>
+        </label>
+        <label class="flex flex-column gap-half txt-small flex-item-grow">
+          <span class="font-weight-bold">Right column</span>
+          <%= text_field_tag "collection[build_config][on_label]", settings["on_label"], id: nil, class: "input", placeholder: "On", form: "collection_schema" %>
+        </label>
+      </div>
+      <fieldset class="flex flex-column gap-half txt-small">
+        <legend class="font-weight-bold">The right column also</legend>
+        <label class="flex align-center gap-half">
+          <%= hidden_field_tag "collection[build_config][also_publish]", "0", id: nil, form: "collection_schema" %>
+          <%= check_box_tag "collection[build_config][also_publish]", "1", settings["also_publish"].present?, id: nil, form: "collection_schema" %>
+          <span>publishes the entry (and the left returns it to draft)</span>
+        </label>
+        <% booleans.reject { it["name"] == settings["field"] }.each do |field| %>
+          <%# herb:key field["name"] %>
+          <label class="flex align-center gap-half">
+            <%= check_box_tag "collection[build_config][also_fields][]", field["name"], Array(settings["also_fields"]).include?(field["name"]), id: nil, form: "collection_schema" %>
+            <span>turns on <%= field_label_text(field) %></span>
+          </label>
+        <% end %>
+      </fieldset>
+      <% if card_candidates.any? %>
+        <fieldset class="flex flex-column gap-half txt-small">
+          <legend class="font-weight-bold">Edit on the card</legend>
+          <% card_candidates.each do |field| %>
+            <%# herb:key field["name"] %>
+            <label class="flex align-center gap-half">
+              <%= check_box_tag "collection[build_config][card_fields][]", field["name"], Array(settings["card_fields"]).include?(field["name"]), id: nil, form: "collection_schema" %>
+              <span><%= field_label_text(field) %></span>
+            </label>
+          <% end %>
+        </fieldset>
+      <% end %>
+    </section>
+
+    <details class="panel">
+      <summary class="txt-medium font-weight-bold">Notifications</summary>
+      <div class="flex flex-column gap-half margin-block-start txt-small">
+        <fieldset class="flex flex-column gap-half">
+          <legend class="font-weight-bold">Email on</legend>
+          <%= hidden_field_tag "collection[notification_events][]", "", id: nil, form: "collection_schema" %>
+          <% Collection::NOTIFICATION_EVENTS.each do |event| %>
+            <%# herb:key event %>
+            <label class="flex align-center gap-half">
+              <%= check_box_tag "collection[notification_events][]", event, Array(@collection.notification_events).include?(event), id: nil, form: "collection_schema" %>
+              <span><%= event.delete_prefix("entry.").humanize %></span>
+            </label>
+          <% end %>
+        </fieldset>
+        <label class="flex flex-column gap-half">
+          <span class="font-weight-bold">Send to</span>
+          <%= text_area_tag "collection[notification_emails]", @collection.notification_emails, id: nil, rows: 2, class: "input",
+                placeholder: "alice@example.com, bob@example.com", form: "collection_schema" %>
+          <span class="txt-x-small txt-subtle">Comma- or newline-separated. Saved with the schema.</span>
+        </label>
+      </div>
+    </details>
+
+    <section class="panel flex flex-column gap-half">
+      <h2 class="txt-medium font-weight-bold margin-none">Name and icon</h2>
+      <%= form_with model: @collection, url: collection_path(@collection.slug), method: :patch, class: "flex flex-column gap-half" do |form| %>
+        <%= form.text_field :name, class: "input full-width", autocomplete: "off", aria: { label: "Name" } %>
+        <div class="flex align-center gap-half">
+          <%= icon_tag @collection.admin_icon %>
+          <%= form.select :icon, Collection::Iconic.options, { include_blank: "No icon (stack)" }, class: "input input--select flex-item-grow", aria: { label: "Icon" } %>
+        </div>
+        <%= form.button "Save", class: "btn txt-small" %>
+      <% end %>
+      <p class="txt-x-small txt-subtle margin-none">Slug: <span class="font-mono"><%= @collection.slug %></span></p>
+    </section>
+  </aside>
+</div>

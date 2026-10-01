@@ -1,0 +1,68 @@
+<% @page_title = "Collections" %>
+<% can_write = Current.user.can?("collections:write") %>
+<% can_delete = Current.user.can?("collections:delete") %>
+
+<% content_for :page_actions do %>
+  <% if can_write %>
+    <%= render "collections/new_collection", collection: @new_collection || Collection.new, open: @new_collection.present? %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title, description: "Repeating content — posts, specials, team members — each with fields of its own." %>
+
+<% if can_delete && @collections.any? %>
+  <%= render "layouts/shared/bulk_actions", id: "collections_bulk", noun: "collection", deletion_path: collections_bulk_deletions_path,
+        delete_message: "Their entries are deleted with them. This can’t be undone." %>
+<% end %>
+
+<% if @collections.any? %>
+  <section class="panel shadow center index-table" data-controller="select-all">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <% if can_delete %>
+            <th class="data-table__check"><input type="checkbox" aria-label="Select every row" data-select-all-target="all" data-action="select-all#toggle"></th>
+          <% end %>
+          <th>Name</th>
+          <th>Slug</th>
+          <th class="data-table__number">Fields</th>
+          <th class="data-table__number">Entries</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @collections.each do |collection| %>
+          <%# herb:key collection.id %>
+          <tr id="<%= dom_id(collection) %>" data-filter-target="item">
+            <% if can_delete %>
+              <td class="data-table__check"><input type="checkbox" data-select-all-target="box" data-action="select-all#sync" name="slugs[]" value="<%= collection.slug %>" form="collections_bulk" aria-label="Select <%= collection.name %>"></td>
+            <% end %>
+            <td>
+              <%= link_to collection_entries_path(collection.slug), class: "txt-ink font-weight-bold collection-name" do %>
+                <%= icon_tag collection.admin_icon %>
+                <span><%= collection.name %></span>
+              <% end %>
+              <%= render "layouts/shared/row_links",
+                    links: [ [ "Entries", collection_entries_path(collection.slug) ],
+                             ([ "Build", build_collection_entries_path(collection.slug) ] if collection.build_board?),
+                             ([ "Schema", collection_schema_path(collection.slug) ] if can_write) ].compact,
+                    delete_path: (collection_path(collection.slug) if can_delete), delete_name: collection.name,
+                    delete_message: "Its entries are deleted with it. This can’t be undone." %>
+            </td>
+            <td class="txt-subtle font-mono"><%= collection.slug %></td>
+            <td class="data-table__number"><%= collection.fields.size %></td>
+            <td class="data-table__number"><%= @entry_counts.fetch(collection.id, 0) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+<% else %>
+  <div class="panel panel--centered center flex flex-column gap-half">
+    <p class="txt-medium">No collections yet. Start from a template, or define the fields yourself.</p>
+    <% if can_write %>
+      <%= link_to new_collection_path, class: "btn btn--link center" do %>
+        <span>Add a collection</span>
+        <%= icon_tag "arrow-right" %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

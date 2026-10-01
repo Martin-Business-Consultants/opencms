@@ -1,0 +1,68 @@
+<%# locals: (report:, extra:) %>
+<%# The audit's findings with the fix beside each, what a person dismissed
+    ("not a problem here", kept across runs) and what passed. %>
+<% dismissed = (extra[:dismissed] || {}).to_h %>
+<% findings = Array(report.data["findings"]) %>
+<% open = findings.reject { |f| dismissed.key?(f["key"].to_s) } %>
+<% closed = findings.select { |f| dismissed.key?(f["key"].to_s) } %>
+<% passed = Array(report.data["passed"]) %>
+<% can_run = Current.user.can?("reports:run") %>
+
+<section class="panel shadow flex flex-column gap-half">
+  <h2 class="txt-medium font-weight-bold margin-none">Findings <span class="txt-small txt-subtle">(<%= open.length %> open<% if closed.any? %>, <%= closed.length %> dismissed<% end %>, <%= passed.length %> passed)</span></h2>
+  <% if open.empty? %>
+    <p class="margin-none">Nothing open.</p>
+  <% end %>
+  <% open.each do |finding| %>
+    <%# herb:key finding["key"] %>
+    <article class="flex flex-column gap-half report-finding">
+      <div class="flex align-center justify-space-between gap">
+        <strong><%= status_tag finding["severity"].to_s %> <%= finding["title"] %></strong>
+        <% if can_run %>
+          <%= button_to "Not a problem here", site_audit_dismissal_path(key: finding["key"]), class: "btn txt-x-small" %>
+        <% end %>
+      </div>
+      <p class="txt-small margin-none"><%= finding["body"] %></p>
+      <% fix = finding["fix"] %>
+      <% if fix.is_a?(Hash) && fix["label"].present? %>
+        <p class="txt-small margin-none">
+          Fix:
+          <% if fix["href"].to_s.start_with?("/") %>
+            <%= link_to fix["label"], fix["href"], class: "txt-link" %>
+          <% else %>
+            <%= fix["label"] %>
+          <% end %>
+        </p>
+      <% end %>
+    </article>
+  <% end %>
+</section>
+
+<% if closed.any? %>
+  <section class="panel shadow flex flex-column gap-half">
+    <h2 class="txt-medium font-weight-bold margin-none">Dismissed</h2>
+    <ul class="margin-none">
+      <% closed.each do |finding| %>
+        <%# herb:key finding["key"] %>
+        <li class="flex align-center justify-space-between gap txt-small">
+          <span><%= finding["title"] %></span>
+          <% if can_run %>
+            <%= button_to "Restore", site_audit_dismissal_path(key: finding["key"]), method: :delete, class: "btn txt-x-small" %>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+<% end %>
+
+<% if passed.any? %>
+  <section class="panel shadow flex flex-column gap-half">
+    <h2 class="txt-medium font-weight-bold margin-none">Passed</h2>
+    <ul class="margin-none">
+      <% passed.each do |check| %>
+        <%# herb:key check["key"] %>
+        <li class="txt-small"><%= check["title"] %></li>
+      <% end %>
+    </ul>
+  </section>
+<% end %>

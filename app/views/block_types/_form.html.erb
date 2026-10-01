@@ -1,0 +1,63 @@
+<%# locals: (block_type:) %>
+<% json = JSON.pretty_generate(block_type.slice("slug", "label", "description", "category", "icon", "fields", "defaults")) %>
+<%= render "layouts/shared/errors", record: block_type %>
+
+<%= form_with url: (block_type.persisted? ? block_type_path(block_type.slug) : block_types_path), method: (block_type.persisted? ? :patch : :post),
+      id: "block_type_form", class: "flex flex-column gap" do %>
+  <section class="panel flex flex-column gap-half txt-align-start">
+    <div class="block-type-identity">
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Label</span>
+        <%= text_field_tag "block_type[label]", block_type.label, id: nil, class: "input full-width", placeholder: "Hero", autocomplete: "off" %>
+      </label>
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Slug</span>
+        <%= text_field_tag "block_type[slug]", block_type.slug, id: nil, class: "input full-width font-mono", placeholder: "hero",
+              autocomplete: "off", spellcheck: false, disabled: block_type.persisted? %>
+      </label>
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Category</span>
+        <%= text_field_tag "block_type[category]", block_type.category, id: nil, class: "input full-width", placeholder: "layout", autocomplete: "off" %>
+      </label>
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Icon</span>
+        <%= text_field_tag "block_type[icon]", block_type.icon, id: nil, class: "input full-width", placeholder: "LayoutTemplate", autocomplete: "off" %>
+      </label>
+    </div>
+    <label class="flex flex-column gap-half">
+      <span class="txt-small font-weight-bold">Description</span>
+      <%= text_area_tag "block_type[description]", block_type.description, id: nil, rows: 2, class: "input full-width" %>
+    </label>
+    <label class="flex align-center gap-half txt-small">
+      <%= hidden_field_tag "block_type[deprecated]", "0", id: nil %>
+      <%= check_box_tag "block_type[deprecated]", "1", block_type.deprecated, id: nil %>
+      <span>Deprecated — hidden when adding a block, kept on pages that have one</span>
+    </label>
+  </section>
+
+  <h2 class="txt-medium font-weight-bold margin-none txt-align-start">Fields</h2>
+  <%= render "schemas/editor", fields: block_type.fields, scope: "block_type", field_types: BlockType::TYPES,
+        collection_slugs: Collection.order(:slug).pluck(:slug), block_slugs: BlockType.where.not(id: block_type.id).order(:slug).pluck(:slug) %>
+
+  <label class="flex flex-column gap-half txt-align-start">
+    <span class="txt-small font-weight-bold">Defaults (JSON)</span>
+    <%= text_area_tag "block_type[defaults]", JSON.pretty_generate(block_type.defaults.presence || {}), id: nil, rows: 5,
+          class: "input full-width font-mono", spellcheck: false %>
+    <span class="txt-x-small txt-subtle">What a new block of this type starts with, keyed by field name.</span>
+  </label>
+
+  <div>
+    <button type="submit" class="btn btn--link"><%= block_type.persisted? ? "Save block type" : "Create block type" %></button>
+  </div>
+
+  <details class="panel txt-align-start">
+    <summary class="txt-small font-weight-bold">Paste or edit the whole definition as JSON</summary>
+    <div class="flex flex-column gap-half margin-block-start">
+      <%= text_area_tag "block_type[json]", json, id: nil, rows: 16, class: "input full-width font-mono", spellcheck: false %>
+      <span class="txt-x-small txt-subtle">The shape the starter pack uses: slug, label, description, category, icon, fields and defaults. It replaces the form above.</span>
+      <div>
+        <button type="submit" class="btn txt-small" name="source" value="json">Use this JSON</button>
+      </div>
+    </div>
+  </details>
+<% end %>

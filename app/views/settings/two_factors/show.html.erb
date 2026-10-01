@@ -1,0 +1,79 @@
+<% @page_title = "Two-factor" %>
+<% user = Current.user %>
+<% remaining = user.recovery_code_digests.is_a?(Array) ? user.recovery_code_digests.size : 0 %>
+
+<%= render "layouts/shared/page_header", title: "Two-factor authentication" %>
+
+<section class="panel shadow settings-page txt-align-start">
+  <section class="settings__section flex flex-column gap">
+    <p class="txt-small txt-subtle margin-none">Adds a second step at sign-in: a code from an authenticator app (1Password, Authy, Google Authenticator…).</p>
+
+    <% if @recovery_codes.present? %>
+      <div class="flex flex-column gap-half">
+        <h2 class="txt-medium font-weight-bold margin-none">Save your recovery codes</h2>
+        <p class="txt-small margin-none">Each code works once, in place of an authenticator code. Store them somewhere safe — this is the only time they’re shown.</p>
+        <ul class="settings-codes">
+          <% @recovery_codes.each do |code| %>
+            <%# herb:key code %>
+            <li class="settings-code"><%= code %></li>
+          <% end %>
+        </ul>
+        <div><%= copy_button @recovery_codes.join("\n"), label: "Copy all" %></div>
+      </div>
+    <% end %>
+
+    <% if user.totp_enabled? %>
+      <p class="flex align-center gap-half margin-none txt-small">
+        <%= status_tag "Enabled" %>
+        <% if user.totp_enabled_at %>
+          <span class="txt-subtle">since <%= l(user.totp_enabled_at, format: :long) %></span>
+        <% end %>
+      </p>
+      <p class="txt-small margin-none"><%= pluralize(remaining, "recovery code") %> left.</p>
+
+      <div class="flex gap-half flex-wrap">
+        <details>
+          <summary class="btn txt-small">Regenerate recovery codes…</summary>
+          <div class="flex flex-column gap-half margin-block-start">
+            <p class="txt-small margin-none">Your old codes stop working immediately.</p>
+            <%= button_to "Generate new codes", settings_two_factor_recovery_codes_path, class: "btn txt-small", form: { data: { turbo: false } } %>
+          </div>
+        </details>
+        <%= render "layouts/shared/confirm_dialog", label: "Disable two-factor", title: "Disable two-factor authentication?",
+              message: "Your account will be protected by its password alone.", path: settings_two_factor_path, method: :delete,
+              button: "Disable", negative: true %>
+      </div>
+    <% else %>
+      <p class="flex align-center gap-half margin-none txt-small"><%= status_tag "Not yet enabled" %></p>
+
+      <% if user.totp_secret.present? %>
+        <ol class="flex flex-column gap txt-small margin-none">
+          <li class="flex flex-column gap-half">
+            <span>Add this account to your authenticator app — open the link on your phone, or enter the secret by hand.</span>
+            <span class="font-weight-bold">Secret</span>
+            <div class="flex align-center gap-half">
+              <code class="settings-code flex-item-grow"><%= user.totp_secret %></code>
+              <%= copy_button user.totp_secret %>
+            </div>
+            <span class="font-weight-bold">otpauth link</span>
+            <div class="flex align-center gap-half">
+              <code class="settings-code flex-item-grow"><%= user.totp_provisioning_uri %></code>
+              <%= copy_button user.totp_provisioning_uri %>
+            </div>
+          </li>
+          <li>
+            <%= form_with url: settings_two_factor_activation_path, class: "flex flex-column gap-half", data: { turbo: false } do |form| %>
+              <% if @code_error %>
+                <p class="txt-small txt-negative margin-none"><%= @code_error %></p>
+              <% end %>
+              <%= settings_field "Enter the 6-digit code from the app" do %>
+                <%= form.text_field :code, required: true, inputmode: "numeric", autocomplete: "one-time-code", pattern: "[0-9 ]{6,7}", placeholder: "000000", class: "input font-mono" %>
+              <% end %>
+              <div><button type="submit" class="btn btn--link">Verify and enable</button></div>
+            <% end %>
+          </li>
+        </ol>
+      <% end %>
+    <% end %>
+  </section>
+</section>

@@ -1,0 +1,59 @@
+<%# locals: (redirect:) %>
+<%# A redirect's form in the list's sheet (the redirect_sheet frame): new, or
+    one being edited with its hits. It saves across the whole page
+    (turbo_frame _top): done, back to the list; refused, the list again with
+    the sheet open. %>
+<turbo-frame id="redirect_sheet">
+  <div class="flex flex-column gap">
+    <h2 class="txt-large font-weight-bold margin-none"><%= redirect.new_record? ? "New redirect" : "Edit redirect" %></h2>
+    <%= render "layouts/shared/errors", record: redirect %>
+
+    <%= form_with model: [:tools, redirect], class: "flex flex-column gap txt-medium", data: { turbo_frame: "_top" } do |form| %>
+      <label class="flex flex-column gap-half txt-align-start">
+        <span class="txt-small font-weight-bold">Source path</span>
+        <%= form.text_field :source_path, required: true, class: "input full-width font-mono", autofocus: true, autocomplete: "off", placeholder: "/old-page  or  /old-section/*" %>
+        <span class="txt-x-small txt-subtle">A path on this site, with the leading slash. End it with <code>/*</code> to match every path beneath it.</span>
+      </label>
+
+      <label class="flex flex-column gap-half txt-align-start">
+        <span class="txt-small font-weight-bold">Destination</span>
+        <%= form.text_field :destination_url, required: true, class: "input full-width font-mono", autocomplete: "off", placeholder: "/new-page  or  https://example.com/new" %>
+        <span class="txt-x-small txt-subtle">A path or a full URL. For a wildcard source, end it with <code>/*</code> to carry the rest of the path across.</span>
+      </label>
+
+      <label class="flex flex-column gap-half txt-align-start">
+        <span class="txt-small font-weight-bold">HTTP status</span>
+        <%= form.select :status_code, redirect_status_options, {}, class: "input input--select full-width" %>
+      </label>
+
+      <label class="flex align-center gap-half txt-align-start">
+        <%= form.check_box :active %>
+        <span class="txt-small font-weight-bold">Active</span>
+        <span class="txt-x-small txt-subtle">Enforced on requests. Untick to keep the rule without applying it.</span>
+      </label>
+
+      <label class="flex flex-column gap-half txt-align-start">
+        <span class="txt-small font-weight-bold">Notes <span class="font-weight-normal txt-subtle">(optional)</span></span>
+        <%= form.text_area :notes, rows: 3, class: "input full-width", placeholder: "Why this redirect exists, or when it can be removed." %>
+      </label>
+
+      <% if redirect.persisted? %>
+        <dl class="file-manager-asset__facts txt-small margin-none">
+          <dt>Hits</dt><dd><%= redirect.hit_count %></dd>
+          <dt>Last hit</dt><dd><%= redirect.last_hit_at ? time_ago_tag(redirect.last_hit_at) : "never" %></dd>
+        </dl>
+      <% end %>
+
+      <div class="dialog__actions flex align-center gap-half justify-end">
+        <% if redirect.persisted? && Current.user.can?("redirects:delete") %>
+          <span class="flex-item-grow">
+            <%= render "layouts/shared/delete_dialog", name: "this redirect", path: tools_redirect_path(redirect), trigger_text: "Delete",
+                  message: "Anyone visiting " + redirect.source_path_was.to_s + " will get a 404 instead." %>
+          </span>
+        <% end %>
+        <button type="button" class="btn" data-action="dialog#close">Cancel</button>
+        <%= form.button (redirect.new_record? ? "Add redirect" : "Save changes"), class: "btn btn--link" %>
+      </div>
+    <% end %>
+  </div>
+</turbo-frame>

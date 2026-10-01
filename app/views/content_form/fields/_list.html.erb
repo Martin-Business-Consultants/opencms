@@ -1,0 +1,35 @@
+<%# locals: (field:, value:, scope:, depth:) %>
+<%# A list of strings (string_list) or of entry slugs (record_refs), each row
+    keyed opaquely; `_list` posts even when the list is emptied. %>
+<% refs = field["type"] == "record_refs" %>
+<% collection = field["of_collection"].presence %>
+<% titles = refs && collection ? content_reference_titles(collection, Array(value)) : {} %>
+<% token = "__KEY" + depth.to_s + "__" %>
+<%= render "content_form/label", field: field, for_id: nil %>
+<div class="content-list flex flex-column gap-half" data-controller="sortable-list" data-sortable-list-token-value="<%= token %>"
+     data-action="picker:chosen->sortable-list#addChosen">
+  <%= hidden_field_tag scope[ContentForm::LIST_MARKER].name, "1", id: nil %>
+  <ol class="content-list__items flex flex-column gap-half" data-sortable-list-target="list">
+    <% Array(value).each do |item| %>
+      <%# herb:key item %>
+      <%= render "content_form/list_item", scope: scope[content_row_key], item: item, refs: refs, title: titles[item.to_s] %>
+    <% end %>
+  </ol>
+  <template data-sortable-list-target="template">
+    <%= render "content_form/list_item", scope: scope[token], item: "__VALUE__", refs: refs, title: "__LABEL__" %>
+  </template>
+  <div class="flex align-center gap-half">
+    <% if refs && collection %>
+      <%= render "content_form/picker", name: nil, value: "", dom_id: scope.dom_id + "_add", mode: "add",
+            url: content_picker_path(kind: "entries", collection: collection), label: "",
+            placeholder: "Add an entry…", aria_label: "Add an entry" %>
+    <% elsif refs %>
+      <span class="txt-x-small txt-subtle">No collection is set for this field (of_collection).</span>
+    <% else %>
+      <button type="button" class="btn txt-small" data-action="sortable-list#add">
+        <%= icon_tag "add" %>
+        <span>Add</span>
+      </button>
+    <% end %>
+  </div>
+</div>

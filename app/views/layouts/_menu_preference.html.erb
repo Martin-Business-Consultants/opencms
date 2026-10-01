@@ -1,0 +1,8 @@
+<%# locals: () %>
+<%# Applies the folded admin menu before first paint, so it doesn't open and
+    then snap shut (admin_menu_controller saves the choice). %>
+<%= javascript_tag nonce: true do %>
+  try {
+    if (localStorage.getItem("admin-menu") === "folded") document.documentElement.dataset.menu = "folded"
+  } catch (error) {}
+<% end %>

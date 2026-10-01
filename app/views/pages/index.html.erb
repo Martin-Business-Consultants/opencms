@@ -1,0 +1,83 @@
+<% @page_title = "Pages" %>
+<% can_write = Current.user.can?("pages:write") %>
+<% can_publish = Current.user.can?("pages:publish") %>
+<% can_delete = Current.user.can?("pages:delete") %>
+<% ticks = can_publish || can_delete %>
+
+<% content_for :page_actions do %>
+  <% if can_write %>
+    <%= render "pages/new_page", page: @new_page, templates: Page.available_templates %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title, description: "Every page on the site, in its place in the tree." %>
+
+<%= render "layouts/shared/status_links", param: :status, current: @status.to_s,
+      options: [ [ "All", nil, @status_counts.values.sum ] ] + Page::STATUSES.filter_map { |status| [ status.humanize, status, @status_counts[status] ] if @status_counts[status].to_i.positive? } %>
+
+<% if @locales.many? %>
+  <div class="filters flex flex-wrap gap-half margin-block-end">
+    <%= render "layouts/shared/quick_filter", title: "Locale", param: :locale, current: @locale.to_s,
+          options: [ [ "Any locale", "" ] ] + @locales.map { [ it, it ] } %>
+  </div>
+<% end %>
+
+<%= render "layouts/shared/bulk_actions", id: "pages_bulk", noun: "page",
+      status_path: (pages_bulk_status_changes_path if can_publish), statuses: Page::STATUSES,
+      deletion_path: (pages_bulk_deletions_path if can_delete) %>
+
+<% if @pages.any? %>
+  <% site_url = public_site_url %>
+  <section class="panel shadow center index-table" data-controller="select-all">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <% if ticks %>
+            <th class="data-table__check">
+              <input type="checkbox" aria-label="Select every page" data-select-all-target="all" data-action="select-all#toggle">
+            </th>
+          <% end %>
+          <th>Title</th>
+          <th>Path</th>
+          <th>Status</th>
+          <th>Locale</th>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @pages.each do |page| %>
+          <%# herb:key page.id %>
+          <tr id="<%= dom_id(page) %>" data-filter-target="item">
+            <% if ticks %>
+              <td class="data-table__check">
+                <input type="checkbox" data-select-all-target="box" data-action="select-all#sync" name="slugs[]" value="<%= page.path %>" form="pages_bulk" aria-label="Select <%= page.title %>">
+              </td>
+            <% end %>
+            <td>
+              <span class="page-tree__title" data-depth="<%= [ page.depth.to_i, 6 ].min %>">
+                <%= link_to page.title, (can_write ? edit_page_path(page.path) : page_schema_path(page.path)), class: "txt-ink font-weight-bold" %>
+              </span>
+              <%= render "layouts/shared/row_links",
+                    links: [ ([ "Edit", edit_page_path(page.path) ] if can_write), ([ "Fields", page_schema_path(page.path) ] if can_write),
+                             ([ "View", site_url.chomp("/") + "/" + page.path ] if site_url && page.status == "published") ].compact,
+                    delete_path: (page_path(page.path) if can_delete), delete_name: page.title, delete_label: "Trash",
+                    delete_message: "It goes to the trash, where it can be restored." %>
+            </td>
+            <td class="txt-subtle font-mono">/<%= page.path %></td>
+            <td><%= status_tag page.status %></td>
+            <td class="txt-subtle"><%= page.locale %></td>
+            <td class="txt-subtle txt-small"><%= time_ago_tag page.updated_at %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+<% elsif @status || @locale %>
+  <div class="blank-slate">
+    No pages match.
+    <%= link_to "Show all", pages_path, class: "txt-link" %>
+  </div>
+<% else %>
+  <div class="panel panel--centered center flex flex-column gap-half">
+    <p class="txt-medium">No pages yet. The first one is usually the home page.</p>
+  </div>
+<% end %>

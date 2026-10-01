@@ -1,0 +1,96 @@
+<%# locals: (field:, prefix:, key:, field_types:, collection_slugs:, block_slugs: nil) %>
+<% name = prefix + "[" + key + "]" %>
+<li class="schema-field" data-schema-editor-target="row">
+  <div class="schema-field__main">
+    <label class="schema-field__control">
+      <span class="txt-x-small font-weight-bold">Name</span>
+      <%= text_field_tag name + "[name]", field["name"], id: nil, class: "input font-mono", placeholder: "title",
+            autocomplete: "off", spellcheck: false, pattern: "[a-z][a-z0-9_]*",
+            title: "Lowercase letters, digits and underscores, starting with a letter", data: { schema_editor_target: "name" } %>
+    </label>
+    <label class="schema-field__control">
+      <span class="txt-x-small font-weight-bold">Label</span>
+      <%= text_field_tag name + "[label]", field["label"], id: nil, class: "input", placeholder: "Title", autocomplete: "off" %>
+    </label>
+    <label class="schema-field__control">
+      <span class="txt-x-small font-weight-bold">Type</span>
+      <%= select_tag name + "[type]", options_for_select(field_type_options(field_types), field["type"]),
+            id: nil, class: "input input--select schema-field__type" %>
+    </label>
+    <label class="schema-field__check txt-small">
+      <%= check_box_tag name + "[required]", "1", field["required"] == true, id: nil %>
+      <span>Required</span>
+    </label>
+    <div class="schema-field__moves flex align-center gap-half">
+      <button type="button" class="btn btn--circle btn--plain" title="Move up" data-action="schema-editor#moveUp">
+        <%= icon_tag "arrow-up" %>
+        <span class="for-screen-reader">Move up</span>
+      </button>
+      <button type="button" class="btn btn--circle btn--plain schema-field__down" title="Move down" data-action="schema-editor#moveDown">
+        <%= icon_tag "arrow-up" %>
+        <span class="for-screen-reader">Move down</span>
+      </button>
+      <button type="button" class="btn btn--circle btn--plain txt-negative" title="Remove this field" data-action="schema-editor#remove">
+        <%= icon_tag "trash" %>
+        <span class="for-screen-reader">Remove this field</span>
+      </button>
+    </div>
+  </div>
+
+  <label class="schema-field__setting" data-for="select">
+    <span class="txt-x-small font-weight-bold">Choices, one per line</span>
+    <%= text_area_tag name + "[options]", SchemaFields.options_text(field), id: nil, rows: 3, class: "input" %>
+  </label>
+
+  <label class="schema-field__setting" data-for="reference">
+    <span class="txt-x-small font-weight-bold">Pick from collection</span>
+    <%= select_tag name + "[of_collection]", options_for_select(reference_collection_options(collection_slugs, field["of_collection"]), field["of_collection"]),
+          include_blank: "Any collection", id: nil, class: "input input--select" %>
+  </label>
+
+  <% if block_slugs %>
+    <fieldset class="schema-field__setting" data-for="blocks">
+      <legend class="txt-x-small font-weight-bold">Allowed blocks (none ticked means any)</legend>
+      <div class="flex flex-wrap gap-half">
+        <% block_slugs.each do |slug| %>
+          <%# herb:key slug %>
+          <label class="schema-field__check txt-small">
+            <%= check_box_tag name + "[allowed_types][]", slug, Array(field["allowed_types"]).include?(slug), id: nil %>
+            <span class="font-mono"><%= slug %></span>
+          </label>
+        <% end %>
+      </div>
+    </fieldset>
+  <% end %>
+
+  <div class="schema-field__setting schema-field__children" data-for="nested">
+    <span class="txt-x-small font-weight-bold">Sub-fields</span>
+    <%= render "schemas/list", fields: field["of"], prefix: name + "[of]", field_types: field_types,
+          collection_slugs: collection_slugs, block_slugs: block_slugs %>
+  </div>
+
+  <details class="schema-field__more">
+    <summary class="txt-x-small txt-subtle">More settings</summary>
+    <div class="schema-field__more-body">
+      <label class="schema-field__control">
+        <span class="txt-x-small font-weight-bold">Help text</span>
+        <%= text_field_tag name + "[help]", field["help"], id: nil, class: "input" %>
+      </label>
+      <label class="schema-field__control">
+        <span class="txt-x-small font-weight-bold">Tab</span>
+        <%= text_field_tag name + "[tab]", field["tab"], id: nil, class: "input", placeholder: "Group fields under a tab" %>
+      </label>
+      <label class="schema-field__check txt-small">
+        <%= check_box_tag name + "[sidebar]", "1", field["sidebar"] == true, id: nil %>
+        <span>Show in the sidebar</span>
+      </label>
+      <label class="schema-field__control">
+        <span class="txt-x-small font-weight-bold">Show only if (JSON)</span>
+        <%= text_field_tag name + "[show_if]", SchemaFields.show_if_text(field), id: nil, class: "input font-mono",
+              placeholder: "{\"field\": \"kind\", \"equals\": \"event\"}", spellcheck: false %>
+      </label>
+    </div>
+  </details>
+
+  <%= hidden_field_tag name + "[extra]", SchemaFields.extra_json(field), id: nil %>
+</li>

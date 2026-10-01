@@ -1,0 +1,23 @@
+<%# The dashboard's reminder that this CMS is headless: the site it serves,
+    and whether that site's build has reported in (Frontend). %>
+<% build = Frontend.last_build %>
+<section class="panel shadow flex flex-column gap-half txt-align-start dashboard-frontend">
+  <header class="flex align-center justify-space-between gap">
+    <h2 class="txt-medium font-weight-bold margin-none flex align-center gap-half"><%= icon_tag "code" %> Your frontend</h2>
+    <%= link_to "Developers", developers_path, class: "btn txt-small" %>
+  </header>
+  <p class="txt-small margin-none">
+    This CMS is headless: it serves content as JSON, and
+    <% if Frontend.site_url %>
+      <%= external_link Frontend.site_url, Frontend.site_url.sub(%r{\Ahttps?://}, "") %>
+    <% else %>
+      your site
+    <% end %>
+    renders it.
+    <% if build %>
+      Its last build reported <%= time_ago_tag build[:built_at] %><%= " (#{number_with_delimiter(build[:pages])} pages)" if build[:pages] %>.
+    <% else %>
+      No site build has reported yet — connect one with the Astro integration.
+    <% end %>
+  </p>
+</section>

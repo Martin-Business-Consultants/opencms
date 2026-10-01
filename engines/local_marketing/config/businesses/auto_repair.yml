@@ -1,0 +1,29 @@
+key: auto_repair
+version: 1
+name: Auto repair shop
+description: A garage — storefront, trust-led, service pages by job type and make.
+category: Auto repair shop
+schema_type: AutoRepair
+footprint: storefront
+services: [auto repair, brake repair, oil change, transmission repair, check engine light, tire shop, car ac repair, mechanic]
+keyword_patterns: ["{service} {city}", "{service} near me", "{modifier} {service} {city}"]
+modifiers: [honest, affordable, best]
+directories: [repairpal.com, carfax.com, angi.com]
+reports:
+  - {kind: site_audit, cadence: weekly}
+  - {kind: business_profile, cadence: weekly}
+  - {kind: google_reviews, cadence: weekly}
+  - {kind: local_rankings, cadence: weekly}
+  - {kind: rank_map, cadence: weekly}
+  - {kind: ranked_keywords, cadence: weekly}
+  - {kind: citations, cadence: monthly}
+  - {kind: local_competitors, cadence: monthly}
+  - {kind: page_health, cadence: weekly}
+  - {kind: ai_answers, cadence: weekly}
+agents: [reporting_analyst, metadata_optimizer, content_gap, technical_seo]
+targets: {map_pack_share: 50, rating: 4.7, reviews: 150, top_3: 15, page_score: 85, ai_mention_rate: 20, citations_consistent: 10}
+content_scaffold:
+  - {slug: services, title: Repair services, kind: services}
+  - {slug: makes, title: Makes we service, kind: page}
+  - {slug: faq, title: Frequently asked questions, kind: faq}
+  - {slug: reviews, title: Reviews, kind: reviews}

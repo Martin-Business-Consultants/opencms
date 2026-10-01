@@ -1,0 +1,70 @@
+<% @page_title = @form.title %>
+<%= parent_page "Forms", forms_path %>
+<% can_delete = Current.user.can?("submissions:delete") %>
+
+<% content_for :page_actions do %>
+  <%= link_to "All submissions", submissions_path(form: @form.slug), class: "btn txt-small" %>
+  <% if Current.user.can?("forms:write") %>
+    <%= link_to "Edit form", edit_form_path(@form.slug), class: "btn txt-small" %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @form.title,
+      description: pluralize(@submission_count, "submission") + " · " + @form.status + " · posts to /api/forms/" + @form.slug + "/submissions" %>
+
+<div class="flex flex-column gap">
+  <% if @submissions.any? %>
+    <section class="panel shadow center index-table">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Received</th>
+            <th>Preview</th>
+            <th class="data-table__number">Files</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @submissions.each do |submission| %>
+            <%# herb:key submission.id %>
+            <tr id="<%= dom_id(submission) %>" data-filter-target="item">
+              <td class="font-mono">
+                <%= link_to submission.id, form_submission_path(@form.slug, submission), class: "txt-ink font-weight-bold" %>
+                <%= render "layouts/shared/row_links", name: "submission #" + submission.id.to_s, edit_path: nil,
+                    delete_path: (form_submission_path(@form.slug, submission) if can_delete),
+                    delete_message: "The submission and its files are deleted. This can’t be undone." %>
+              </td>
+              <td class="txt-small"><%= time_ago_tag submission.created_at %></td>
+              <td class="txt-subtle"><%= submission_preview(submission) %></td>
+              <td class="data-table__number"><%= submission.files.size %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+      <% if @submission_count > @submissions.size %>
+        <p class="txt-small txt-subtle">The latest <%= @submissions.size %>. <%= link_to "See them all", submissions_path(form: @form.slug), class: "txt-link" %>.</p>
+      <% end %>
+    </section>
+  <% else %>
+    <div class="panel panel--centered center flex flex-column gap-half">
+      <p class="txt-medium">No submissions yet.</p>
+      <p class="txt-small txt-subtle margin-none">The site posts them to <code>/api/forms/<%= @form.slug %>/submissions</code><%= " once the form is published" unless @form.status == "published" %>.</p>
+    </div>
+  <% end %>
+
+  <section class="panel shadow txt-align-start flex flex-column gap-half">
+    <h2 class="txt-medium font-weight-bold margin-none">Fields</h2>
+    <% if Array(@form.fields).any? %>
+      <ul class="margin-none flex flex-column gap-half">
+        <% Array(@form.fields).each_with_index do |field, index| %>
+          <%# herb:key index %>
+          <li class="txt-small">
+            <strong><%= field["label"] %></strong>
+            <span class="txt-subtle font-mono"><%= field["name"] %> · <%= field["type"] %><%= " · required" if field["required"] %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="txt-small txt-subtle margin-none">No fields yet.</p>
+    <% end %>
+  </section>
+</div>

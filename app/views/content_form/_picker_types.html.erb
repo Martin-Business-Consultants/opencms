@@ -1,0 +1,19 @@
+<%# locals: (types:) %>
+<%# The block types a picker offers, one button each (sortable-list#insert);
+    the filter matches each item's data-picker-text. %>
+<ul class="content-picker__types">
+  <% types.each do |block_type| %>
+    <%# herb:key block_type.slug %>
+    <li data-picker-text="<%= [ block_type.slug, block_type.label, block_type.description ].compact.join(" ").downcase %>">
+      <button type="button" class="btn content-picker__type txt-align-start" data-type="<%= block_type.slug %>"
+              data-action="sortable-list#insert">
+        <span class="flex flex-column">
+          <span class="font-weight-bold"><%= block_type.label.presence || block_type.slug %></span>
+          <% if block_type.description.present? %>
+            <span class="txt-x-small txt-subtle"><%= block_type.description %></span>
+          <% end %>
+        </span>
+      </button>
+    </li>
+  <% end %>
+</ul>

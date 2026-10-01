@@ -1,0 +1,61 @@
+<%# locals: (form:, script:, preset: nil) %>
+<%# A script's own fields: what it is, where it's filed and loaded, and its
+    snippet (a preset makes that from the vendor's ID instead). Shared by the
+    New script sheet and the edit page. %>
+<% if preset %>
+  <%= hidden_field_tag :preset, preset[:key], id: nil %>
+  <label class="flex flex-column gap-half txt-align-start">
+    <span class="txt-small font-weight-bold"><%= preset[:id_label] %></span>
+    <%= text_field_tag :preset_id, params[:preset_id], required: true, autofocus: true, class: "input full-width font-mono", autocomplete: "off", placeholder: preset[:id_hint] %>
+    <span class="txt-x-small txt-subtle">The <%= preset[:vendor] %> install snippet is filled in with it.</span>
+  </label>
+<% end %>
+
+<label class="flex flex-column gap-half txt-align-start">
+  <span class="txt-small font-weight-bold">Name</span>
+  <%= form.text_field :name, required: true, class: "input full-width", autofocus: preset.nil? && script.new_record?, autocomplete: "off" %>
+</label>
+
+<label class="flex flex-column gap-half txt-align-start">
+  <span class="txt-small font-weight-bold">Vendor <span class="font-weight-normal txt-subtle">(optional)</span></span>
+  <%= form.text_field :vendor, class: "input full-width", autocomplete: "off" %>
+</label>
+
+<label class="flex flex-column gap-half txt-align-start">
+  <span class="txt-small font-weight-bold">Consent category</span>
+  <%= form.select :category, Script::CATEGORIES.map { |c| [Script::CATEGORY_LABELS[c], c] }, {}, class: "input input--select full-width" %>
+  <span class="txt-x-small txt-subtle">
+    <% Script::CATEGORIES.each do |category| %>
+      <%# herb:key category %>
+      <strong><%= Script::CATEGORY_LABELS[category] %>:</strong> <%= Script::CATEGORY_DESCRIPTIONS[category] %>
+    <% end %>
+  </span>
+</label>
+
+<label class="flex flex-column gap-half txt-align-start">
+  <span class="txt-small font-weight-bold">Placement</span>
+  <%= form.select :placement, Script::PLACEMENTS.map { |p| [Script::PLACEMENT_LABELS[p], p] }, {}, class: "input input--select full-width" %>
+</label>
+
+<% unless preset %>
+  <label class="flex flex-column gap-half txt-align-start">
+    <span class="txt-small font-weight-bold">Script URL</span>
+    <%= form.url_field :src, class: "input full-width font-mono", autocomplete: "off", placeholder: "https://…" %>
+  </label>
+
+  <label class="flex flex-column gap-half txt-align-start">
+    <span class="txt-small font-weight-bold">Inline code</span>
+    <%= form.text_area :code, rows: 6, class: "input full-width font-mono txt-small", spellcheck: false %>
+    <span class="txt-x-small txt-subtle">A URL, inline code, or both. Leave out the &lt;script&gt; tags.</span>
+  </label>
+
+  <div class="flex gap txt-small">
+    <label class="flex align-center gap-half"><%= form.check_box :async %> async</label>
+    <label class="flex align-center gap-half"><%= form.check_box :defer %> defer</label>
+  </div>
+<% end %>
+
+<label class="flex flex-column gap-half txt-align-start">
+  <span class="txt-small font-weight-bold">Notes <span class="font-weight-normal txt-subtle">(optional)</span></span>
+  <%= form.text_area :notes, rows: 2, class: "input full-width" %>
+</label>

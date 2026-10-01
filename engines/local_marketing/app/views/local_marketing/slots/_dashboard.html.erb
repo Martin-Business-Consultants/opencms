@@ -1,0 +1,32 @@
+<%# locals: () %>
+<%# The dashboard's line on the latest site audit (the :dashboard slot) — nil,
+    and nothing shown, for a role that can't see reports. The full list lives
+    on the report's page. %>
+<% audit = Reports::Audit::Dashboard.payload(Current.user) %>
+<% if audit %>
+<% report = audit[:report] %>
+<section class="panel shadow flex flex-column gap-half txt-align-start">
+  <h2 class="txt-large font-weight-black margin-none">Site audit</h2>
+  <p class="txt-small txt-subtle margin-none">Checks the live site for what the CMS can fix: tracking and consent scripts, Search Console verification, forms, phone numbers and page health.</p>
+
+  <% if report %>
+    <p class="txt-medium margin-none">
+      The latest audit<% if report[:base_url].present? %> of <span class="font-mono"><%= report[:base_url] %></span><% end %>,
+      on <%= l(Time.zone.parse(report[:measured_at]).to_date, format: :long) %>, found
+      <strong><%= pluralize(report[:open], "open finding") %></strong><% if report[:dismissed].positive? %> (<%= report[:dismissed] %> dismissed)<% end %>
+      and <%= pluralize(report[:passed], "passed check") %>.
+    </p>
+    <% if report[:counts].present? %>
+      <p class="txt-small txt-subtle margin-none">
+        By severity: <%= report[:counts].map { |severity, count| "#{count} #{severity}" }.join(", ") %>.
+      </p>
+    <% end %>
+  <% elsif audit[:running] %>
+    <p class="txt-medium margin-none">An audit is running now.</p>
+  <% else %>
+    <p class="txt-medium margin-none">No audit has run yet.<% if audit[:missing].any? %> It needs: <%= audit[:missing].map(&:humanize).join(", ") %>.<% end %></p>
+  <% end %>
+
+  <p class="txt-small margin-none"><%= link_to "See the full report under Reports", (report ? report_path(report[:id]) : reports_path), class: "txt-link" %></p>
+</section>
+<% end %>

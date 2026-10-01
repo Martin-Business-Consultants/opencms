@@ -1,0 +1,19 @@
+<%# The Settings sections, down a settings page's sidebar, the current one
+    marked. %>
+<%= postbox "settings-sections", "Settings" do %>
+  <nav class="settings-sections" aria-label="Settings sections">
+    <% settings_sections.each do |group, links| %>
+      <%# herb:key group %>
+      <div class="flex flex-column gap-quarter">
+        <h3 class="txt-x-small txt-uppercase txt-subtle margin-none"><%= group %></h3>
+        <ul class="settings-sections__list">
+          <% links.each do |label, url, _description| %>
+            <%# herb:key label %>
+            <% here = request.path == url || request.path.start_with?(url + "/") %>
+            <li><%= link_to label, url, class: class_names("settings-sections__link", "settings-sections__link--current": here), aria: { current: ("page" if here) } %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+  </nav>
+<% end %>

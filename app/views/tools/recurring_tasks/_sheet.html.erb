@@ -1,0 +1,72 @@
+<%# locals: (recipe:, task:) %>
+<%# A schedule in the list's sheet (the schedule_sheet frame): what it did
+    last, and its settings — on or off, its cron, and the recipe's own. It
+    saves across the whole page (turbo_frame _top). %>
+<% enabled = task&.enabled %>
+<% cron = task&.cron.presence || recipe.default_cron %>
+<% values = recipe.default_params.stringify_keys.merge((task&.params || {}).stringify_keys) %>
+<turbo-frame id="schedule_sheet">
+  <div class="flex flex-column gap txt-align-start">
+    <div class="flex flex-column gap-half">
+      <h2 class="txt-large font-weight-bold margin-none"><%= recipe.title %></h2>
+      <p class="txt-small txt-subtle margin-none"><%= recipe.description %></p>
+    </div>
+
+    <dl class="file-manager-asset__facts txt-small margin-none">
+      <dt>State</dt><dd><%= status_tag enabled ? "Active" : "Off" %></dd>
+      <% if enabled && task&.next_due_at %>
+        <dt>Next run</dt><dd><%= l(task.next_due_at, format: :long) %></dd>
+      <% end %>
+      <dt>Last run</dt>
+      <dd>
+        <% if task&.last_run_at %>
+          <%= time_ago_tag task.last_run_at %> (<%= task.last_status || "unknown" %><% if task.last_duration_ms %>, <%= number_with_delimiter(task.last_duration_ms) %> ms<% end %>)
+        <% else %>
+          never
+        <% end %>
+      </dd>
+    </dl>
+    <% if task&.last_summary.present? %>
+      <p class="txt-small margin-none"><%= task.last_summary %></p>
+    <% end %>
+    <% if task&.last_error.present? %>
+      <p class="txt-small txt-negative font-mono margin-none"><%= task.last_error %></p>
+    <% end %>
+
+    <% if task&.errors&.any? %>
+      <%= render "layouts/shared/errors", record: task %>
+    <% end %>
+    <%= form_with url: tools_recurring_task_path(recipe.key), method: :patch, scope: :task, namespace: recipe.key,
+          class: "flex flex-column gap", data: { turbo_frame: "_top" } do |form| %>
+      <label class="flex align-center gap-half">
+        <%= form.check_box :enabled, checked: enabled %>
+        <span class="txt-small font-weight-bold">Run on this schedule</span>
+      </label>
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Cron</span>
+        <%= form.text_field :cron, value: cron, placeholder: recipe.default_cron, class: "input full-width font-mono", autocomplete: "off" %>
+        <span class="txt-x-small txt-subtle">A standard cron expression. The default is <code><%= recipe.default_cron %></code>.</span>
+      </label>
+      <%= form.fields :params do |fields| %>
+        <% recipe.param_schema.each do |param| %>
+          <%# herb:key param[:name] %>
+          <label class="flex flex-column gap-half">
+            <span class="txt-small font-weight-bold"><%= param[:label] %></span>
+            <% if param[:type] == "integer" %>
+              <%= fields.number_field param[:name], value: values[param[:name].to_s], class: "input full-width" %>
+            <% else %>
+              <%= fields.text_field param[:name], value: values[param[:name].to_s], class: "input full-width", autocomplete: "off" %>
+            <% end %>
+            <% if param[:help].present? %>
+              <span class="txt-x-small txt-subtle"><%= param[:help] %></span>
+            <% end %>
+          </label>
+        <% end %>
+      <% end %>
+      <div class="dialog__actions flex gap-half justify-end">
+        <button type="button" class="btn" data-action="dialog#close">Cancel</button>
+        <%= form.button "Save", class: "btn btn--link" %>
+      </div>
+    <% end %>
+  </div>
+</turbo-frame>

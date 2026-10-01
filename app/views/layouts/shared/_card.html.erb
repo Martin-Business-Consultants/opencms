@@ -1,0 +1,38 @@
+<%# locals: (path:, title:, id_label: nil, context: nil, meta: nil, status: nil, highlight: nil) %>
+<%# A record as a Fizzy card, for the Cards view on indexes. The whole card is its link. %>
+<article class="card card--tone-<%= status_tone(status, highlight: highlight) %>" data-filter-target="item">
+  <div class="flex flex-column flex-item-grow max-inline-size">
+    <%= link_to path, class: "card__link", title: title, data: { turbo_frame: "_top" } do %>
+      <span class="for-screen-reader"><%= title %></span>
+    <% end %>
+
+    <header class="card__header">
+      <div class="card__board">
+        <% if id_label.present? %>
+          <div class="card__id"><%= id_label %></div>
+        <% end %>
+        <div class="card__board-name">
+          <span class="overflow-ellipsis"><%= context %></span>
+        </div>
+      </div>
+    </header>
+
+    <div class="card__body justify-space-between">
+      <div class="card__content">
+        <h3 class="card__title overflow-line-clamp"><%= title %></h3>
+      </div>
+    </div>
+  </div>
+
+  <footer class="card__footer flex gap-half">
+    <div class="card__meta">
+      <% Array(meta).compact_blank.each do |text| %>
+        <%# herb:key text %>
+        <span class="card__meta-text"><%= text %></span>
+      <% end %>
+    </div>
+    <% if status.present? %>
+      <%= status_tag status, highlight: highlight %>
+    <% end %>
+  </footer>
+</article>

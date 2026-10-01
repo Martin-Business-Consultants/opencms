@@ -1,0 +1,10 @@
+<% @page_title = @webhook.name %>
+<%= parent_page "Webhooks", webhooks_path %>
+
+<%= render "layouts/shared/page_header", title: @page_title %>
+
+<div class="panel panel--centered panel--wide flex flex-column gap-half txt-align-start">
+  <p class="font-mono txt-small margin-none"><%= @webhook.url %></p>
+  <p class="txt-small margin-none"><%= webhook_health(@webhook) %> · <%= Array(@webhook.events).join(", ") %></p>
+  <%= render "webhooks/deliveries", deliveries: @deliveries %>
+</div>

@@ -1,0 +1,39 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Cuts a release: moves CHANGELOG.md's Unreleased notes under the version,
+# writes VERSION, commits both, tags vX.Y.Z and pushes. GitHub then publishes
+# the release with those notes (.github/workflows/release.yml), every
+# install's daily check sees it, and each owner can update from
+# Settings › Updates.
+#
+#   bin/release 1.1.0
+require "fileutils"
+
+APP_ROOT = File.expand_path("..", __dir__)
+version = ARGV.first.to_s.delete_prefix("v")
+abort "Usage: bin/release 1.1.0" unless version.match?(/\A\d+\.\d+\.\d+\z/)
+
+def system!(*args) = system(*args, exception: true)
+def capture(*args) = IO.popen(args, &:read).strip
+
+FileUtils.chdir APP_ROOT do
+  current = File.read("VERSION").strip
+  tagged = !capture("git", "tag", "--list", "v#{version}").empty?
+  abort "v#{version} is already tagged." if tagged
+  # The version in VERSION may be cut once, if it was never tagged (the first release).
+  abort "#{version} isn't newer than #{current}." if Gem::Version.new(version) < Gem::Version.new(current)
+  abort "Release from main (on #{capture("git", "branch", "--show-current")})." unless capture("git", "branch", "--show-current") == "main"
+  abort "Commit or stash your changes first." unless capture("git", "status", "--porcelain", "--untracked-files=no").empty?
+
+  changelog = File.read("CHANGELOG.md")
+  unreleased = changelog[/^## Unreleased\n(.*?)(?=^## )/m, 1].to_s
+  abort "CHANGELOG.md has nothing under ## Unreleased to release." if unreleased.strip.empty?
+
+  File.write "CHANGELOG.md", changelog.sub("## Unreleased\n", "## Unreleased\n\n## #{version}\n")
+  File.write "VERSION", "#{version}\n"
+  system! "git", "commit", "--quiet", "-m", "Release #{version}", "VERSION", "CHANGELOG.md"
+  system! "git", "tag", "-a", "v#{version}", "-m", "CMS #{version}"
+  system! "git", "push", "--quiet", "origin", "main", "v#{version}"
+  puts "Released v#{version}. GitHub publishes it in a minute; installs see it within a day, or at once with Check now in Settings › Updates."
+end

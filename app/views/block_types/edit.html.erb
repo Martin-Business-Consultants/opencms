@@ -1,0 +1,12 @@
+<% @page_title = @block_type.label %>
+<%= parent_page "Block types", block_types_path %>
+
+<% content_for :page_actions do %>
+  <% if Current.user.can?("block_types:delete") %>
+    <%= render "layouts/shared/delete_dialog", name: @block_type.label, path: block_type_path(@block_type.slug),
+          message: "Pages using it keep their blocks, which stop validating. This can’t be undone." %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title,
+      description: (@block_type.built_in ? "A built-in block type. Changes here apply to this site only." : "A custom block type.") %>
+<%= render "block_types/form", block_type: @block_type %>

@@ -1,0 +1,88 @@
+/* Settings > Appearance, applied as attributes on <html> (data-scheme and
+/* data-font) so a change previews instantly. Schemes re-point Fizzy's accent tokens at one
+/* of its color families; those families swap their steps in dark mode, so every scheme
+/* works in both themes.
+/*
+/* Fizzy's tokens are unlayered (_global.css), so scheme and font overrides are too; the
+/* corner overrides target component variables, which live in the components layer. */
+
+
+:root[data-scheme="forest"] { --scheme: var(--lch-green-dark); --scheme-light: var(--lch-green-light); --scheme-lighter: var(--lch-green-lighter); --scheme-lightest: var(--lch-green-lightest); }
+:root[data-scheme="plum"] { --scheme: var(--lch-purple-dark); --scheme-light: var(--lch-purple-light); --scheme-lighter: var(--lch-purple-lighter); --scheme-lightest: var(--lch-purple-lightest); }
+:root[data-scheme="ocean"] { --scheme: var(--lch-aqua-dark); --scheme-light: var(--lch-aqua-light); --scheme-lighter: var(--lch-aqua-lighter); --scheme-lightest: var(--lch-aqua-lightest); }
+:root[data-scheme="graphite"] { --scheme: var(--lch-ink-darker); --scheme-light: var(--lch-ink-light); --scheme-lighter: var(--lch-ink-lighter); --scheme-lightest: var(--lch-ink-lightest); }
+
+:root:is([data-scheme="forest"], [data-scheme="plum"], [data-scheme="ocean"], [data-scheme="graphite"]) {
+  --color-link: oklch(var(--scheme));
+  --color-selected: oklch(var(--scheme-lighter));
+  --color-selected-dark: oklch(var(--scheme-light));
+  --color-card-default: oklch(var(--scheme));
+  --scheme-tint: oklch(var(--scheme-lightest));
+}
+
+/* Fonts: local font stacks only, nothing downloaded. */
+:root[data-font="humanist"] { --font-sans: Seravek, "Gill Sans Nova", Ubuntu, Calibri, "DejaVu Sans", source-sans-pro, sans-serif; }
+:root[data-font="rounded"] { --font-sans: ui-rounded, "Hiragino Maru Gothic ProN", Quicksand, Comfortaa, Manjari, "Arial Rounded MT", "Arial Rounded MT Bold", Calibri, source-sans-pro, sans-serif; }
+:root[data-font="serif"] { --font-sans: "Iowan Old Style", "Palatino Linotype", "URW Palladio L", P052, Georgia, serif; }
+:root[data-font="mono"] { --font-sans: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, "DejaVu Sans Mono", monospace; }
+
+/* Corners: every control shares the one --radius (_global.css). Unlayered, so
+   these beat the component rules and their modifiers in every layer. */
+.btn { --btn-border-radius: var(--radius); }
+.input, .input--select, .input--upload, .input--actor { --input-border-radius: var(--radius); }
+.input--upload, .view-toggle, .view-toggle__option, .status-tag, .popup__btn { border-radius: var(--radius); }
+
+/* An uploaded logo sits where the wordmark was, at the wordmark's height. */
+@layer components {
+  .header__logo-image {
+    block-size: 1.6em;
+    inline-size: auto;
+    max-inline-size: 12em;
+    object-fit: contain;
+    vertical-align: middle;
+  }
+}
+
+/* Settings > Appearance: each choice shows what it does. */
+@layer components {
+  .appearance-choices .theme-switcher__btn {
+    flex: 1 1 7em;
+  }
+
+  .appearance-sample {
+    block-size: 2em;
+    display: inline-grid;
+    font-size: 1.1em;
+    font-weight: 700;
+    inline-size: 2em;
+    place-items: center;
+  }
+
+  .appearance-swatch--fizzy { background: oklch(var(--lch-blue-dark)); }
+  .appearance-swatch--forest { background: oklch(var(--lch-green-dark)); }
+  .appearance-swatch--plum { background: oklch(var(--lch-purple-dark)); }
+  .appearance-swatch--ocean { background: oklch(var(--lch-aqua-dark)); }
+  .appearance-swatch--graphite { background: oklch(var(--lch-ink-darker)); }
+
+  [class*="appearance-swatch--"] {
+    border-radius: 50%;
+    color: transparent;
+  }
+
+  .appearance-font--system { font-family: "Adwaita Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .appearance-font--humanist { font-family: Seravek, "Gill Sans Nova", Ubuntu, Calibri, sans-serif; }
+  .appearance-font--rounded { font-family: ui-rounded, "Hiragino Maru Gothic ProN", Quicksand, Comfortaa, "Arial Rounded MT", sans-serif; }
+  .appearance-font--serif { font-family: "Iowan Old Style", "Palatino Linotype", "URW Palladio L", Georgia, serif; }
+  .appearance-font--mono { font-family: ui-monospace, "Cascadia Code", Menlo, Consolas, monospace; }
+
+  .appearance-upload {
+    block-size: 2.5em;
+    inline-size: auto;
+    max-inline-size: 14em;
+    object-fit: contain;
+  }
+
+  .appearance-upload--favicon {
+    inline-size: 2.5em;
+  }
+}

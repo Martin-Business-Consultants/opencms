@@ -1,0 +1,133 @@
+<% @page_title = "Consent" %>
+<% config = @config.to_h %>
+<% can_write = Current.user.can?("consent:write") %>
+<% gated = Consent::Config::OPTIONAL_CATEGORIES.sum { |category| @script_counts[category] } %>
+<% snippet = "<script src=\"" + consent_script_url + "\" defer></script>" %>
+<% mode_labels = { "opt_in" => ["Opt-in", "Nothing but necessary scripts load until the visitor agrees. Required in the EU and UK."], "opt_out" => ["Opt-out", "Everything loads; the banner offers a way to turn it off. Legal in parts of the US only."] } %>
+
+<%= render "layouts/shared/page_header", title: "Consent banner" %>
+<% content_for :settings_aside do %>
+  <%= render "settings/save_box", form: "settings_form", capability: "consent:write" %>
+<% end %>
+
+
+<section class="panel shadow settings-page txt-align-start">
+  <section class="settings__section flex flex-column gap">
+    <p class="txt-small txt-subtle margin-none">Asks visitors before third-party scripts run, remembers their answer, and only loads what they agreed to.</p>
+
+    <div class="flex flex-column gap-half">
+      <span class="txt-small font-weight-bold">Install</span>
+      <div class="flex align-center gap-half">
+        <code class="settings-code flex-item-grow"><%= snippet %></code>
+        <%= copy_button snippet %>
+      </div>
+      <p class="txt-x-small txt-subtle margin-none">Put this in the site’s <code>&lt;head&gt;</code>, before any other tag. A build that renders its own banner can read <%= link_to "the same config as JSON", consent_json_url, class: "txt-link", target: "_blank", rel: "noreferrer" %>. Add <code>data-consent-open</code> to any link (say, “Cookie settings” in the footer) to reopen the choices.</p>
+    </div>
+  </section>
+
+  <%= form_with url: settings_consent_path, id: "settings_form", method: :patch, scope: :consent, class: "flex flex-column gap-double" do |form| %>
+    <%= form.hidden_field :version, value: config["version"] %>
+    <%= tag.fieldset class: "settings-fieldset flex flex-column gap-double", disabled: !can_write do %>
+      <section class="settings__section flex flex-column gap">
+        <%= settings_switch form, :enabled, config["enabled"] ? "Banner is on" : "Banner is off", checked: config["enabled"],
+              hint: config["enabled"] ? pluralize(gated, "script") + " wait for consent; " + @script_counts["necessary"].to_s + " load right away." : "Off, no scripts are served to the public site at all." %>
+        <%= settings_field "Mode", hint: mode_labels.dig(config["mode"], 1) do %>
+          <%= form.select :mode, Consent::Config::MODES.map { |mode| [mode_labels.dig(mode, 0) || mode, mode] }, { selected: config["mode"] }, class: "input input--select full-width" %>
+        <% end %>
+        <%= settings_switch form, :google_consent_mode, "Google Consent Mode v2", checked: config["google_consent_mode"],
+              hint: "Tell Google tags what was granted, so GA4 and Ads model the rest instead of dropping it." %>
+      </section>
+
+      <section class="settings__section flex flex-column gap">
+        <header><h2 class="divider">What it says</h2></header>
+        <p class="txt-small txt-subtle margin-none">The banner’s copy. Keep it short; the details belong in the privacy policy it links to.</p>
+        <div class="settings-fields">
+          <%= settings_field "Position" do %>
+            <%= form.select :position, Consent::Config::POSITIONS.map { |value| [value.humanize, value] }, { selected: config["position"] }, class: "input input--select full-width" %>
+          <% end %>
+          <%= settings_field "Theme" do %>
+            <%= form.select :theme, Consent::Config::THEMES.map { |value| [value.humanize, value] }, { selected: config["theme"] }, class: "input input--select full-width" %>
+          <% end %>
+        </div>
+        <%= form.fields_for :banner do |banner| %>
+          <%= settings_field "Title" do %>
+            <%= banner.text_field :title, value: config.dig("banner", "title"), class: "input full-width" %>
+          <% end %>
+          <%= settings_field "Message" do %>
+            <%= banner.text_area :message, value: config.dig("banner", "message"), rows: 3, class: "input full-width" %>
+          <% end %>
+          <div class="settings-fields">
+            <%= settings_field "Privacy policy URL" do %>
+              <%= banner.url_field :policy_url, value: config.dig("banner", "policy_url"), placeholder: "https://www.example.com/privacy", class: "input full-width" %>
+            <% end %>
+            <%= settings_field "Policy link text" do %>
+              <%= banner.text_field :policy_label, value: config.dig("banner", "policy_label"), class: "input full-width" %>
+            <% end %>
+            <%= settings_field "Accept button" do %>
+              <%= banner.text_field :accept_label, value: config.dig("banner", "accept_label"), class: "input full-width" %>
+            <% end %>
+            <%= settings_field "Reject button" do %>
+              <%= banner.text_field :reject_label, value: config.dig("banner", "reject_label"), class: "input full-width" %>
+            <% end %>
+            <%= settings_field "Manage choices button" do %>
+              <%= banner.text_field :customize_label, value: config.dig("banner", "customize_label"), class: "input full-width" %>
+            <% end %>
+            <%= settings_field "Save choices button" do %>
+              <%= banner.text_field :save_label, value: config.dig("banner", "save_label"), class: "input full-width" %>
+            <% end %>
+          </div>
+        <% end %>
+        <%= settings_switch form, :show_reject, "Show a reject-all button", checked: config["show_reject"] %>
+      </section>
+
+      <section class="settings__section flex flex-column gap">
+        <header><h2 class="divider">Categories</h2></header>
+        <p class="txt-small txt-subtle margin-none">What the visitor can say yes or no to. A category that’s switched off isn’t offered, and scripts filed under it never load. Scripts are filed under categories at <%= link_to "Tools › Scripts", scripts_path, class: "txt-link" %>.</p>
+        <%= form.fields_for :necessary do |necessary| %>
+          <div class="flex flex-column gap-half">
+            <span class="txt-small font-weight-bold">Necessary <span class="txt-subtle font-weight-normal">· always on · <%= pluralize(@script_counts["necessary"], "script") %></span></span>
+            <div class="settings-fields">
+              <%= necessary.text_field :label, value: config.dig("necessary", "label"), class: "input full-width", aria: { label: "Necessary label" } %>
+              <%= necessary.text_field :description, value: config.dig("necessary", "description"), class: "input full-width", aria: { label: "Necessary description" } %>
+            </div>
+          </div>
+        <% end %>
+        <%= form.fields_for :categories do |categories| %>
+          <% Consent::Config::OPTIONAL_CATEGORIES.each do |category| %>
+            <%# herb:key category %>
+            <%= categories.fields_for category do |category_fields| %>
+              <div class="flex flex-column gap-half">
+                <%= settings_switch category_fields, :enabled, config.dig("categories", category, "label").to_s + " · " + pluralize(@script_counts[category], "script"), checked: config.dig("categories", category, "enabled") %>
+                <div class="settings-fields">
+                  <%= category_fields.text_field :label, value: config.dig("categories", category, "label"), class: "input full-width", aria: { label: category.humanize + " label" } %>
+                  <%= category_fields.text_field :description, value: config.dig("categories", category, "description"), class: "input full-width", aria: { label: category.humanize + " description" } %>
+                </div>
+              </div>
+            <% end %>
+          <% end %>
+        <% end %>
+      </section>
+
+      <section class="settings__section flex flex-column gap">
+        <header><h2 class="divider">Remembering the answer</h2></header>
+        <p class="txt-small txt-subtle margin-none">How long a choice lasts, and how to ask everyone again after the policy changes.</p>
+        <%= settings_field "Remember for (days)" do %>
+          <%= form.number_field :expiry_days, value: config["expiry_days"], min: 1, max: 730, class: "input" %>
+        <% end %>
+      </section>
+
+    <% end %>
+  <% end %>
+
+  <section class="settings__section flex flex-column gap-half">
+    <span class="txt-small font-weight-bold">Consent version: v<%= config["version"] %></span>
+    <p class="txt-x-small txt-subtle margin-none">Stored choices carry the version they were made under. Bumping it makes every visitor choose again on their next visit.</p>
+    <% if can_write %>
+      <div>
+        <%= render "layouts/shared/confirm_dialog", label: "Ask everyone again", title: "Ask every visitor again?",
+              message: "Everyone sees the banner on their next visit, and nothing beyond necessary scripts loads for them until they answer. Do this after a change to what you collect or who you share it with.",
+              path: settings_consent_reconsent_path, button: "Ask again" %>
+      </div>
+    <% end %>
+  </section>
+</section>

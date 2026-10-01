@@ -1,0 +1,49 @@
+<%# locals: () %>
+<%# The admin menu (NavigationHelper#admin_menu): groups of top-level items,
+    the current one open with its submenu, the others' submenus flying out on
+    hover and keyboard focus. Folds to icons, and below the tablet width it is
+    a drawer the admin bar's menu button opens (admin_menu_controller). %>
+<nav id="admin-menu" class="admin-menu" aria-label="Admin menu">
+  <ul class="admin-menu__list">
+    <% admin_menu.each_with_index do |(group, entries), index| %>
+      <%# herb:key group.to_s %>
+      <% if index.positive? %>
+        <li class="admin-menu__separator" aria-hidden="true"></li>
+      <% end %>
+      <% entries.each do |entry| %>
+        <%# herb:key entry.id %>
+        <% current_link = entry.submenu.find(&:current) %>
+        <li class="<%= class_names("admin-menu__item", "admin-menu__item--current": entry.current, "admin-menu__item--has-submenu": entry.submenu.any?) %>" data-menu-group="<%= group %>">
+          <%= link_to entry.url, class: "admin-menu__link", aria: { current: ("page" if entry.current && current_link.nil?) } do %>
+            <%= icon_tag entry.icon, class: "admin-menu__icon" %>
+            <span class="admin-menu__label"><%= entry.label %></span>
+          <% end %>
+          <% if entry.submenu.any? %>
+            <ul class="admin-menu__submenu" aria-label="<%= entry.label %>">
+              <li class="admin-menu__submenu-head" aria-hidden="true"><%= entry.label %></li>
+              <% entry.submenu.each do |link| %>
+                <%# herb:key link.url %>
+                <li>
+                  <% if link.icon %>
+                    <%= link_to link.url, class: "admin-menu__submenu-link", aria: { current: ("page" if link.current) } do %>
+                      <%= icon_tag link.icon, class: "admin-menu__submenu-icon" %>
+                      <span><%= link.label %></span>
+                    <% end %>
+                  <% else %>
+                    <%= link_to link.label, link.url, class: "admin-menu__submenu-link", aria: { current: ("page" if link.current) } %>
+                  <% end %>
+                </li>
+              <% end %>
+            </ul>
+          <% end %>
+        </li>
+      <% end %>
+    <% end %>
+  </ul>
+
+  <button type="button" class="admin-menu__collapse" data-admin-menu-target="foldToggle" data-action="admin-menu#toggleFold" aria-pressed="false">
+    <%= icon_tag "collapse-menu", class: "admin-menu__icon" %>
+    <span class="admin-menu__label">Collapse menu</span>
+  </button>
+</nav>
+<div class="admin-menu__backdrop" data-action="click->admin-menu#closeDrawer"></div>

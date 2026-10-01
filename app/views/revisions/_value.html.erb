@@ -1,0 +1,6 @@
+<%# locals: (text:, tone: nil) %>
+<% if text.blank? %>
+  <span class="txt-x-small txt-subtle">(empty)</span>
+<% else %>
+  <pre class="<%= class_names("revision-diff__value", "revision-diff__value--#{tone}" => tone) %>"><%= text %></pre>
+<% end %>

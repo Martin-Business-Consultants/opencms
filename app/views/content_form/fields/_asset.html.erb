@@ -1,0 +1,27 @@
+<%# locals: (field:, value:, scope:) %>
+<%# An asset id, chosen in the shared picker (content_form/asset_picker). %>
+<% asset = content_asset(value) %>
+<%= render "content_form/label", field: field, for_id: nil %>
+<div class="content-asset flex align-center gap" data-controller="asset-field" data-asset-field-id-value="<%= scope.dom_id %>">
+  <%= hidden_field_tag scope.name, value, id: scope.dom_id, data: { asset_field_target: "input" } %>
+  <div class="content-asset__preview" data-asset-field-target="preview">
+    <% if asset %>
+      <%= asset_thumbnail asset, size: 160 %>
+    <% end %>
+  </div>
+  <div class="flex flex-column gap-half min-width-0">
+    <span class="txt-small overflow-ellipsis" data-asset-field-target="name">
+      <% if asset %>
+        <%= asset.title %>
+      <% elsif value.present? %>
+        Asset <%= value %> (missing)
+      <% else %>
+        No file chosen
+      <% end %>
+    </span>
+    <div class="flex gap-half">
+      <button type="button" class="btn txt-small" data-action="asset-field#choose">Choose…</button>
+      <button type="button" class="btn btn--plain txt-small" data-action="asset-field#clear">Clear</button>
+    </div>
+  </div>
+</div>

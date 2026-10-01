@@ -1,0 +1,49 @@
+<%# locals: (block:, scope:, depth:, errors: nil, open: nil) %>
+<% block = block.is_a?(Hash) ? block : {} %>
+<% block_type = content_block_type(block["type"]) %>
+<% errors = Array(errors) %>
+<% summary = block_type ? content_summary(block["data"], block_type.fields) : nil %>
+<li class="content-block" data-sortable-list-target="item" data-block-id="<%= block["id"] %>" data-row-scope="<%= scope.name %>">
+  <%= content_tag :details, class: class_names("content-block__details", "content-block__details--invalid": errors.any?), open: open || errors.any? do %>
+    <summary class="content-block__summary flex align-center gap-half">
+      <span class="content-handle" title="Drag to reorder" data-action="mousedown->sortable-list#grab touchstart->sortable-list#grab">⠿</span>
+      <span class="flex flex-column flex-item-grow min-width-0">
+        <span class="flex align-center gap-half">
+          <strong class="txt-small"><%= block_type ? (block_type.label.presence || block_type.slug) : "Unknown block type" %></strong>
+          <% if block_type&.category.present? %>
+            <span class="txt-x-small txt-subtle"><%= block_type.category %></span>
+          <% end %>
+          <% if errors.any? %>
+            <span class="status-tag status-tag--negative border-radius pad-inline-half txt-x-small font-weight-bold"><%= pluralize(errors.size, "error") %></span>
+          <% end %>
+        </span>
+        <% if summary %>
+          <span class="txt-x-small txt-subtle overflow-ellipsis"><%= summary %></span>
+        <% end %>
+      </span>
+      <%= render "content_form/row_moves", noun: "block", duplicate: true, add_below: true %>
+    </summary>
+    <div class="content-block__body">
+      <%= hidden_field_tag scope[ContentForm::ORIGINAL].name, block.to_json, id: nil %>
+      <%= hidden_field_tag scope["id"].name, block["id"], id: nil, data: { block_id: true } %>
+      <% if block_type %>
+        <%= hidden_field_tag scope["type"].name, block["type"], id: nil %>
+        <%= hidden_field_tag scope["version"].name, block["version"], id: nil %>
+        <% if errors.any? %>
+          <ul class="content-block__errors txt-small txt-negative margin-none">
+            <% errors.each do |message| %>
+              <%# herb:key message %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        <% end %>
+        <%= render "content_form/fields", fields: block_type.fields, values: block["data"], scope: scope["data"], depth: depth %>
+      <% else %>
+        <%= hidden_field_tag scope["_json"].name, block.to_json, id: nil %>
+        <p class="txt-small txt-negative margin-none">
+          This block’s type, <code><%= block["type"] %></code>, doesn’t exist any more. It’s kept as it is; remove it or add the block type back.
+        </p>
+      <% end %>
+    </div>
+  <% end %>
+</li>

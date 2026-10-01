@@ -1,0 +1,26 @@
+<%# locals: (recipe:, task:) %>
+<%# One schedule's row: what it does, when it runs and ran, and Run now. Its
+    title opens its settings in the sheet. %>
+<% enabled = task&.enabled %>
+<% cron = task&.cron.presence || recipe.default_cron %>
+<tr id="recipe_<%= recipe.key %>" data-filter-target="item">
+  <td>
+    <%= link_to recipe.title, edit_tools_recurring_task_path(recipe.key), class: "txt-ink font-weight-bold",
+          data: { turbo_frame: "schedule_sheet", action: "dialog#open" } %>
+    <div class="txt-x-small txt-subtle"><%= recipe.description %></div>
+    <% if task&.last_error.present? %>
+      <div class="txt-x-small txt-negative font-mono overflow-ellipsis" title="<%= task.last_error %>"><%= task.last_error %></div>
+    <% end %>
+  </td>
+  <td class="font-mono txt-small txt-nowrap"><%= cron %></td>
+  <td><%= status_tag enabled ? "Active" : "Off" %></td>
+  <td class="txt-subtle txt-small"><%= enabled && task&.next_due_at ? time_ago_tag(task.next_due_at) : "—" %></td>
+  <td class="txt-subtle txt-small">
+    <% if task&.last_run_at %>
+      <%= time_ago_tag task.last_run_at %> · <%= task.last_status || "unknown" %>
+    <% else %>
+      Never
+    <% end %>
+  </td>
+  <td><%= button_to "Run now", tools_recurring_task_run_path(recipe.key), class: "btn txt-small" %></td>
+</tr>

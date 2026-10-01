@@ -1,0 +1,30 @@
+key: hvac
+version: 1
+name: HVAC contractor
+description: Heating and cooling — service-area, sharply seasonal, financing and emergency queries.
+category: HVAC contractor
+schema_type: HVACBusiness
+footprint: service_area
+services: [hvac repair, ac repair, furnace repair, hvac installation, air conditioning installation, heat pump installation, duct cleaning, hvac maintenance]
+keyword_patterns: ["{service} {city}", "{service} near me", "{modifier} {service} {city}"]
+modifiers: [emergency, affordable, best]
+directories: [angi.com, homeadvisor.com, thumbtack.com]
+reports:
+  - {kind: site_audit, cadence: weekly}
+  - {kind: business_profile, cadence: weekly}
+  - {kind: google_reviews, cadence: weekly}
+  - {kind: local_rankings, cadence: weekly}
+  - {kind: rank_map, cadence: weekly}
+  - {kind: ranked_keywords, cadence: weekly}
+  - {kind: search_trends, cadence: monthly}
+  - {kind: keyword_demand, cadence: monthly}
+  - {kind: citations, cadence: monthly}
+  - {kind: page_health, cadence: weekly}
+  - {kind: ai_answers, cadence: weekly}
+agents: [reporting_analyst, content_freshness, metadata_optimizer, technical_seo]
+targets: {map_pack_share: 45, rating: 4.7, reviews: 150, top_3: 20, page_score: 85, ai_mention_rate: 20, citations_consistent: 10}
+content_scaffold:
+  - {slug: services, title: Heating & cooling services, kind: services}
+  - {slug: service-area, title: Areas we serve, kind: location}
+  - {slug: financing, title: Financing, kind: page}
+  - {slug: reviews, title: Reviews, kind: reviews}

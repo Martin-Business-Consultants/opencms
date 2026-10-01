@@ -1,0 +1,30 @@
+key: dental_practice
+version: 1
+name: Dental practice
+description: A dental office — reputation-led, insurance and emergency queries, a small service area around the chair.
+category: Dentist
+schema_type: Dentist
+footprint: storefront
+services: [dentist, dental implants, teeth whitening, emergency dentist, invisalign, dental cleaning, pediatric dentist, root canal]
+keyword_patterns: ["{service} {city}", "{service} near me", "{modifier} {service} {city}"]
+modifiers: [best, affordable, family]
+directories: [healthgrades.com, zocdoc.com, vitals.com, webmd.com]
+reports:
+  - {kind: site_audit, cadence: weekly}
+  - {kind: business_profile, cadence: weekly}
+  - {kind: google_reviews, cadence: weekly}
+  - {kind: local_rankings, cadence: weekly}
+  - {kind: rank_map, cadence: weekly}
+  - {kind: ranked_keywords, cadence: weekly}
+  - {kind: citations, cadence: monthly}
+  - {kind: local_competitors, cadence: monthly}
+  - {kind: page_health, cadence: weekly}
+  - {kind: lighthouse, cadence: monthly}
+  - {kind: ai_answers, cadence: weekly}
+agents: [reporting_analyst, metadata_optimizer, schema_markup, content_freshness]
+targets: {map_pack_share: 55, rating: 4.8, reviews: 150, top_3: 12, page_score: 85, ai_mention_rate: 20, citations_consistent: 11}
+content_scaffold:
+  - {slug: services, title: Our services, kind: services}
+  - {slug: new-patients, title: New patients, kind: page}
+  - {slug: insurance, title: Insurance & payment, kind: faq}
+  - {slug: reviews, title: Patient reviews, kind: reviews}

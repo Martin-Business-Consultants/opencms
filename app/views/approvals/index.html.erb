@@ -1,0 +1,30 @@
+<% @page_title = "Approvals" %>
+
+<%= render "layouts/shared/page_header", title: @page_title,
+      description: "Everything waiting on a person: content changes an agent proposed, drafts waiting to be published, and findings that need a decision rather than an edit." %>
+
+<p class="txt-small txt-subtle margin-block-end">
+  <% if @counts[:total].zero? %>
+    Nothing is waiting.
+  <% else %>
+    <%= pluralize(@counts[:total], "item") %> waiting.
+  <% end %>
+  <% if @activity %>
+    <% if @activity[:enabled_agents].zero? %>
+      No agents are enabled, so nothing is producing work for review.
+    <% else %>
+      <%= pluralize(@activity[:enabled_agents], "agent") %> enabled<%= ", last finished " + time_ago_in_words(@activity[:last_completed_run_at]) + " ago" if @activity[:last_completed_run_at] %><%= ", #{@activity[:active_runs]} running now" if @activity[:active_runs].positive? %>.
+    <% end %>
+  <% end %>
+</p>
+
+<div class="approvals">
+  <%= render "approvals/column", title: "Content changes", count: @counts[:revisions], items: @revisions,
+        empty: "No proposed content changes.", more_path: revisions_path %>
+  <%= render "approvals/column", title: "Publish requests", count: @counts[:review_requests], items: @review_requests,
+        empty: "No publish requests.", more_path: review_requests_path %>
+  <% if @sees_findings %>
+    <%= render "approvals/column", title: "Agent findings", count: @counts[:recommendations], items: @recommendations,
+          empty: "No open findings.", more_path: recommendations_path %>
+  <% end %>
+</div>

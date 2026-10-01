@@ -1,0 +1,107 @@
+@layer components {
+  /* Prevent page scrolling when modal dialog is open */
+  html:has(dialog:modal) {
+    overflow: hidden;
+  }
+
+  :is(.dialog) {
+    border: 0;
+    opacity: 0;
+    transform: scale(0.85);
+    transform-origin: center;
+    transition-behavior: allow-discrete;
+    transition-duration: calc(var(--dialog-duration) / 2); /* Faster closing */
+    transition-property: display, opacity, overlay, transform;
+    transition-timing-function: ease-out;
+
+    &::backdrop {
+      background-color: var(--color-black);
+      opacity: 0;
+      transition-behavior: allow-discrete;
+      transition-duration: calc(var(--dialog-duration) / 2);
+      transition-property: display, opacity, overlay;
+      transition-timing-function: ease-out;
+    }
+
+    &[open] {
+      opacity: 1;
+      transform: scale(1);
+      transition-duration: var(--dialog-duration); /* Normal opening speed */
+
+      &::backdrop {
+        opacity: 0.5;
+        transition-duration: var(--dialog-duration);
+      }
+    }
+
+    @starting-style {
+      &[open] {
+        opacity: 0;
+        transform: scale(0.85);
+      }
+
+      &[open]::backdrop {
+        opacity: 0;
+      }
+    }
+  }
+
+  /* Ensure padding from viewport edges */
+  .dialog.panel {
+    max-inline-size: calc(100vw - var(--inline-space-double) * 2);
+  }
+
+  /* A modal that asks for something (delete, a quick action): one width for all of them. */
+  .dialog.dialog--action {
+    --panel-size: 42rem;
+  }
+
+  /* A modal that slides in from the right and runs the viewport's height
+     (New page, Choose a file): room to grow, a form's actions pinned to the foot. */
+  .dialog.dialog--sheet {
+    --panel-border-radius: var(--radius) 0 0 var(--radius);
+    --panel-size: min(36rem, 100vw);
+
+    block-size: 100dvh;
+    inset-inline: auto 0;
+    margin: 0;
+    max-block-size: 100dvh;
+    max-inline-size: 100vw;
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition-property: display, opacity, overlay, transform;
+
+    /* A flex column only while open, so its gap spaces what's in it; a
+       `flex` class would also show it when closed. */
+    &[open] {
+      display: flex;
+      transform: translateX(0);
+    }
+
+    @starting-style {
+      &[open] {
+        transform: translateX(100%);
+      }
+    }
+
+    /* The title and its Close button, kept clear of what follows. */
+    > header {
+      flex-shrink: 0;
+      margin-block-end: var(--block-space-half);
+    }
+
+    > form {
+      flex: 1;
+    }
+
+    .dialog__actions {
+      margin-block-start: auto;
+    }
+  }
+
+  /* A sheet with more to lay out (a form's webhook mapping): half the screen,
+     never narrower than a sheet, the whole screen on a phone. */
+  .dialog.dialog--sheet-half {
+    --panel-size: max(50vw, min(36rem, 100vw));
+  }
+}

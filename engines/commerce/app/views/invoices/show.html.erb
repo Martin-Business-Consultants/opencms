@@ -1,0 +1,113 @@
+<% @page_title = "Invoice " + @invoice.number %>
+<%= parent_page "Invoices", invoices_path %>
+<% can_write = Current.user.can?("invoices:write") %>
+<% public_url = request.base_url + @invoice.public_path %>
+
+<% content_for :page_actions do %>
+  <% if can_write && !@invoice.paid? && !@invoice.void? %>
+    <%= link_to "Edit", edit_invoice_path(@invoice), class: "btn txt-small" %>
+  <% end %>
+  <% if Current.user.can?("invoices:send") && @invoice.sendable? %>
+    <% send_label = @invoice.sent? ? "Send again" : "Send to customer" %>
+    <%= render "layouts/shared/confirm_dialog", label: send_label, title: send_label + "?",
+          path: invoice_delivery_path(@invoice), button: "Send",
+          message: "Emails " + @invoice.customer_email.to_s + " the invoice, its hosted page and the payment link." %>
+  <% end %>
+  <% if can_write && @invoice.sent? %>
+    <%= render "layouts/shared/confirm_dialog", label: "Mark paid", title: "Mark " + @invoice.number + " paid?",
+          path: invoice_payment_path(@invoice), message: "Do this once the money has arrived through your processor." %>
+  <% end %>
+  <% if can_write && (@invoice.sent? || @invoice.draft?) %>
+    <%= render "layouts/shared/confirm_dialog", label: "Void", title: "Void " + @invoice.number + "?", negative: true,
+          path: invoice_voiding_path(@invoice), message: "It stays on record, crossed out, and can no longer be paid." %>
+  <% end %>
+  <% if Current.user.can?("invoices:delete") && @invoice.draft? %>
+    <%= render "layouts/shared/delete_dialog", name: "draft " + @invoice.number, path: invoice_path(@invoice) %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title, description: @invoice.customer_name %>
+
+<% if @invoice.draft? && !@invoice.sendable? %>
+  <p class="panel txt-small txt-align-start margin-block-end">It needs a customer email and at least one line before it can be sent.</p>
+<% end %>
+
+<div class="commerce-columns">
+  <section class="panel shadow txt-align-start flex flex-column gap">
+    <div class="flex align-center justify-space-between gap">
+      <%= status_tag @invoice.status %>
+      <span class="txt-small txt-subtle">
+        Issued <%= @invoice.issued_on ? l(@invoice.issued_on) : "—" %> · due <%= @invoice.due_on ? l(@invoice.due_on) : "—" %>
+      </span>
+    </div>
+
+    <table class="data-table">
+      <thead><tr><th>Description</th><th>SKU</th><th class="data-table__number">Qty</th><th class="data-table__number">Unit</th><th class="data-table__number">Amount</th></tr></thead>
+      <tbody>
+        <% @invoice.line_items.each_with_index do |line, index| %>
+          <%# herb:key index %>
+          <tr>
+            <td><%= line["description"] %></td>
+            <td class="font-mono txt-small txt-subtle"><%= line["sku"] %></td>
+            <td class="data-table__number"><%= line["quantity"] %></td>
+            <td class="data-table__number"><%= @invoice.formatted(line["unit_price_cents"]) %></td>
+            <td class="data-table__number"><%= invoice_line_total(@invoice, line) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+    <dl class="commerce-totals">
+      <dt>Subtotal</dt><dd><%= @invoice.formatted(@invoice.subtotal_cents) %></dd>
+      <% if @invoice.tax_cents.to_i.nonzero? %>
+        <dt>Tax</dt><dd><%= @invoice.formatted(@invoice.tax_cents) %></dd>
+      <% end %>
+      <% if @invoice.shipping_cents.to_i.nonzero? %>
+        <dt>Shipping</dt><dd><%= @invoice.formatted(@invoice.shipping_cents) %></dd>
+      <% end %>
+      <dt class="font-weight-bold">Total</dt><dd class="font-weight-bold"><%= @invoice.formatted(@invoice.total_cents) %></dd>
+    </dl>
+
+    <% if @invoice.notes.present? %>
+      <div><h3 class="txt-small font-weight-bold margin-none">Notes</h3><%= simple_format @invoice.notes, class: "margin-none" %></div>
+    <% end %>
+    <% if @invoice.terms.present? %>
+      <div><h3 class="txt-small font-weight-bold margin-none">Terms</h3><%= simple_format @invoice.terms, class: "margin-none txt-small txt-subtle" %></div>
+    <% end %>
+  </section>
+
+  <div class="flex flex-column gap">
+    <section class="panel shadow txt-align-start flex flex-column gap-half">
+      <h2 class="txt-medium font-weight-bold margin-none">Bill to</h2>
+      <p class="margin-none">
+        <%= @invoice.customer_name %>
+        <% if @invoice.company.present? %><br><%= @invoice.company %><% end %>
+      </p>
+      <% if @invoice.billing_address.present? %>
+        <%= simple_format @invoice.billing_address, class: "margin-none txt-small" %>
+      <% end %>
+      <dl class="commerce-facts">
+        <dt>Email</dt><dd><%= @invoice.customer_email.present? ? mail_to(@invoice.customer_email, class: "txt-link") : "—" %></dd>
+        <dt>Phone</dt><dd><%= @invoice.customer_phone.presence || "—" %></dd>
+      </dl>
+    </section>
+
+    <section class="panel shadow txt-align-start flex flex-column gap-half">
+      <h2 class="txt-medium font-weight-bold margin-none">Getting paid</h2>
+      <dl class="commerce-facts">
+        <dt>Payment link</dt>
+        <dd class="overflow-ellipsis"><%= @invoice.payment_link.present? ? external_link(@invoice.payment_link) : "None yet — add one before sending." %></dd>
+        <dt>Customer’s page</dt>
+        <dd class="flex align-center gap-half">
+          <%= link_to "Open", public_url, class: "txt-link", target: "_blank", rel: "noopener" %>
+          <button type="button" class="btn txt-x-small" data-controller="copy-to-clipboard" data-copy-to-clipboard-content-value="<%= public_url %>" data-copy-to-clipboard-success-class="btn--success" data-action="copy-to-clipboard#copy">Copy link</button>
+        </dd>
+        <% if @invoice.sent_at %><dt>Sent</dt><dd><%= l(@invoice.sent_at, format: :long) %></dd><% end %>
+        <% if @invoice.paid_at %><dt>Paid</dt><dd><%= l(@invoice.paid_at, format: :long) %></dd><% end %>
+        <% if @invoice.voided_at %><dt>Voided</dt><dd><%= l(@invoice.voided_at, format: :long) %></dd><% end %>
+      </dl>
+      <% if @invoice.quote_request %>
+        <p class="txt-small margin-none">From <%= link_to "quote request #" + @invoice.quote_request_id.to_s, quote_request_path(@invoice.quote_request), class: "txt-link" %>.</p>
+      <% end %>
+    </section>
+  </div>
+</div>

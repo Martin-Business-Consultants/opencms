@@ -1,0 +1,17 @@
+<% @page_title = @template.name %>
+<%= parent_page "Templates", agent_templates_path %>
+
+<%= render "layouts/shared/page_header", title: @page_title %>
+
+<div class="panel panel--centered panel--wide flex flex-column gap-half">
+  <div class="flex align-center justify-space-between gap">
+    <% if Current.user.can?("agents:delete") %>
+      <%= render "layouts/shared/delete_dialog", name: @template.name, path: agent_template_path(@template),
+            message: "Agents already built from it are unaffected." %>
+    <% end %>
+  </div>
+  <% if @template.built_in? %>
+    <p class="txt-small txt-subtle margin-none">This is a shipped template, so an upgrade overwrites it. To keep an edit, create a new template instead: a copy has no shipped key, so no upgrade touches it.</p>
+  <% end %>
+  <%= render "agent_templates/form", template: @template %>
+</div>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<%# Signed-out pages: sign in, sign up, password reset. No navigation, just the site's logo. %>
+<html lang="en">
+  <%= render "layouts/shared/head" %>
+
+  <body class="public">
+    <div id="global-container">
+      <header class="header" id="header">
+        <a href="#main" class="header__skip-navigation btn" data-turbo="false">Skip to main content</a>
+        <nav class="flex align-center justify-center gap">
+          <span class="header__logo txt-large font-weight-black"><%= render "layouts/shared/logo" %></span>
+          <%= render "layouts/shared/theme_toggle" %>
+        </nav>
+
+        <%= yield :header %>
+      </header>
+
+      <%= render "layouts/shared/flash" %>
+
+      <main id="main">
+        <%= yield %>
+      </main>
+    </div>
+
+    <footer id="footer">
+      <%= yield :footer %>
+    </footer>
+  </body>
+</html>

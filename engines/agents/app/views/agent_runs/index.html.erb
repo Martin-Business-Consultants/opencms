@@ -1,0 +1,58 @@
+<% @page_title = "Runs" %>
+
+<% content_for :page_actions do %>
+  <%= link_to "Live", agent_runs_live_path, class: "btn txt-small" %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title, description: "What agents have done, are doing, and are waiting to do." %>
+
+<% content_for :index_filters do %>
+  <%= render "layouts/shared/quick_filter", title: "Status", param: :status, current: @status.to_s,
+        options: [["Every status", ""]] + AgentRun::STATUSES.map { [it.humanize + " (" + @counts[it].to_i.to_s + ")", it] } %>
+  <%= render "layouts/shared/quick_filter", title: "Agent", param: :agent_id, current: @agent_id.to_s,
+        options: [["Every agent", ""]] + Agent.ordered.pluck(:name, :id).map { |name, id| [name, id.to_s] } %>
+<% end %>
+<%= render "layouts/shared/index_toolbar" %>
+
+<p class="txt-small txt-subtle margin-block-end txt-align-start">
+  <% if @worker.in_process? %>
+    Runs execute here, on the AI plugin’s key.
+  <% elsif @worker.seen_recently? %>
+    A worker claimed work <%= time_ago_in_words(@worker.last_claim_at) %> ago.
+  <% else %>
+    No worker has claimed anything recently<%= " (" + @worker.queued.to_s + " queued)" if @worker.queued.positive? %> — check a harness is running.
+  <% end %>
+</p>
+
+<% if @runs.any? %>
+  <section class="panel shadow center index-table">
+    <table class="data-table" data-controller="pagination" data-pagination-paginate-on-intersection-value="true" data-pagination-discard-frame-value="true">
+      <thead>
+        <tr><th>Run</th><th>Agent</th><th>Status</th><th>Trigger</th><th>Queued</th><th class="data-table__number">Took</th><th>Summary</th></tr>
+      </thead>
+      <tbody id="<%= pagination_frame_id_for(:runs_rows, @page.number) %>">
+        <% @runs.each do |run| %>
+          <%# herb:key run.id %>
+          <tr id="<%= dom_id(run) %>" data-filter-target="item">
+            <td><%= link_to "#" + run.id.to_s, agent_run_path(run), class: "txt-ink font-weight-bold", data: { turbo_frame: "_top" } %></td>
+            <td class="txt-small">
+              <%= run.agent_name %>
+              <% if run.swarm %>
+                <span class="txt-x-small txt-subtle">· <%= run.swarm.name %><%= " / " + run.swarm_member.display_name if run.swarm_member %></span>
+              <% end %>
+            </td>
+            <td><%= run_status_tag run %></td>
+            <td class="txt-small txt-subtle"><%= run.trigger %><%= " by " + run.triggered_by.email if run.triggered_by %></td>
+            <td class="txt-small"><%= time_ago_tag run.created_at %></td>
+            <td class="data-table__number txt-small"><%= run_duration(run.duration_seconds) %></td>
+            <td class="txt-x-small txt-subtle"><%= (run.error.presence || run.summary).to_s.truncate(140) %></td>
+          </tr>
+        <% end %>
+        <%= table_next_page_row :runs_rows, @page, columns: 7 %>
+      </tbody>
+    </table>
+  </section>
+<% else %>
+  <div class="panel panel--centered center">
+    <p class="txt-medium margin-none">No runs<%= " like that" if @status || @agent_id %> yet.</p>
+  </div>
+<% end %>

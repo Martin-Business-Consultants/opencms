@@ -1,0 +1,2 @@
+<%= render "settings/secret", frame_id: dom_id(@token, :secret), masked: @token.masked, visible: @token.visible?,
+      reveal_path: settings_service_token_reveal_path(@token), plaintext: (@token.token if @token.visible?) %>

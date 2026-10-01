@@ -1,0 +1,105 @@
+<% @page_title = "Updates" %>
+<% release_tag = UpdateCheck.latest_tag %>
+
+<%= render "layouts/shared/page_header", title: "Updates" %>
+
+<%# While an update runs the page reloads itself (refresh), and stops once
+    it has settled and the server leaves the controller off. %>
+<%= tag.section class: "panel shadow settings-page txt-align-start", data: ({ controller: "refresh", refresh_interval_value: 5 } if @upgrade) do %>
+  <section class="settings__section flex flex-column gap">
+    <dl class="settings-index">
+      <div class="settings-index__item"><dt class="font-weight-bold txt-small">Running</dt><dd class="txt-small margin-none">CMS <%= cms_version %></dd></div>
+      <div class="settings-index__item">
+        <dt class="font-weight-bold txt-small">Newest release</dt>
+        <dd class="txt-small margin-none">
+          <% if UpdateCheck.latest_version %>
+            <%= external_link UpdateCheck.release_url, "CMS #{UpdateCheck.latest_version}" %>
+            <span class="txt-subtle"><%= UpdateCheck.update_available? ? "(newer)" : "(up to date)" %></span>
+          <% else %>
+            <span class="txt-subtle">Not checked yet</span>
+          <% end %>
+        </dd>
+      </div>
+      <div class="settings-index__item">
+        <dt class="font-weight-bold txt-small">Checked</dt>
+        <dd class="txt-small margin-none">
+          <% if UpdateCheck.checked_at %>
+            <%= time_ago_tag UpdateCheck.checked_at %><% if UpdateCheck.checking? %>, and every day<% end %>
+          <% else %>
+            <span class="txt-subtle">Never<% unless UpdateCheck.checking? %> (CMS_UPDATE_CHECK=false)<% end %></span>
+          <% end %>
+        </dd>
+      </div>
+      <div class="settings-index__item"><dt class="font-weight-bold txt-small">Updates by</dt><dd class="txt-small margin-none"><%= update_method_description %></dd></div>
+    </dl>
+    <div><%= button_to "Check now", settings_updates_check_path, class: "btn txt-small" %></div>
+  </section>
+
+  <% if @upgrade %>
+    <section class="settings__section flex flex-column gap-half">
+      <header><h2 class="divider">Updating to <%= @upgrade.to_version %></h2></header>
+      <p class="txt-small margin-none">
+        Started <%= time_ago_tag @upgrade.created_at %> by <%= upgrade_requester @upgrade %>.
+        The install backs up its data, migrates and restarts on <%= @upgrade.to_version %>; until then <%= cms_version %> keeps running.
+        This page checks every few seconds.
+      </p>
+      <% if @upgrade.via == "hoster" && @upgrade.runner.awaiting_approval? %>
+        <p class="txt-small margin-none">Hoster deploys once someone approves it there.</p>
+      <% end %>
+      <% if @upgrade.external_url %>
+        <p class="txt-small margin-none"><%= external_link @upgrade.external_url, upgrade_follow_text(@upgrade) %></p>
+      <% end %>
+    </section>
+  <% elsif UpdateCheck.update_available? %>
+    <section class="settings__section flex flex-column gap-half">
+      <header><h2 class="divider">CMS <%= UpdateCheck.latest_version %></h2></header>
+      <% if UpdateCheck.published_at %>
+        <p class="txt-small txt-subtle margin-none">Released <%= l UpdateCheck.published_at.to_date, format: :long %>.</p>
+      <% end %>
+      <% if UpdateCheck.notes %>
+        <div class="txt-small release-notes"><%= simple_format UpdateCheck.notes %></div>
+      <% end %>
+
+      <% if !Upgrade.available? %>
+        <p class="txt-small margin-none"><%= Upgrade.unavailable_reason %> On the server:</p>
+        <pre class="txt-small margin-none"><code><%= manual_update_command(release_tag) %></code></pre>
+        <p class="txt-x-small txt-subtle margin-none">
+          To use a button instead, run from a checkout made by <code>bin/install</code>, or for a Docker install set
+          <code>CMS_GITHUB_TOKEN</code> and <code>CMS_DEPLOY_DESTINATION</code>. See <code>docs/install.md</code>.
+        </p>
+      <% elsif Current.user.admin? %>
+        <div>
+          <%= render "layouts/shared/confirm_dialog", label: "Update to #{UpdateCheck.latest_version}", title: "Update to CMS #{UpdateCheck.latest_version}?",
+                message: "The CMS backs up its data, updates and restarts. It’s unavailable for a minute or two; nobody is signed out. If anything fails, #{cms_version} keeps running and this page says why.",
+                path: settings_updates_path, button: "Update now", trigger_class: "btn--link" %>
+        </div>
+      <% else %>
+        <p class="txt-small txt-subtle margin-none">An admin can update to it from here.</p>
+      <% end %>
+    </section>
+  <% end %>
+
+  <% if @upgrades.any? %>
+    <section class="settings__section flex flex-column gap-half">
+      <header><h2 class="divider">Past updates</h2></header>
+      <ul class="settings-sessions flex flex-column gap-half margin-none txt-small">
+        <% @upgrades.each do |upgrade| %>
+          <%# herb:key upgrade.id %>
+          <li class="flex flex-column">
+            <span>
+              <%= status_tag upgrade.status %>
+              <strong><%= upgrade.from_version %> → <%= upgrade.to_version %></strong>
+              <span class="txt-subtle"> · <%= upgrade_requester upgrade %> · <%= time_ago_tag upgrade.created_at %></span>
+              <% if upgrade.external_url %>
+                <span class="txt-subtle"> · </span><%= external_link upgrade.external_url, "Deploy log" %>
+              <% end %>
+            </span>
+            <% if upgrade.message.present? %>
+              <pre class="txt-x-small margin-none upgrade-message"><%= upgrade.message %></pre>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+<% end %>

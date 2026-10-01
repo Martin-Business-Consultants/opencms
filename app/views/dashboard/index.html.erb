@@ -1,0 +1,14 @@
+<% @page_title = "Dashboard" %>
+
+<div class="flex flex-column gap center dashboard">
+  <% unless @checklist["dismissed"] %>
+    <%= render "dashboard/checklist", checklist: @checklist %>
+  <% end %>
+
+  <% if Current.user.can?("pages:read") %>
+    <%= render "dashboard/api_use" %>
+    <%= render "dashboard/frontend" %>
+  <% end %>
+
+  <%= plugin_slots(:dashboard) %>
+</div>

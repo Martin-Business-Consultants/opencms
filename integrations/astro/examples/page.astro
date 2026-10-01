@@ -1,0 +1,58 @@
+---
+// Example: src/pages/[...slug].astro
+// Renders any published CMS page at its CMS-managed path.
+
+import Layout from "~/layouts/Layout.astro";
+import { cms, CmsError } from "~/lib/cms/cms";
+import { resolveBlocks } from "~/lib/cms/blocks";
+
+// Replace these stubs with whatever section components you ship.
+import Hero from "~/components/blocks/Hero.astro";
+import Prose from "~/components/blocks/Prose.astro";
+import CollectionList from "~/components/blocks/CollectionList.astro";
+
+const COMPONENTS = {
+  hero:            Hero,
+  prose:           Prose,
+  collection_list: CollectionList,
+};
+
+// Astro statically renders at build time when output: "static". On
+// "server" or "hybrid" this runs per request.
+export async function getStaticPaths() {
+  const { pages } = await cms.pages.list({ status: "published" });
+  return pages.map((p) => ({
+    params: { slug: p.path === "home" ? undefined : p.path },
+  }));
+}
+
+const slugParam = Astro.params.slug;
+const slug = (Array.isArray(slugParam) ? slugParam.join("/") : slugParam) ?? "home";
+
+let page;
+try {
+  page = await cms.pages.get(slug);
+} catch (err) {
+  if (err instanceof CmsError && err.status === 404) {
+    return Astro.redirect("/404", 404);
+  }
+  throw err;
+}
+
+// Drafts and archived pages are 404 to the public site. Editors who need
+// to see them use the CMS preview tokens; that flow lives in the CMS.
+if (page.status !== "published") {
+  return Astro.redirect("/404", 404);
+}
+
+const blocks = resolveBlocks(page.blocks, COMPONENTS);
+---
+
+<Layout
+  title={page.seo.meta_title || page.title}
+  description={page.seo.meta_description}
+  canonical={page.seo.canonical}
+  noindex={page.seo.noindex}
+>
+  {blocks.map(({ Component, data }) => <Component {...data} />)}
+</Layout>

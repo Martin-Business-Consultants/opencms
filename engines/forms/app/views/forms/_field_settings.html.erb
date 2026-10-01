@@ -1,0 +1,68 @@
+<%# locals: (field:, key:) %>
+<%# One field's settings in the builder's side panel, shown while its card is
+    picked, split as Gravity Forms splits them: General, Appearance, Advanced.
+    Which settings show depends on the type (forms/forms.css). %>
+<% name = "form[fields][" + key + "]" %>
+<div class="form-settings" data-key="<%= key %>" data-forms--builder-target="settings" hidden
+     data-action="input->forms--builder#changed change->forms--builder#changed">
+  <div class="form-settings__tab" data-tab="general">
+    <label class="form-settings__field">
+      <span class="txt-small font-weight-bold">Field label</span>
+      <%= text_field_tag name + "[label]", field["label"], id: nil, class: "input full-width", autocomplete: "off", required: true, data: { role: "label" } %>
+    </label>
+    <label class="form-settings__field">
+      <span class="txt-small font-weight-bold">Description</span>
+      <%= text_field_tag name + "[help]", field["help"], id: nil, class: "input full-width", placeholder: "Shown under the field", data: { role: "help" } %>
+    </label>
+    <label class="form-settings__field" data-for="choices">
+      <span class="txt-small font-weight-bold">Choices</span>
+      <%= text_area_tag name + "[options]", FormFields.options_text(field), id: nil, rows: 4, class: "input full-width font-mono", data: { role: "options" } %>
+      <span class="txt-x-small txt-subtle">One per line: <code>value | label</code>, or just the label.</span>
+    </label>
+    <div class="form-settings__group" data-for="file">
+      <label class="form-settings__field">
+        <span class="txt-small font-weight-bold">Accepted files</span>
+        <%= text_field_tag name + "[accept]", field["accept"], id: nil, class: "input full-width font-mono", placeholder: ".pdf,.doc,image/*" %>
+      </label>
+      <label class="form-settings__field">
+        <span class="txt-small font-weight-bold">Largest file</span>
+        <%= text_field_tag name + "[max_size]", FormFields.max_size_text(field), id: nil, class: "input full-width", placeholder: "10 MB" %>
+      </label>
+      <label class="form-settings__check txt-small">
+        <%= check_box_tag name + "[multiple]", "1", field["multiple"] == true, id: nil, data: { role: "multiple" } %>
+        <span>Several files</span>
+      </label>
+    </div>
+    <label class="form-settings__check txt-small">
+      <%= check_box_tag name + "[required]", "1", field["required"] == true, id: nil, data: { role: "required" } %>
+      <span>Required</span>
+    </label>
+  </div>
+
+  <div class="form-settings__tab" data-tab="appearance">
+    <label class="form-settings__field" data-for="text">
+      <span class="txt-small font-weight-bold">Placeholder</span>
+      <%= text_field_tag name + "[placeholder]", field["placeholder"], id: nil, class: "input full-width", data: { role: "placeholder" } %>
+    </label>
+    <p class="txt-small txt-subtle margin-none" data-for="no-text">This field has no appearance settings.</p>
+  </div>
+
+  <div class="form-settings__tab" data-tab="advanced">
+    <label class="form-settings__field">
+      <span class="txt-small font-weight-bold">Field type</span>
+      <%= select_tag name + "[type]", options_for_select(form_field_type_options, field["type"]), id: nil, class: "input input--select full-width", data: { role: "type" } %>
+    </label>
+    <label class="form-settings__field">
+      <span class="txt-small font-weight-bold">Field name</span>
+      <%= text_field_tag name + "[name]", field["name"], id: nil, class: "input full-width font-mono", placeholder: "email",
+            autocomplete: "off", spellcheck: false, required: true, data: { role: "name" } %>
+      <span class="txt-x-small txt-subtle">The key the submission stores the answer under. Made from the label until you change it.</span>
+    </label>
+    <label class="form-settings__field" data-for="text">
+      <span class="txt-small font-weight-bold">Default value</span>
+      <%= text_field_tag name + "[default]", field["default"], id: nil, class: "input full-width", data: { role: "default" } %>
+    </label>
+  </div>
+
+  <%= hidden_field_tag name + "[extra]", FormFields.extra_json(field), id: nil %>
+</div>

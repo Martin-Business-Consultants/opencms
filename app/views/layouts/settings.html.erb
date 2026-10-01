@@ -1,0 +1,19 @@
+<%# Settings pages, laid out like the editors: the page's title across the
+    top (page_header puts it in :settings_header), the page in two thirds, and
+    a sidebar in the other third — the page's Save box (settings/save_box, in
+    :settings_aside) when it has one, then the Settings sections. %>
+<% content_for :content do %>
+  <div class="settings-screen flex flex-column gap">
+    <%= content_for(:settings_header) %>
+    <div class="content-form content-form--thirds">
+      <div class="content-form__main flex flex-column gap">
+        <%= yield %>
+      </div>
+      <aside class="content-form__aside flex flex-column gap">
+        <%= content_for(:settings_aside) %>
+        <%= render "settings/sections_box" %>
+      </aside>
+    </div>
+  </div>
+<% end %>
+<%= render template: "layouts/application" %>

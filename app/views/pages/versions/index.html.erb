@@ -1,0 +1,8 @@
+<% @page_title = "Revisions" %>
+<%= parent_page @page.title, edit_page_path(@page.path) %>
+<% content_for :page_actions do %>
+  <%= link_to "Back to the page", edit_page_path(@page.path), class: "btn txt-small" %>
+<% end %>
+<%= render "layouts/shared/page_header", title: "Revisions of “" + @page.title + "”",
+      description: "A copy of the page’s blocks is kept each time they change. Compare one with the page now, or restore it." %>
+<%= render "versions/list", versions: @versions, page: @versions_page, show_path: ->(version) { page_version_path(@page.path, version) } %>

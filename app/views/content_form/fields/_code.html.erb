@@ -1,0 +1,7 @@
+<%# locals: (field:, value:, scope:) %>
+<%# Raw text that must not pass through the rich text editor (HTML snippets,
+    scripts), or JSON, which is shown formatted and parsed back on save. %>
+<% text = field["type"] == "json" && !value.nil? && !value.is_a?(String) ? JSON.pretty_generate(value) : value %>
+<%= render "content_form/label", field: field, for_id: scope.dom_id %>
+<%= text_area_tag scope.name, text, id: scope.dom_id, rows: (field["type"] == "json" ? 10 : 8), spellcheck: false,
+      class: "input full-width font-mono txt-small" %>

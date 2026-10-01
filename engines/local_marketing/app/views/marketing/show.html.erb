@@ -1,0 +1,198 @@
+<% @page_title = "Marketer’s report" %>
+<% overview = @overview %>
+<% business = overview.business %>
+<% scorecard = overview.scorecard %>
+<% spend = overview.spend %>
+<% agents = overview.agents %>
+<% can_run = Current.user.can?("reports:run") %>
+
+<% content_for :page_actions do %>
+  <%= link_to "Owner’s view", marketing_client_path, class: "btn txt-small" %>
+  <%= link_to "Setup", marketing_setup_path, class: "btn txt-small" %>
+  <%= link_to "All reports", reports_path, class: "btn txt-small" %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title,
+      description: (business[:name].present? ? business[:name] + (business[:type_name] ? " · " + business[:type_name] : "") + (business[:location].present? ? " · " + business[:location] : "") : "Scores against the business’s targets, and what to do next.") %>
+
+<div class="reports-page flex flex-column gap txt-align-start">
+  <% unless business[:setup_complete] %>
+    <section class="panel shadow flex flex-column gap-half">
+      <p class="margin-none">The business isn’t set up yet, so most scores can’t be worked out. <%= link_to "Run the setup", marketing_setup_path, class: "txt-link" %> — it picks keywords, directories and targets for the type of business.</p>
+    </section>
+  <% end %>
+
+  <section class="panel shadow flex flex-column gap-half">
+    <div class="flex align-center justify-space-between gap">
+      <h2 class="txt-medium font-weight-bold margin-none">This week</h2>
+      <% if can_run && overview.narrative_available? %>
+        <%= button_to "Rewrite", marketing_narrative_path, class: "btn txt-x-small" %>
+      <% end %>
+    </div>
+    <% narrative = overview.narrative %>
+    <% if narrative %>
+      <% if narrative["headline"].present? %>
+        <p class="font-weight-bold margin-none"><%= narrative["headline"] %></p>
+      <% end %>
+      <p class="margin-none"><%= narrative["summary"] %></p>
+      <p class="txt-x-small txt-subtle margin-none">Written <%= time_ago_tag Time.zone.parse(narrative["generated_at"]) %> from the figures below.</p>
+    <% elsif overview.narrative_available? %>
+      <p class="margin-none txt-subtle">No summary yet — Rewrite writes one from the figures below.</p>
+    <% else %>
+      <p class="margin-none txt-subtle">A written summary needs the AI plugin with a key.</p>
+    <% end %>
+  </section>
+
+  <section class="panel shadow center index-table">
+    <h2 class="txt-medium font-weight-bold margin-none">Scores</h2>
+    <p class="txt-small margin-none">
+      <% if scorecard[:overall] %>
+        Overall <strong><%= scorecard[:overall] %></strong> out of 100, against the business’s own targets.
+      <% else %>
+        No score yet — nothing has been measured.
+      <% end %>
+      <%= scorecard[:measured] %> of <%= scorecard[:catalog] %> reports have a snapshot.
+    </p>
+    <table class="data-table">
+      <thead>
+        <tr><th>Pillar</th><th>Figure</th><th class="data-table__number">Now</th><th class="data-table__number">Target</th><th class="data-table__number">Score</th><th>Measured</th></tr>
+      </thead>
+      <tbody>
+        <% scorecard[:pillars].each do |pillar| %>
+          <%# herb:key pillar[:key] %>
+          <tr>
+            <td class="font-weight-bold"><%= pillar[:label] %></td>
+            <td class="txt-subtle">Pillar score<% if pillar[:trend] %> (<%= pillar[:trend] %>)<% end %></td>
+            <td></td>
+            <td></td>
+            <td class="data-table__number font-weight-bold"><%= report_value(pillar[:score]) %></td>
+            <td></td>
+          </tr>
+          <% pillar[:metrics].each do |metric| %>
+            <%# herb:key metric[:key] %>
+            <tr>
+              <td></td>
+              <td><%= metric[:label] %></td>
+              <td class="data-table__number"><%= report_value(metric[:value]) %></td>
+              <td class="data-table__number"><%= report_value(metric[:target]) %></td>
+              <td class="data-table__number"><%= report_value(metric[:score]) %></td>
+              <td class="txt-small">
+                <% if metric[:report_id] %>
+                  <%= link_to time_ago_in_words(Time.zone.parse(metric[:measured_at])) + " ago", report_path(metric[:report_id]), class: "txt-link" %>
+                <% else %>
+                  <span class="txt-subtle">Not measured</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel shadow flex flex-column gap-half">
+    <h2 class="txt-medium font-weight-bold margin-none">Do next</h2>
+    <% if overview.actions.empty? %>
+      <p class="margin-none">Nothing to do right now.</p>
+    <% end %>
+    <ol class="margin-none flex flex-column gap-half">
+      <% overview.actions.each do |item| %>
+        <%# herb:key item[:key] %>
+        <li>
+          <div class="flex align-center justify-space-between gap">
+            <span><strong><%= item[:title] %></strong> <span class="txt-x-small txt-subtle">— <%= { "you" => "for you", "owner" => "for the business owner", "agent" => "for an agent" }.fetch(item[:owner], item[:owner]) %>, impact <%= item[:impact] %> of 5</span></span>
+            <% action = item[:action] || {} %>
+            <% if action[:type] == "hand_off" && can_run && agents[:available] %>
+              <%= button_to "Hand to an agent", marketing_hand_off_path, params: { template: action[:template], finding_id: action[:finding_id] }, class: "btn txt-x-small" %>
+            <% elsif action[:type] == "link" && action[:href].to_s.start_with?("/") %>
+              <%= link_to action[:label].presence || "Fix it", action[:href], class: "txt-link txt-x-small" %>
+            <% elsif action[:finding_id] %>
+              <%= link_to "Open the finding", recommendation_path(action[:finding_id]), class: "txt-link txt-x-small" %>
+            <% end %>
+          </div>
+          <% if item[:body].present? %>
+            <p class="txt-small margin-none"><%= item[:body] %></p>
+          <% end %>
+          <% evidence = item[:evidence] || {} %>
+          <% if evidence[:report_id] %>
+            <p class="txt-x-small txt-subtle margin-none">From <%= link_to evidence[:title], report_path(evidence[:report_id]), class: "txt-link" %><% if evidence[:figure].present? %>: <%= evidence[:figure] %><% end %>.</p>
+          <% end %>
+        </li>
+      <% end %>
+    </ol>
+  </section>
+
+  <section class="panel shadow flex flex-column gap-half">
+    <h2 class="txt-medium font-weight-bold margin-none">Agents</h2>
+    <% if agents[:available] %>
+      <p class="txt-small margin-none"><%= pluralize(agents[:installed].length, "agent") %> installed, <%= pluralize(agents[:open_findings], "open finding") %> waiting.</p>
+      <% if agents[:recent_runs].any? %>
+        <ul class="margin-none">
+          <% agents[:recent_runs].each do |run| %>
+            <%# herb:key run[:id] %>
+            <li class="txt-small"><%= link_to run[:agent], agent_run_path(run[:id]), class: "txt-link" %> — <%= run[:status] %>, <%= time_ago_in_words(Time.zone.parse(run[:at])) %> ago<% if run[:summary].present? %>: <%= run[:summary] %><% end %></li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="txt-small txt-subtle margin-none">No runs yet.</p>
+      <% end %>
+      <% if agents[:recommended].any? %>
+        <p class="txt-x-small txt-subtle margin-none">Recommended for this business: <%= agents[:recommended].map(&:name).to_sentence %>.</p>
+      <% end %>
+    <% else %>
+      <p class="txt-small txt-subtle margin-none">Switch on the Agents plugin to hand work to agents. <%= pluralize(agents[:open_findings], "open finding") %> waiting.</p>
+    <% end %>
+  </section>
+
+  <section class="panel shadow center index-table">
+    <div class="flex align-center justify-space-between gap">
+      <h2 class="txt-medium font-weight-bold margin-none">Measurement</h2>
+      <% if can_run %>
+        <%= button_to "Run the baseline (about " + report_money(spend[:baseline_estimate]) + ")", marketing_baseline_path, class: "btn txt-x-small" %>
+      <% end %>
+    </div>
+    <p class="txt-small margin-none">
+      Reporting cost <%= report_money(spend[:this_month]) %> this month. The weekly refresh is <%= spend[:schedule_on] ? "on" : "off" %>.
+    </p>
+    <table class="data-table">
+      <thead><tr><th>Report</th><th>Group</th><th>Measured</th><th>For this business</th></tr></thead>
+      <tbody>
+        <% overview.reports.each do |row| %>
+          <%# herb:key row[:definition].key %>
+          <tr>
+            <td>
+              <% if row[:latest] %>
+                <%= link_to row[:definition].title, report_path(row[:latest]), class: "txt-link" %>
+              <% else %>
+                <%= row[:definition].title %>
+              <% end %>
+            </td>
+            <td class="txt-small"><%= row[:definition].group %></td>
+            <td class="txt-small">
+              <% if row[:latest] %>
+                <%= time_ago_tag row[:latest].created_at %>
+              <% elsif row[:missing].any? %>
+                <span class="txt-subtle">Needs <%= row[:missing].map(&:humanize).to_sentence.downcase %></span>
+              <% else %>
+                <span class="txt-subtle">Never</span>
+              <% end %>
+            </td>
+            <td class="txt-small"><%= row[:recommended] ? "Recommended" : "" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+
+  <% warnings = overview.warnings %>
+  <% if warnings.any? %>
+    <section class="panel shadow flex flex-column gap-half">
+      <h2 class="txt-medium font-weight-bold margin-none">What the last runs couldn’t do</h2>
+      <ul class="margin-none">
+        <% warnings.each do |entry| %>
+          <%# herb:key entry[:report].id %>
+          <li class="txt-small"><%= link_to entry[:report].title, report_path(entry[:report]), class: "txt-link" %>: <%= entry[:warnings].to_sentence %></li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+</div>

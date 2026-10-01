@@ -1,0 +1,32 @@
+<% @page_title = "Docs" %>
+<%= render "layouts/shared/page_header", title: "Docs", icon: "help-circle",
+      description: "How to work with this CMS: how it fits together, an Astro site, AI agents — and what to check before the site goes live." %>
+
+<div class="content-form content-form--thirds">
+  <div class="content-form__main flex flex-column gap">
+    <div class="docs-cards">
+      <% @guides.each do |guide| %>
+        <%# herb:key guide.slug %>
+        <%= link_to doc_path(guide.slug), class: "panel shadow docs-card txt-ink" do %>
+          <strong class="txt-medium"><%= guide.title %></strong>
+          <span class="txt-small txt-subtle"><%= guide.summary %></span>
+        <% end %>
+      <% end %>
+      <%= link_to go_live_docs_path, class: "panel shadow docs-card txt-ink" do %>
+        <strong class="txt-medium">Before going live</strong>
+        <span class="txt-small txt-subtle">
+          <%= @summary[:passing] %> of <%= @summary[:total] %> checks pass on this site<%= @summary[:ready] ? " — ready." : "." %>
+        </span>
+      <% end %>
+      <%= link_to site_health_docs_path, class: "panel shadow docs-card txt-ink" do %>
+        <strong class="txt-medium">Site health</strong>
+        <span class="txt-small txt-subtle">
+          The details a site needs in good order — NAP, tracking, spam protection, search. <%= @health[:passing] %> of <%= @health[:total] %> pass.
+        </span>
+      <% end %>
+    </div>
+  </div>
+  <aside class="content-form__aside flex flex-column gap">
+    <%= render "docs/nav", guides: @guides, current: :index %>
+  </aside>
+</div>

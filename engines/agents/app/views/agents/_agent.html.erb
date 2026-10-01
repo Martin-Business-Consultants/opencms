@@ -1,0 +1,63 @@
+<%# locals: (agent:, latest:, card:, total:, failed:) %>
+<tr id="<%= dom_id(agent) %>" data-filter-target="item">
+  <td>
+    <div class="flex flex-column gap-half">
+      <span class="flex align-center gap-half">
+        <%= link_to agent.name, (Current.user.can?("agents:write") ? edit_agent_path(agent) : agent_runs_path(agent_id: agent.id)), class: "txt-ink font-weight-bold" %>
+        <%= status_tag agent.enabled ? "On" : "Off", highlight: agent.enabled %>
+      </span>
+      <% if agent.description.present? %>
+        <span class="txt-x-small txt-subtle"><%= agent.description %></span>
+      <% end %>
+      <span class="txt-x-small txt-subtle"><%= agent.capability_labels.join(" · ") %></span>
+      <% missing = agent.missing_capabilities(Current.user&.role) %>
+      <% if missing.any? %>
+        <span class="txt-x-small txt-negative">Needs <%= missing.join(", ") %>, which this role can’t grant.</span>
+      <% end %>
+      <%= render "layouts/shared/row_links",
+            edit_path: (edit_agent_path(agent) if Current.user.can?("agents:write")),
+            links: [ [ "Runs", agent_runs_path(agent_id: agent.id) ] ],
+            buttons: [ ([ "Run now", agent_dispatch_path(agent), "Queue a run now" ] if Current.user.can?("agents:run")) ],
+            delete_path: (agent_path(agent) if Current.user.can?("agents:delete")), delete_name: agent.name,
+            delete_message: "Its runs stay in the log, and its findings stay in the queue." %>
+      <% if agent.swarms.any? %>
+        <span class="txt-x-small txt-subtle">In <%= agent.swarms.map(&:name).to_sentence %></span>
+      <% end %>
+      <% if agent.from_library? && agent.upgradable? %>
+        <details class="txt-x-small">
+          <summary class="txt-link">v<%= agent.latest_template_version %> of <%= agent.template_key %> is available</summary>
+          <% changes = agent.library_changes %>
+          <% if changes.any? %>
+            <p class="margin-none">Taking it replaces what the template now says for: <%= changes.map { it[:label] }.to_sentence %>.</p>
+          <% else %>
+            <p class="margin-none">Nothing you changed is replaced.</p>
+          <% end %>
+          <% if Current.user.can?("agents:write") %>
+            <%= button_to "Take v" + agent.latest_template_version.to_s, agent_upgrade_path(agent), class: "btn txt-x-small" %>
+          <% end %>
+        </details>
+      <% end %>
+    </div>
+  </td>
+  <td class="txt-small"><%= agent.cadence_label %></td>
+  <td class="txt-small"><%= agent.scope_label %></td>
+  <td class="txt-small font-mono" title="<%= agent.resolved_model %>"><%= agent.tier || Ai::Models.label(agent.resolved_model) %></td>
+  <td class="txt-small">
+    <% if latest %>
+      <%= link_to agent_run_path(latest), class: "flex align-center gap-half txt-ink" do %>
+        <%= run_status_tag latest %>
+        <%= time_ago_tag latest.created_at %>
+      <% end %>
+    <% else %>
+      <span class="txt-subtle">Never</span>
+    <% end %>
+  </td>
+  <td class="data-table__number"><%= link_to total, agent_runs_path(agent_id: agent.id), class: "txt-ink" %><%= " (" + failed.to_s + " failed)" if failed.positive? %></td>
+  <td class="txt-x-small txt-subtle">
+    <% if card %>
+      <%= card.accepted %>/<%= card.recommendations %> findings accepted · <%= Ai::Pricing.usd(card.cost_cents) %>
+    <% else %>
+      —
+    <% end %>
+  </td>
+</tr>

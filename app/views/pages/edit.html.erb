@@ -1,0 +1,15 @@
+<% @page_title = "Edit Page" %>
+<%= parent_page "Pages", pages_path %>
+
+<% content_for :page_actions do %>
+  <% if Current.user.can?("pages:write") %>
+    <%= link_to "Add New", new_page_path, class: "btn txt-small" %>
+  <% end %>
+  <%= link_to "Fields", page_schema_path(@page.path), class: "btn txt-small", title: "The fields this page carries" %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title %>
+
+<%= render "layouts/shared/errors", record: @page %>
+<%= render layout: "content_form/editor_tabs", locals: { record: @page, kind: "page" } do %>
+  <%= render "pages/form", page: @page, invalid_json: @invalid_json %>
+<% end %>

@@ -1,0 +1,16 @@
+<%# locals: (field:, for_id:) %>
+<% if for_id %>
+  <label class="content-field__label txt-small font-weight-bold" for="<%= for_id %>">
+    <%= content_field_label(field) %>
+    <% if field["required"] %>
+      <span class="txt-negative" title="Required">*</span>
+    <% end %>
+  </label>
+<% else %>
+  <span class="content-field__label txt-small font-weight-bold">
+    <%= content_field_label(field) %>
+    <% if field["required"] %>
+      <span class="txt-negative" title="Required">*</span>
+    <% end %>
+  </span>
+<% end %>

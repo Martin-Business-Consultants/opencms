@@ -1,0 +1,60 @@
+<% @page_title = "Users" %>
+
+<% content_for :page_actions do %>
+  <% if Current.user.can?("users:write") %>
+    <%= render "layouts/shared/new_link", text: "New user", path: new_user_path %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title, description: "Everyone who can sign in to this workspace, and the role that decides what they can do." %>
+
+<% can_delete = Current.user.can?("users:delete") %>
+<% if can_delete %>
+  <%= render "layouts/shared/bulk_deletion", id: "users_bulk_deletion", path: users_bulk_deletions_path, noun: "user",
+        message: "They can no longer sign in. Your own account is never included." %>
+<% end %>
+
+<section class="panel shadow center index-table" data-controller="select-all">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <% if can_delete %>
+          <th class="data-table__check"><input type="checkbox" aria-label="Select every row" data-select-all-target="all" data-action="select-all#toggle"></th>
+        <% end %>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Verified</th>
+        <th>2FA</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @users.each do |user| %>
+        <%# herb:key user.id %>
+        <% yourself = user == Current.user %>
+        <tr id="<%= dom_id(user) %>" data-filter-target="item">
+          <% if can_delete %>
+            <td>
+              <% unless yourself %>
+                <input type="checkbox" data-select-all-target="box" data-action="select-all#sync" name="ids[]" value="<%= user.id %>" form="users_bulk_deletion" aria-label="Select <%= user.email %>">
+              <% end %>
+            </td>
+          <% end %>
+          <td>
+            <%= link_to user.name, edit_user_path(user), class: "txt-ink font-weight-bold" %>
+            <% if yourself %>
+              <span class="txt-x-small txt-subtle">(you)</span>
+            <% end %>
+  <%= render "layouts/shared/row_links", name: user.name,
+                edit_path: (edit_user_path(user) if Current.user.can?("users:write")),
+                delete_path: (user_path(user) if can_delete && !yourself),
+                delete_message: "They can no longer sign in to this workspace." %>
+          </td>
+          <td class="txt-subtle"><%= user.email %></td>
+          <td><%= user.role&.name || "No role" %></td>
+          <td><%= user.verified ? "Yes" : "No" %></td>
+          <td><%= user.totp_enabled ? "On" : "Off" %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>

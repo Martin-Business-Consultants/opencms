@@ -1,0 +1,27 @@
+<% @page_title = "Brand context" %>
+
+<%= render "layouts/shared/page_header", title: "Brand context" %>
+<% content_for :settings_aside do %>
+  <%= render "settings/save_box", form: "settings_form" %>
+<% end %>
+
+
+<section class="panel shadow settings-page txt-align-start">
+  <section class="settings__section flex flex-column gap">
+    <p class="txt-small txt-subtle margin-none">A short brief describing how this workspace writes. Nothing in the CMS renders it — it’s published in <code>/api/manifest</code> so an agent working through the API or the <code>cms</code> CLI writes in your voice instead of a generic one. Leave a field blank to omit it.</p>
+    <% if @record %>
+      <%= render "layouts/shared/errors", record: @record %>
+    <% end %>
+
+    <%= form_with url: settings_brand_path, id: "settings_form", method: :patch, scope: :settings, class: "flex flex-column gap" do |form| %>
+      <%= tag.fieldset class: "settings-fieldset flex flex-column gap", disabled: !Current.user.can?("settings:write") do %>
+        <% Settings::BrandsController::LABELS.each do |field, (field_label, hint)| %>
+          <%# herb:key field %>
+          <%= settings_field field_label, hint: hint do %>
+            <%= form.text_area field, value: @settings[field], rows: 4, class: "input full-width" %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </section>
+</section>

@@ -1,0 +1,52 @@
+<%# locals: (blocks:, form:, submission:) %>
+<%# A form email's blocks in the CMS's email layout: one table row each,
+    styled inline, as mail clients need. %>
+<% blocks.each_with_index do |block, index| %>
+  <%# herb:key index %>
+  <% data = block["data"].is_a?(Hash) ? block["data"] : {} %>
+  <% align = data["align"] == "center" ? "center" : "left" %>
+  <% case block["type"] %>
+  <% when "email_heading" %>
+    <% size = { "h1" => 24, "h2" => 20, "h3" => 17 }.fetch(data["level"], 24) %>
+    <tr><td align="<%= align %>" style="padding:8px 32px;">
+      <p style="margin:0;font-size:<%= size %>px;line-height:1.3;font-weight:700;"><%= email_text(data["text"], form, submission) %></p>
+    </td></tr>
+  <% when "email_text" %>
+    <tr><td style="padding:8px 32px;font-size:15px;line-height:1.55;"><%= email_rich_text(data["body"], form, submission) %></td></tr>
+  <% when "email_button" %>
+    <tr><td align="<%= align %>" style="padding:12px 32px;">
+      <a href="<%= email_text(data["url"], form, submission) %>" style="display:inline-block;background:<%= email_accent %>;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:6px;"><%= email_text(data["label"], form, submission) %></a>
+    </td></tr>
+  <% when "email_image" %>
+    <% src = email_asset_url(data["asset"]) %>
+    <% if src %>
+      <tr><td align="<%= align %>" style="padding:8px 32px;">
+        <% image = capture do %><img src="<%= src %>" alt="<%= data["alt"] %>" width="496" style="display:block;max-width:100%;height:auto;border:0;"><% end %>
+        <% if data["url"].present? %>
+          <a href="<%= email_text(data["url"], form, submission) %>"><%= image %></a>
+        <% else %>
+          <%= image %>
+        <% end %>
+      </td></tr>
+    <% end %>
+  <% when "email_submission" %>
+    <tr><td style="padding:8px 32px;">
+      <% if data["title"].present? %>
+        <p style="margin:0 0 8px;font-size:12px;color:#78716c;text-transform:uppercase;letter-spacing:0.05em;"><%= email_text(data["title"], form, submission) %></p>
+      <% end %>
+      <table role="presentation" width="100%" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+        <% FormEmail::Answers.for(form, submission, skip_empty: data["skip_empty"] == true).each_with_index do |(label, value), row| %>
+          <%# herb:key row %>
+          <tr>
+            <td valign="top" style="border:1px solid #e7e5e4;background:#fafaf9;font-weight:600;width:35%;"><%= label %></td>
+            <td style="border:1px solid #e7e5e4;"><%= value.presence || "—" %></td>
+          </tr>
+        <% end %>
+      </table>
+    </td></tr>
+  <% when "email_divider" %>
+    <tr><td style="padding:8px 32px;"><hr style="border:none;border-top:1px solid #e7e5e4;margin:0;"></td></tr>
+  <% when "email_spacer" %>
+    <tr><td style="height:<%= FormEmail::BlockTypes::SPACER_HEIGHTS.fetch(data["size"], 24) %>px;line-height:0;font-size:0;">&nbsp;</td></tr>
+  <% end %>
+<% end %>

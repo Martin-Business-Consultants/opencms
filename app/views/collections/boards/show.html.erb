@@ -1,0 +1,22 @@
+<% @page_title = "Build: " + @collection.name %>
+<%= parent_page @collection.name, collection_entries_path(@collection.slug) %>
+
+<% content_for :page_actions do %>
+  <%= link_to "Entries", collection_entries_path(@collection.slug), class: "btn txt-small" %>
+  <% if Current.user.can?("collections:write") %>
+    <%= link_to "Board settings", collection_schema_path(@collection.slug), class: "btn txt-small" %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title, description: board_move_description(@collection) %>
+
+<% unless can_move_cards? %>
+  <p class="panel txt-small txt-subtle margin-block-end">
+    <% if @collection.build_publishes? %>
+      Moving a card on this board publishes or unpublishes the entry, which needs publish access. You can still change the fields on its cards.
+    <% else %>
+      Moving a card needs permission to edit entries.
+    <% end %>
+  </p>
+<% end %>
+
+<%= render "collections/boards/board", collection: @collection, entries: @entries, can_move: can_move_cards? %>

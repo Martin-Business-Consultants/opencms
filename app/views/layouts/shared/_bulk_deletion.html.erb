@@ -1,0 +1,4 @@
+<%# locals: (id:, path:, noun:, message: nil, search: nil) %>
+<%# A list table's top bar when its only bulk action is delete: the same
+    "Bulk actions" select as layouts/shared/bulk_actions. %>
+<%= render "layouts/shared/bulk_actions", id: id, noun: noun, deletion_path: path, delete_message: message || "This can’t be undone.", search: search %>

@@ -1,0 +1,2 @@
+<%= render "settings/secret", frame_id: "api_token_secret", masked: @token.masked, visible: @token.visible?,
+      reveal_path: settings_api_token_reveal_path, plaintext: (@token.token if @token.visible?) %>

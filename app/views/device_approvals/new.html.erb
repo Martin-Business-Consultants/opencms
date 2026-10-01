@@ -1,0 +1,44 @@
+<%# The browser half of `cms login`. Short, because someone is reading it with a
+    terminal open beside them. %>
+<% @page_title = "Connect a machine" %>
+<div class="panel panel--centered center flex flex-column gap-half txt-align-start">
+  <h1 class="txt-x-large font-weight-black margin-none"><%= @page_title %></h1>
+
+  <% if @authorization&.pending? %>
+    <% if @authorization.site? %>
+      <p class="txt-small txt-subtle margin-none">
+        The Astro site <strong><%= @authorization.label.presence || "a site" %></strong>
+        (on <%= @authorization.hostname.presence || "a machine" %>) is asking for a read-only token of its own,
+        to build from this CMS's content. It gets the Production site role, and a service token you can revoke under Settings › Service tokens.
+      </p>
+      <% unless @authorization.approvable_by?(Current.user) %>
+        <p class="txt-small txt-negative margin-none">Your role can't issue service tokens. Ask someone who manages settings to approve it.</p>
+      <% end %>
+    <% else %>
+      <p class="txt-small txt-subtle margin-none">
+        <%= @authorization.hostname.presence || "A machine" %> is asking to act as you in this CMS.
+        It will be able to do whatever your role allows — no more.
+      </p>
+    <% end %>
+
+    <%= form_with url: connect_path, method: :post, class: "flex gap-half margin-block-start" do %>
+      <%= hidden_field_tag :code, @authorization.user_code, id: nil %>
+      <button name="decision" value="approve" class="btn btn--link">Approve</button>
+      <button name="decision" value="deny" class="btn">Deny</button>
+    <% end %>
+  <% else %>
+    <p class="txt-small txt-subtle margin-none">Enter the code your terminal is showing.</p>
+
+    <%= form_with url: connect_path, method: :get, class: "flex gap-half margin-block-start" do %>
+      <%= text_field_tag :code, @code, placeholder: "ABCD-EFGH", autocomplete: "off", class: "input font-mono", autofocus: true,
+            aria: { label: "Code" } %>
+      <button type="submit" class="btn btn--link">Continue</button>
+    <% end %>
+
+    <% if @code.present? %>
+      <p class="txt-small txt-negative margin-none">
+        That code has expired or doesn’t exist. Run <code>cms login</code> again.
+      </p>
+    <% end %>
+  <% end %>
+</div>

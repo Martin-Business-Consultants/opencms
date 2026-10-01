@@ -1,0 +1,14 @@
+<% @page_title = "Edit " + @collection.name.singularize %>
+<%= parent_page @collection.name, collection_entries_path(@collection.slug) %>
+
+<% content_for :page_actions do %>
+  <% if Current.user.can?("entries:write") %>
+    <%= link_to "Add New", new_collection_entry_path(@collection.slug), class: "btn txt-small" %>
+  <% end %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title %>
+
+<%= render "layouts/shared/errors", record: @entry %>
+<%= render layout: "content_form/editor_tabs", locals: { record: @entry, kind: "entry" } do %>
+  <%= render "collection_entries/form", collection: @collection, entry: @entry, invalid_json: @invalid_json %>
+<% end %>

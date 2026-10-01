@@ -1,0 +1,362 @@
+/* The content editor's WordPress conventions (pages, entries, globals): the
+/* big title and its permalink line, the block editor in a bordered box with a
+/* header and a status bar, and the sidebar's collapsible boxes, the Publish
+/* box first. Layout lives in content-form.css; the partials in content_form/. */
+@layer components {
+  /* The title, as large as a heading, and the permalink under it. */
+  .editor-title {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  /* inputs.css loads after this file, so the title outranks .input here. */
+  .editor-title .editor-title__input {
+    --input-background: var(--color-canvas);
+    --input-padding: 0.3em 0.5em;
+
+    font-size: 1.55rem;
+    inline-size: 100%;
+  }
+
+  /* An "Edit" that opens its field in place: the Publish box's status and
+     schedule. */
+  .inline-edit {
+    display: contents;
+
+    > summary {
+      cursor: pointer;
+      list-style: none;
+
+      &::-webkit-details-marker { display: none; }
+    }
+
+    &[open] > summary { display: none; }
+  }
+
+  .inline-edit__field {
+    display: flex;
+    flex-basis: 100%;
+    flex-direction: column;
+    gap: 0.3em;
+    margin-block: 0.3em 0.5em;
+  }
+
+  /* The block editor's box: a header bar, the editor, a status bar. */
+  .editor-box {
+    background: var(--color-canvas);
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: var(--radius-large);
+    box-shadow: var(--shadow-small);
+  }
+
+  .editor-box__header {
+    border-block-end: 1px solid var(--color-ink-lightest);
+    font-size: var(--text-normal);
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    margin: 0;
+    padding: 0.8em 1.1em;
+  }
+
+  .editor-box__body {
+    padding: var(--block-space) 1.1em;
+  }
+
+  .editor-box__status {
+    background: var(--color-ink-lightest);
+    border-block-start: 1px solid var(--color-ink-lighter);
+    color: var(--color-ink-dark);
+    font-size: var(--text-x-small);
+    margin: 0;
+    padding: 0.4em 0.9em;
+  }
+
+  /* A box (content_form_helper#postbox): a rounded card with a soft shadow,
+     its header a button that collapses it, the arrow pointing up while it's
+     open. */
+  .postbox {
+    background: var(--color-canvas);
+    border: 1px solid var(--color-ink-lighter);
+    border-radius: var(--radius-large);
+    box-shadow: var(--shadow-small);
+    text-align: start;
+  }
+
+  .postbox__header {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    gap: 0.5em;
+    justify-content: space-between;
+    list-style: none;
+    padding: 0.8em 1.1em;
+
+    &::-webkit-details-marker { display: none; }
+
+    .postbox[open] > & {
+      border-block-end: 1px solid var(--color-ink-lightest);
+    }
+  }
+
+  .postbox__title {
+    font-size: var(--text-normal);
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    margin: 0;
+  }
+
+  .postbox__toggle {
+    border-block-end: 0.35em solid currentColor;
+    border-inline: 0.3em solid transparent;
+    color: var(--color-ink-dark);
+    transition: transform 100ms ease;
+
+    .postbox:not([open]) & {
+      transform: rotate(180deg);
+    }
+  }
+
+  .postbox__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space);
+    padding: var(--block-space) 1.1em;
+  }
+
+  /* The Publish box: Save Draft, the status/schedule/revisions lines, the
+     review notice, then Move to Trash and the primary button on a shaded
+     footer. Its body has no padding of its own; the rows do. */
+  .publish-box > .postbox__body {
+    gap: 0;
+    padding: 0;
+  }
+
+  .publish-box__minor {
+    display: flex;
+    justify-content: flex-start;
+    padding: 0.75em 0.9em 0;
+  }
+
+  .publish-box__misc {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    padding: 0.75em 0.9em;
+
+    /* The review-gate notice, compact: a line with a yellow edge. */
+    .content-notice {
+      --panel-padding: 0.5em 0.7em;
+
+      border: 1px solid var(--color-ink-lighter);
+      border-inline-start: 4px solid oklch(var(--lch-yellow-dark));
+      border-radius: var(--radius);
+      box-shadow: none;
+      font-size: var(--text-x-small);
+      margin: 0;
+      padding: 0.5em 0.7em;
+    }
+  }
+
+  .publish-box__line {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: var(--text-small);
+    gap: 0.35em;
+  }
+
+  .publish-box__icon {
+    --icon-size: 1.05em;
+
+    color: var(--color-ink-dark);
+  }
+
+  .publish-box__major {
+    align-items: center;
+    background: color-mix(in oklch, var(--color-canvas) 98%, var(--color-ink));
+    border-block-start: 1px solid var(--color-ink-lightest);
+    border-end-end-radius: var(--radius-large);
+    border-end-start-radius: var(--radius-large);
+    display: flex;
+    gap: 0.5em;
+    justify-content: space-between;
+    padding: 0.6em 0.9em;
+
+    /* Move to Trash on the left, the primary action pushed to the right. */
+    .publish-box__primary {
+      margin-inline-start: auto;
+    }
+  }
+
+  /* An editor's Edit and JSON tabs (content_form/editor_tabs). */
+  .editor-tabs__bar {
+    border-block-end: 1px solid var(--color-ink-lighter);
+    display: flex;
+    gap: 0.25em;
+    margin-block-end: var(--block-space);
+  }
+
+  .editor-tabs__tab {
+    align-items: center;
+    border: 1px solid transparent;
+    border-block-end: 0;
+    border-start-end-radius: var(--radius);
+    border-start-start-radius: var(--radius);
+    color: var(--color-ink-dark);
+    display: inline-flex;
+    font-size: var(--text-small);
+    font-weight: 600;
+    gap: 0.4em;
+    margin-block-end: -1px;
+    padding: 0.45em 1em;
+    text-decoration: none;
+
+    &[aria-selected="true"] {
+      background-color: var(--color-canvas);
+      border-color: var(--color-ink-lighter);
+      color: var(--color-ink);
+    }
+  }
+
+  .editor-tabs__json {
+    --panel-size: 100%;
+  }
+
+  .api-json__body {
+    background: var(--color-ink-lightest);
+    border-radius: var(--radius);
+    font-family: var(--font-mono);
+    font-size: var(--text-x-small);
+    margin: 0;
+    max-block-size: 70dvh;
+    overflow: auto;
+    padding: var(--block-space-half) var(--inline-space);
+  }
+
+  /* The Developers screen's picture of a headless CMS: four steps, left to right. */
+  .developers-flow {
+    counter-reset: step;
+    display: grid;
+    gap: var(--inline-space-half);
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    list-style: none;
+    margin: 0 0 var(--block-space-half);
+    padding: 0;
+
+    li {
+      background: var(--color-ink-lightest);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      font-size: var(--text-small);
+      gap: 0.2em;
+      padding: var(--block-space-half) var(--inline-space);
+    }
+
+    span {
+      color: var(--color-ink-dark);
+      font-size: var(--text-x-small);
+    }
+  }
+
+  /* The Developers screen's three surfaces: the API, the CLI, MCP, one to a row. */
+  .developers-surfaces {
+    display: grid;
+    gap: var(--block-space);
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .developers-surface {
+    --panel-size: 100%;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space-half);
+  }
+
+  /* Docs: the guides as cards, a guide as an article, and the go-live checks. */
+  .docs-cards {
+    display: grid;
+    gap: var(--block-space);
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  }
+
+  .docs-card {
+    --panel-size: 100%;
+
+    display: flex;
+    flex-direction: column;
+    gap: 0.3em;
+    text-decoration: none;
+
+    &:hover { outline: 2px solid var(--color-link); }
+  }
+
+  .docs-article {
+    --panel-size: 100%;
+
+    line-height: 1.6;
+    max-inline-size: 80ch;
+
+    pre {
+      background: var(--color-ink-lightest);
+      border-radius: var(--radius);
+      overflow-x: auto;
+      padding: var(--block-space-half) var(--inline-space);
+    }
+
+    table {
+      border-collapse: collapse;
+      display: block;
+      overflow-x: auto;
+    }
+
+    table {
+      margin-block: var(--block-space);
+    }
+
+    th, td {
+      border-block-end: 1px solid var(--color-ink-lighter);
+      padding: 0.7em 1.2em 0.7em 0;
+      text-align: start;
+      vertical-align: top;
+    }
+
+    th {
+      font-weight: 600;
+      padding-block-start: 0;
+    }
+  }
+
+  .go-live {
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space-half);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .go-live__check {
+    align-items: start;
+    display: flex;
+    gap: var(--inline-space);
+  }
+
+  .go-live__mark {
+    --icon-size: 0.9rem;
+
+    align-items: center;
+    block-size: 1.5rem;
+    border-radius: 50%;
+    display: flex;
+    flex-shrink: 0;
+    inline-size: 1.5rem;
+    justify-content: center;
+  }
+
+  .go-live__mark--ok { background: color-mix(in oklch, var(--color-positive) 20%, var(--color-canvas)); color: var(--color-positive); }
+  .go-live__mark--todo { background: color-mix(in oklch, var(--color-negative) 16%, var(--color-canvas)); color: var(--color-negative); }
+  .go-live__mark--na { background: var(--color-ink-lightest); color: var(--color-ink-dark); }
+}

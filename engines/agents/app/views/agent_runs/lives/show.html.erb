@@ -1,0 +1,68 @@
+<% @page_title = "Live" %>
+<%= parent_page "Runs", agent_runs_path %>
+
+<%# Refreshes itself while you watch (morphs in place). %>
+<%= tag.div data: { controller: "refresh", refresh_interval_value: 5 } do %>
+  <%= render "layouts/shared/page_header", title: "What the agents are doing", description: "In flight now, and what just finished. Refreshes every few seconds." %>
+
+  <p class="txt-small txt-subtle margin-block-end txt-align-start">
+    <%= pluralize(@active.size, "run") %> in flight<%= ", " + @worker.queued.to_s + " queued" if @worker.queued.positive? %>.
+    <% if @worker.in_process? %>
+      Runs execute here, on the AI plugin’s key.
+    <% elsif @worker.seen_recently? %>
+      A worker claimed work <%= time_ago_in_words(@worker.last_claim_at) %> ago.
+    <% else %>
+      No worker has claimed anything recently.
+    <% end %>
+    Spent <%= @spend[:today] %> today, <%= @spend[:window] %> over <%= @spend[:window_days] %> days.
+  </p>
+
+  <% if @active.any? %>
+    <div class="flex flex-column gap">
+      <% @active.each do |run| %>
+        <%# herb:key run.id %>
+        <section id="<%= dom_id(run) %>" class="panel shadow flex flex-column gap-half txt-align-start">
+          <header class="flex align-center justify-space-between gap">
+            <%= link_to "#" + run.id.to_s + " · " + run.agent_name.to_s, agent_run_path(run), class: "txt-ink font-weight-bold" %>
+            <span class="flex align-center gap-half txt-x-small txt-subtle"><%= run_status_tag run %> <%= run.claimed_by %> · started <%= time_ago_tag(run.started_at || run.created_at) %></span>
+          </header>
+          <% tail = Array(run.transcript).last(8) %>
+          <% if tail.any? %>
+            <ol class="run-transcript flex flex-column gap-half margin-none txt-small">
+              <% tail.each_with_index do |step, index| %>
+                <%# herb:key index %>
+                <li class="run-transcript__step"><div class="run-transcript__text"><%= transcript_line(step).truncate(400) %></div></li>
+              <% end %>
+            </ol>
+          <% else %>
+            <p class="txt-small txt-subtle margin-none">Waiting for its first step.</p>
+          <% end %>
+        </section>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="panel panel--centered center">
+      <p class="txt-medium margin-none">Nothing is running.</p>
+    </div>
+  <% end %>
+
+  <% if @recent.any? %>
+    <section class="panel shadow center index-table margin-block-start">
+      <h2 class="divider txt-medium txt-align-start">Just finished</h2>
+      <table class="data-table">
+        <tbody>
+          <% @recent.each do |run| %>
+            <%# herb:key run.id %>
+            <tr>
+              <td><%= link_to "#" + run.id.to_s, agent_run_path(run), class: "txt-ink font-weight-bold" %></td>
+              <td class="txt-small"><%= run.agent_name %></td>
+              <td><%= run_status_tag run %></td>
+              <td class="txt-small"><%= time_ago_tag(run.finished_at || run.created_at) %></td>
+              <td class="txt-x-small txt-subtle"><%= (run.error.presence || run.summary).to_s.truncate(140) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </section>
+  <% end %>
+<% end %>

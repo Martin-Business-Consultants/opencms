@@ -1,0 +1,13 @@
+<%# locals: (field:, value:, scope:) %>
+<%# One entry of the field's collection, stored by slug. %>
+<% collection = field["of_collection"].presence %>
+<%= render "content_form/label", field: field, for_id: scope.dom_id %>
+<% if collection %>
+  <%= render "content_form/picker", name: scope.name, value: value.to_s, dom_id: scope.dom_id,
+        url: content_picker_path(kind: "entries", collection: collection), label: content_reference_label(collection, value),
+        placeholder: "entry-slug", aria_label: content_field_label(field) %>
+  <p class="txt-x-small txt-subtle margin-none">From <code><%= collection %></code></p>
+<% else %>
+  <%= text_field_tag scope.name, value, id: scope.dom_id, class: "input font-mono", placeholder: "entry-slug" %>
+  <p class="txt-x-small txt-subtle margin-none">No collection is set for this field (of_collection).</p>
+<% end %>

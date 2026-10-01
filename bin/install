@@ -1,0 +1,123 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# A plain production install, no Docker: bundles, writes .env with fresh
+# secrets, prepares the database (the site's starter content, no demo) and
+# compiles assets. Run it once from a checkout of a release (docs/install.md).
+#
+#   bin/install --host acme.librepublish.com [--site-key acme] [--data-dir /var/lib/cms]
+#               [--port 3000] [--admin-email owner@acme.com --admin-name "Ann Owner"]
+#               [--env-file PATH]
+#
+# Afterwards: bin/thrust bin/rails server (or the systemd unit in
+# config/cms.service), then create the owner at /sign_up — or pass
+# --admin-email and the owner is created here, with its password printed once.
+# bin/update brings an install to a newer release.
+require "fileutils"
+require "securerandom"
+require "optparse"
+require "json"
+
+APP_ROOT = File.expand_path("..", __dir__)
+options = {host: nil, site_key: nil, data_dir: "storage", port: "3000", admin_email: nil, admin_name: nil,
+           env_file: File.join(APP_ROOT, ".env")}
+OptionParser.new do |parser|
+  parser.banner = "Usage: bin/install --host acme.example.com [options]"
+  parser.on("--host HOST", "The address people will use (links in email, the CLI, agents)") { options[:host] = it }
+  parser.on("--site-key KEY", "What the API calls this site (`tenant`; default: the host's first label)") { options[:site_key] = it }
+  parser.on("--data-dir DIR", "Where the databases and files live (default: storage/ in the app)") { options[:data_dir] = it }
+  parser.on("--port PORT", "The port Puma listens on (default: 3000)") { options[:port] = it }
+  parser.on("--admin-email EMAIL", "Create the owner account now") { options[:admin_email] = it }
+  parser.on("--admin-name NAME", "The owner's name") { options[:admin_name] = it }
+  parser.on("--env-file PATH", "Where the install's settings go (default: .env in the app)") { options[:env_file] = File.expand_path(it) }
+end.parse!
+abort "Say where this install lives: bin/install --host acme.example.com" if options[:host].to_s.empty?
+
+def system!(*args) = system(*args, exception: true)
+def step(title) = puts("\n== #{title} ==")
+
+FileUtils.chdir APP_ROOT do
+  env_file = options[:env_file]
+
+  step "Checking Ruby"
+  puts "Ruby #{RUBY_VERSION} (this release was built with #{File.read(".ruby-version").strip})"
+
+  step "Installing gems (production only)"
+  # Not `deployment`: installing a plugin changes the Gemfile, which a frozen
+  # bundle would refuse.
+  system! "bundle", "config", "set", "--local", "without", "development test"
+  system! "bundle", "install"
+
+  if File.exist?(env_file)
+    step "Keeping the existing #{env_file}"
+  else
+    step "Writing #{env_file} with fresh secrets"
+    data_dir = File.expand_path(options[:data_dir], APP_ROOT)
+    site_key = options[:site_key].to_s.strip
+    File.write env_file, <<~ENV
+      # This CMS install's settings. Loaded by the systemd unit (EnvironmentFile)
+      # and by bin/update; for a one-off command: set -a; . ./.env; set +a; bin/rails ...
+      RAILS_ENV=production
+      APP_HOST=#{options[:host]}
+      #{site_key.empty? ? "#SITE_KEY=" : "SITE_KEY=#{site_key}"}
+      PORT=#{options[:port]}
+      SOLID_QUEUE_IN_PUMA=true
+
+      # Databases and uploaded files, together. bin/update backs this up first
+      # (into backups/ inside it, keeping CMS_BACKUP_KEEP, default 5).
+      CMS_DATA_DIR=#{data_dir}
+
+      # Secrets. Losing these loses the sessions and every encrypted value
+      # (API tokens, integration keys) — back them up with the data. Moving a
+      # site between installs means moving these with it.
+      SECRET_KEY_BASE=#{SecureRandom.hex(64)}
+      AR_ENCRYPTION_PRIMARY_KEY=#{SecureRandom.alphanumeric(32)}
+      AR_ENCRYPTION_DETERMINISTIC_KEY=#{SecureRandom.alphanumeric(32)}
+      AR_ENCRYPTION_KEY_DERIVATION_SALT=#{SecureRandom.alphanumeric(32)}
+
+      # Outbound mail (password resets, notifications). Defaults to Outsend.
+      #SMTP_ADDRESS=smtp.getoutsend.com
+      #SMTP_PORT=2587
+      #SMTP_USERNAME=outsend
+      #SMTP_PASSWORD=
+
+      # Links default to https. For plain http on a private network:
+      #APP_PROTOCOL=http
+
+      # Where the daily update check looks for releases (Settings shows it).
+      #CMS_RELEASES_REPO=Martin-Business-Consultants/opencms
+      #CMS_RELEASES_TOKEN=
+    ENV
+    File.chmod 0o600, env_file
+    FileUtils.mkdir_p data_dir
+  end
+
+  # The rest runs with the install's settings.
+  File.readlines(env_file).each do |line|
+    next if line.strip.empty? || line.start_with?("#")
+    key, value = line.strip.split("=", 2)
+    ENV[key] = value
+  end
+
+  step "Preparing the database"
+  system! "bin/rails", "db:prepare"
+
+  step "Compiling assets"
+  system! "bin/rails", "assets:precompile"
+
+  if options[:admin_email]
+    step "Creating the owner"
+    ENV["CMS_OWNER_NAME"] = options[:admin_name] if options[:admin_name]
+    system! "bin/rails", "cms:bootstrap[#{options[:admin_email]}]"
+  end
+
+  step "Done"
+  protocol = ENV.fetch("APP_PROTOCOL", "https")
+  puts <<~TEXT
+    CMS #{File.read("VERSION").strip} is installed for #{options[:host]}.
+
+    Start it:      set -a; . #{env_file}; set +a; bin/thrust bin/rails server
+    As a service:  copy config/cms.service to /etc/systemd/system/ and edit the paths and user
+    #{options[:admin_email] ? "Sign in at #{protocol}://#{options[:host]}/sign_in with the password above." : "Then open #{protocol}://#{options[:host]}/sign_up to create the owner account."}
+  TEXT
+end

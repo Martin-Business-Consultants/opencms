@@ -1,0 +1,101 @@
+<% @page_title = "Edit Form" %>
+<%= parent_page "Forms", forms_path %>
+<% trash = Current.user.can?("forms:delete") %>
+
+<% content_for :page_actions do %>
+  <%= link_to "Add New", new_form_path, class: "btn txt-small" %>
+  <%= link_to "View submissions", form_path(@form.slug), class: "btn txt-small" %>
+<% end %>
+<%= render "layouts/shared/page_header", title: @page_title %>
+<%= render "layouts/shared/errors", record: @form %>
+
+<%# The form builder, laid out like Gravity Forms': the title, the form's
+    fields as the site shows them, then its messages, delivery and emails in
+    the main column; Publish, where the site posts (its permalink) and the
+    field panel (add fields, a field's settings) down the side. %>
+<%= form_with model: @form, url: form_path(@form.slug), method: :patch, id: "form_editor", class: "content-form form-builder",
+      data: { controller: "forms--builder" } do |form| %>
+  <div class="content-form__main flex flex-column gap">
+    <div class="editor-title">
+      <label class="for-screen-reader" for="form_title">Title</label>
+      <%= form.text_field :title, class: "input editor-title__input", required: true, placeholder: "Add title" %>
+    </div>
+
+    <section class="editor-box">
+      <h2 class="editor-box__header">Fields</h2>
+      <div class="editor-box__body flex flex-column gap">
+        <%= render "forms/builder", form: @form %>
+        <p class="txt-x-small txt-subtle margin-none">A spam trap (<code><%= Form::HONEYPOT_FIELD %></code>) is added by the site’s renderer, not here.</p>
+      </div>
+    </section>
+
+    <%= postbox "form-messages", "Messages" do %>
+      <div class="flex flex-column gap">
+        <%= settings_field "Submit button" do %>
+          <%= form.text_field :submit_label, class: "input full-width", required: true, data: { action: "input->forms--builder#submitLabel" } %>
+        <% end %>
+        <%= settings_field "Success message", hint: "Returned to the site after a submission, for the form to show." do %>
+          <%= form.text_area :success_message, rows: 2, class: "input full-width", placeholder: "Thanks — we’ll get back to you shortly." %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%= postbox "form-delivery", "Delivery" do %>
+      <div class="flex flex-column gap">
+        <%= render "forms/webhook_sheet", form: form, record: @form %>
+        <%= settings_field "Legacy submit URL", hint: "Optional. Only for sites that post somewhere other than the CMS." do %>
+          <%= form.text_field :submit_url, class: "input full-width font-mono", placeholder: "mailto:… or https://…" %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%= postbox "form-emails", "Emails" do %>
+      <div class="form-emails">
+        <% FormEmail::KINDS.each do |kind| %>
+          <%# herb:key kind %>
+          <% email = @form.emails.find { it.kind == kind } %>
+          <%= link_to edit_form_email_path(form_slug: @form.slug, kind: kind), class: "panel flex flex-column gap-half txt-ink" do %>
+            <span class="flex align-center justify-space-between gap">
+              <strong><%= kind == "notification" ? "Notification" : "Confirmation" %></strong>
+              <%= status_tag email&.enabled ? "On" : "Off", highlight: email&.enabled %>
+            </span>
+            <span class="txt-small txt-subtle overflow-ellipsis"><%= email&.subject.presence || "No subject yet" %></span>
+            <span class="txt-x-small txt-subtle">
+              <% if kind == "notification" %>
+                To: <%= email&.recipients.presence || "nobody yet" %>
+              <% else %>
+                To the address in: <%= email&.from_field.presence || "the first email field" %>
+              <% end %>
+            </span>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <aside class="content-form__aside flex flex-column gap">
+    <% status_field = capture do %>
+      <%= settings_field "Status", hint: "Only a published form takes submissions." do %>
+        <%= form.select :status, form_status_options, {}, class: "input input--select full-width" %>
+      <% end %>
+    <% end %>
+    <%= render "layouts/shared/save_box", key: "form-publish", title: "Publish", button: "Update",
+          lines: [ [ "form", "Submissions", @form.submissions.count ] ], extra: status_field,
+          trash_name: "this form", trash_path: (form_path(@form.slug) if trash), trash_form: ("form_trash_form" if trash),
+          trash_label: "Move to Trash" %>
+
+    <%= postbox "form-endpoint", "Permalink" do %>
+      <div class="flex flex-column gap-half min-width-0">
+        <span class="txt-small font-weight-bold">Submits to</span>
+        <code class="txt-small overflow-ellipsis">/api/forms/<%= @form.slug %>/submissions</code>
+        <span class="txt-x-small txt-subtle">The slug, <code><%= @form.slug %></code>, is the site’s key for this form, so it can’t change.</span>
+      </div>
+    <% end %>
+
+    <%= render "forms/field_panel", form: @form %>
+  </aside>
+<% end %>
+<% if trash %>
+  <%= render "layouts/shared/delete_form", id: "form_trash_form", path: form_path(@form.slug) %>
+<% end %>
+<%= render "content_form/postbox_state" %>

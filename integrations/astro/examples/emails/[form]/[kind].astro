@@ -1,0 +1,88 @@
+---
+// Example: src/pages/emails/[form]/[kind].astro
+// Each form's notification and confirmation email, as the site designs them.
+// The build sends these to the CMS (emails.ts, cmsEmailTemplates) and the CMS
+// sends them per submission, filling the {{tokens}} left in here.
+//
+// Email HTML is not web HTML: tables for layout, styles inline, no scripts,
+// no web fonts you can't do without. Keep your site's colours and type, not
+// its components. Swap the styles below for your brand.
+
+import type { CmsEmailBlock, CmsForm, CmsFormEmail } from "~/lib/cms/types";
+import { answersRow, digestMeta, emailTemplatePaths } from "~/lib/cms/emails";
+
+export const prerender = true;
+export const getStaticPaths = emailTemplatePaths;
+
+interface Props { form: CmsForm; email: CmsFormEmail }
+const { email } = Astro.props;
+
+const brand = { ink: "#1c1917", accent: "#2563eb", muted: "#78716c", line: "#e7e5e4", canvas: "#f5f5f4" };
+const font = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";
+const sizes = { h1: 26, h2: 21, h3: 17 };
+const spacers = { small: 12, medium: 24, large: 48 };
+const cell = "padding:8px 36px;";
+type Block<T extends CmsEmailBlock["type"]> = Extract<CmsEmailBlock, { type: T }>;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta {...digestMeta(email)} />
+    <title>{email.subject}</title>
+  </head>
+  <body style={`margin:0;background:${brand.canvas};`}>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style={`background:${brand.canvas};padding:32px 0;`}>
+      <tr><td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style={`background:#fff;border-radius:10px;font-family:${font};color:${brand.ink};`}>
+          <tr><td style="height:20px;"></td></tr>
+          {email.blocks.map((block) => {
+            const align = "align" in block.data && block.data.align === "center" ? "center" : "left";
+            switch (block.type) {
+              case "email_heading": {
+                const b = block as Block<"email_heading">;
+                return <tr><td align={align} style={cell}><p style={`margin:0;font-size:${sizes[b.data.level ?? "h1"]}px;font-weight:700;line-height:1.25;`}>{b.data.text}</p></td></tr>;
+              }
+              case "email_text":
+                return <tr><td style={`${cell}font-size:16px;line-height:1.6;`} set:html={(block as Block<"email_text">).data.body} /></tr>;
+              case "email_button": {
+                const b = block as Block<"email_button">;
+                return <tr><td align={align} style="padding:14px 36px;"><a href={b.data.url} style={`display:inline-block;background:${brand.accent};color:#fff;text-decoration:none;font-weight:600;padding:13px 24px;border-radius:999px;`}>{b.data.label}</a></td></tr>;
+              }
+              case "email_image": {
+                const b = block as Block<"email_image">;
+                const src = b.resolved?.url;
+                if (!src) return null;
+                const img = <img src={src} alt={b.data.alt ?? ""} width="528" style="display:block;max-width:100%;height:auto;border:0;border-radius:8px;" />;
+                return <tr><td align={align} style={cell}>{b.data.url ? <a href={b.data.url}>{img}</a> : img}</td></tr>;
+              }
+              case "email_submission": {
+                const b = block as Block<"email_submission">;
+                return (
+                  <tr><td style={cell}>
+                    {b.data.title && <p style={`margin:0 0 8px;font-size:12px;color:${brand.muted};text-transform:uppercase;letter-spacing:.06em;`}>{b.data.title}</p>}
+                    <table role="presentation" width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+                      {/* The CMS repeats this row once per answer. */}
+                      <tr {...answersRow(b)}>
+                        <td valign="top" style={`border-bottom:1px solid ${brand.line};font-weight:600;width:35%;`}>{"{{answer.label}}"}</td>
+                        <td style={`border-bottom:1px solid ${brand.line};`}>{"{{answer.value}}"}</td>
+                      </tr>
+                    </table>
+                  </td></tr>
+                );
+              }
+              case "email_divider":
+                return <tr><td style={cell}><hr style={`border:none;border-top:1px solid ${brand.line};margin:0;`} /></td></tr>;
+              case "email_spacer":
+                return <tr><td style={`height:${spacers[(block as Block<"email_spacer">).data.size ?? "medium"]}px;`}></td></tr>;
+              default:
+                return null;
+            }
+          })}
+          <tr><td style="height:20px;"></td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </body>
+</html>

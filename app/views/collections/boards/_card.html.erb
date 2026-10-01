@@ -1,0 +1,23 @@
+<%# locals: (collection:, entry:, column:, can_move:) %>
+<%# A board card. The right-hand column's cards carry the controls the
+    collection puts on them; the left only sorts. %>
+<article id="<%= dom_id(entry, :card) %>" class="build-card" data-drag-and-drop-target="item" data-id="<%= entry.slug %>"
+  data-filter-target="item" draggable="<%= can_move %>">
+  <div class="build-card__header flex align-center gap-half">
+    <% if can_move %>
+      <span class="build-card__grip txt-subtle" aria-hidden="true">⠿</span>
+    <% end %>
+    <%= link_to entry.title, edit_collection_entry_path(collection.slug, entry.slug), class: "build-card__title txt-ink font-weight-bold flex-item-grow" %>
+    <% if entry.status != "published" %>
+      <%= status_tag entry.status %>
+    <% end %>
+  </div>
+  <% if column == "on" && collection.build_card_fields.any? %>
+    <div class="build-card__fields flex flex-column gap-half">
+      <% collection.build_card_fields.each do |field| %>
+        <%# herb:key field["name"] %>
+        <%= render "collections/boards/card_field", collection: collection, entry: entry, field: field %>
+      <% end %>
+    </div>
+  <% end %>
+</article>

@@ -1,0 +1,50 @@
+<%# locals: (collection:, open: false) %>
+<%# The New collection sheet: a name, a slug, and optionally a template whose
+    fields it starts with; the rest comes after, on the schema. It opens by
+    itself at /collections/new (the menus link there) and when a submit came
+    back with errors. %>
+<div class="display-contents" data-controller="dialog" data-dialog-modal-value="true" data-dialog-auto-open-value="<%= open %>" data-action="keydown.esc->dialog#close:stop">
+  <button type="button" class="btn btn--labelled btn--circle-mobile" data-keys="n" data-action="dialog#open">
+    <%= icon_tag "add" %>
+    <span class="overflow-ellipsis">New collection</span>
+    <kbd class="hide-on-touch">N</kbd>
+  </button>
+  <dialog class="dialog dialog--sheet panel fill-white shadow gap flex-column txt-align-start" data-dialog-target="dialog" aria-label="New collection" closedby="any">
+    <h2 class="txt-large font-weight-bold margin-none">New collection</h2>
+    <%= render "layouts/shared/errors", record: collection %>
+    <%= form_with model: collection, url: collections_path, class: "flex flex-column gap txt-medium" do |form| %>
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Name</span>
+        <%= form.text_field :name, class: "input full-width", placeholder: "Posts", autocomplete: "off" %>
+      </label>
+      <label class="flex flex-column gap-half">
+        <span class="txt-small font-weight-bold">Slug</span>
+        <%= form.text_field :slug, class: "input full-width font-mono", placeholder: "posts", autocomplete: "off", spellcheck: false %>
+        <span class="txt-x-small txt-subtle">How the site and the API name it. It can’t change later. A template fills both in when left blank.</span>
+      </label>
+
+      <fieldset class="new-page-dialog__templates flex flex-column gap-half">
+        <legend class="txt-small font-weight-bold">Start from</legend>
+        <label class="new-collection__template">
+          <%= radio_button_tag :template, "", params[:template].blank?, id: nil %>
+          <span>No fields yet — I’ll define them</span>
+        </label>
+        <% Collection::TEMPLATES.each do |template| %>
+          <%# herb:key template["key"] %>
+          <label class="new-collection__template">
+            <%= radio_button_tag :template, template["key"], params[:template] == template["key"], id: nil %>
+            <span>
+              <strong><%= template["name"] %></strong>
+              <span class="txt-x-small txt-subtle"><%= template["description"] %> · <%= pluralize(template["fields"].size, "field") %></span>
+            </span>
+          </label>
+        <% end %>
+      </fieldset>
+
+      <div class="dialog__actions flex gap-half justify-end">
+        <button type="button" class="btn" data-action="dialog#close">Cancel</button>
+        <%= form.button "Create collection", class: "btn btn--link" %>
+      </div>
+    <% end %>
+  </dialog>
+</div>

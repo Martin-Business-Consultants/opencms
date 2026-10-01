@@ -1,0 +1,17 @@
+<%# locals: (webhook:) %>
+<%# Which forms send submission.created to this webhook (Webhook#matches_filters?). %>
+<% forms = Form.ordered.to_a %>
+<% filtered = Array(webhook.event_filters.is_a?(Hash) ? webhook.event_filters.dig("submission.created", "form_slugs") : nil) %>
+<% if forms.any? %>
+  <fieldset class="flex flex-column gap-half txt-align-start role-permissions">
+    <legend class="txt-small font-weight-bold">Which forms send submission.created</legend>
+    <p class="txt-x-small txt-subtle margin-none">Tick none for every form.</p>
+    <% forms.each do |f| %>
+      <%# herb:key f.slug %>
+      <label class="flex align-center gap-half txt-small">
+        <%= check_box_tag "webhook[event_filters][submission.created][form_slugs][]", f.slug, filtered.include?(f.slug), id: "webhook_form_" + f.slug %>
+        <%= f.title %>
+      </label>
+    <% end %>
+  </fieldset>
+<% end %>

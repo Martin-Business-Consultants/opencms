@@ -1,0 +1,67 @@
+<%# locals: (template:) %>
+<%= render "layouts/shared/errors", record: template %>
+
+<%= form_with model: template, class: "flex flex-column gap txt-medium", data: { controller: "form", action: "keydown.esc->form#cancel" } do |form| %>
+  <%= form.hidden_field :icon %>
+
+  <label class="flex flex-column gap-half txt-align-start">
+    <span class="txt-small font-weight-bold">Name</span>
+    <%= form.text_field :name, required: true, class: "input full-width", autofocus: template.new_record?, autocomplete: "off" %>
+  </label>
+
+  <div class="flex gap">
+    <label class="flex flex-column gap-half txt-align-start flex-item-grow">
+      <span class="txt-small font-weight-bold">Category</span>
+      <%= form.text_field :category, class: "input full-width", autocomplete: "off", placeholder: "SEO" %>
+    </label>
+    <label class="flex flex-column gap-half txt-align-start flex-item-grow">
+      <span class="txt-small font-weight-bold">Suggested cadence</span>
+      <%= form.text_field :cron, class: "input full-width font-mono", autocomplete: "off", placeholder: "0 9 * * 1" %>
+    </label>
+  </div>
+
+  <label class="flex flex-column gap-half txt-align-start">
+    <span class="txt-small font-weight-bold">Description</span>
+    <%= form.text_area :description, rows: 2, class: "input full-width" %>
+  </label>
+
+  <label class="flex flex-column gap-half txt-align-start">
+    <span class="txt-small font-weight-bold">Instructions</span>
+    <%= form.text_area :instructions, rows: 10, required: true, class: "input full-width txt-small" %>
+  </label>
+
+  <fieldset class="flex flex-column gap-half txt-align-start role-permissions">
+    <legend class="txt-small font-weight-bold">What it may do</legend>
+    <%= hidden_field_tag "agent_template[capability_keys][]", "", id: nil %>
+    <%# A switched-off plugin's capabilities aren't offered, but a saved one stays saved. %>
+    <% (Agents::CapabilityCatalog.valid_keys(template.capability_keys) - Agents::CapabilityCatalog.all.keys).each do |key| %>
+      <%# herb:key key %>
+      <%= hidden_field_tag "agent_template[capability_keys][]", key, id: nil %>
+    <% end %>
+    <div class="role-permissions__groups">
+      <% Agents::CapabilityCatalog.groups.each do |group, entries| %>
+        <%# herb:key group %>
+        <fieldset class="panel role-permissions__group">
+          <legend class="txt-small font-weight-bold"><%= group %></legend>
+          <% entries.each do |key, entry| %>
+            <%# herb:key key %>
+            <label class="flex align-start gap-half txt-small" title="<%= Array(entry[:commands]).join("\n") %>">
+              <%= check_box_tag "agent_template[capability_keys][]", key, Array(template.capability_keys).include?(key), id: "agent_template_capability_" + key %>
+              <span>
+                <%= entry[:label] %>
+                <span class="txt-x-small txt-subtle font-mono"><%= entry[:capability] %></span>
+              </span>
+            </label>
+          <% end %>
+        </fieldset>
+      <% end %>
+    </div>
+  </fieldset>
+
+  <button type="submit" class="btn btn--link center" data-form-target="submit">
+    <span><%= template.new_record? ? "Add template" : "Save changes" %></span>
+    <%= icon_tag "arrow-right" %>
+  </button>
+
+  <%= link_to "Cancel and go back", agent_templates_path, data: { form_target: "cancel" }, hidden: true %>
+<% end %>

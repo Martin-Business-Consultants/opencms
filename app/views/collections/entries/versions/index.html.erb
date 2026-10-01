@@ -1,0 +1,10 @@
+<% @page_title = "Revisions" %>
+<% edit_path = edit_collection_entry_path(@collection.slug, @entry.slug) %>
+<%= parent_page @entry.title, edit_path %>
+<% content_for :page_actions do %>
+  <%= link_to "Back to the entry", edit_path, class: "btn txt-small" %>
+<% end %>
+<%= render "layouts/shared/page_header", title: "Revisions of “" + @entry.title.to_s + "”",
+      description: "A copy of the entry’s fields, body and blocks is kept each time they change. Compare one with the entry now, or restore it." %>
+<%= render "versions/list", versions: @versions, page: @versions_page,
+      show_path: ->(version) { collection_entry_version_path(@collection.slug, @entry.slug, version) } %>

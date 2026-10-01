@@ -1,0 +1,33 @@
+<%# locals: (collection:, entries:, can_move:) %>
+<%# Fizzy's board, two columns wide: a card dropped on a column posts to that
+    column's placement URL (drag-and-drop controller), which answers with this
+    partial morphed back in. %>
+<% field = collection.build_field["name"] %>
+<% labels = collection.build_column_labels %>
+<% on_cards, off_cards = entries.partition { it.flag?(field) } %>
+<div id="build_board" class="build-board"
+  data-controller="drag-and-drop"
+  data-drag-and-drop-dragged-item-class="drag-and-drop__dragged-item"
+  data-drag-and-drop-hover-container-class="drag-and-drop__hover-container"
+  data-action="dragstart->drag-and-drop#dragStart dragover->drag-and-drop#dragOver drop->drag-and-drop#drop dragend->drag-and-drop#dragEnd">
+  <% [ [ "off", labels["off"], off_cards ], [ "on", labels["on"], on_cards ] ].each do |column, label, cards| %>
+    <%# herb:key column %>
+    <section class="<%= class_names("build-column", "build-column--on": column == "on") %>" data-drag-and-drop-target="container"
+      data-drag-and-drop-url="<%= collection_entry_placement_path(collection.slug, "__id__", column: column) %>"
+      aria-label="<%= label %>">
+      <header class="build-column__header flex align-center justify-space-between gap-half">
+        <h2 class="txt-medium font-weight-bold margin-none"><%= label %></h2>
+        <span class="txt-small txt-subtle" data-drag-and-drop-counter><%= cards.size %></span>
+      </header>
+      <div class="build-column__cards flex flex-column gap-half" data-drag-drop-item-container>
+        <% cards.each do |entry| %>
+          <%# herb:key entry.id %>
+          <%= render "collections/boards/card", collection: collection, entry: entry, column: column, can_move: can_move %>
+        <% end %>
+      </div>
+      <% if cards.empty? %>
+        <p class="build-column__empty txt-small txt-subtle">Drag entries here</p>
+      <% end %>
+    </section>
+  <% end %>
+</div>

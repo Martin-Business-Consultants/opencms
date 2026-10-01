@@ -1,0 +1,29 @@
+<%# locals: (checks:, groups:, key:) %>
+<%# A checklist's checks (Checklist::Check), a box per group: each one's mark
+(passes, to do, or ? — yours to judge), what it's about, where to fix it
+and its cms command. The go-live checklist and Site health both use it. %>
+<% groups.each do |group| %>
+  <%# herb:key group %>
+  <% in_group = checks.select { it.group == group } %>
+  <% next if in_group.empty? %>
+  <%= postbox key + "-" + group.parameterize, group do %>
+    <ul class="go-live">
+      <% in_group.each do |check| %>
+        <%# herb:key check.key %>
+        <li class="go-live__check" id="check_<%= check.key %>">
+          <span class="go-live__mark go-live__mark--<%= check.ok.nil? ? "na" : (check.ok ? "ok" : "todo") %>" aria-label="<%= check.ok.nil? ? "Check yourself" : (check.ok ? "Passes" : "To do") %>">
+            <%= icon_tag(check.ok ? "check" : (check.ok.nil? ? "help-circle" : "close")) %>
+          </span>
+          <span class="flex flex-column gap-quarter min-width-0">
+            <strong class="txt-small"><%= check.title %></strong>
+            <span class="txt-x-small txt-subtle"><%= check.detail %></span>
+            <span class="flex flex-wrap align-center gap-half txt-x-small">
+              <% if check.href %><%= link_to (check.ok ? "Open" : "Fix it"), check.href, class: "txt-link" %><% end %>
+              <% if check.cli %><code><%= check.cli %></code><% end %>
+            </span>
+          </span>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+<% end %>

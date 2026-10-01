@@ -1,0 +1,28 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "File Access",
+      "warning_code": 16,
+      "fingerprint": "f286bef83cc46cb01a7c9ce7929aca661585d8cb7164881bfdd2a8e5e523d7f5",
+      "check_name": "SendFile",
+      "message": "Model attribute used in file name",
+      "file": "app/controllers/tools/backups/archives_controller.rb",
+      "line": 12,
+      "link": "https://brakemanscanner.org/docs/warning_types/file_access/",
+      "code": "send_file(SiteBackup.data_archives.find do\n (it.name == params[:name])\n end.path, :filename => SiteBackup.data_archives.find do\n (it.name == params[:name])\n end.name, :type => \"application/gzip\", :disposition => \"attachment\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Tools::Backups::ArchivesController",
+        "method": "show"
+      },
+      "user_input": "SiteBackup.data_archives.find",
+      "confidence": "Weak",
+      "cwe_id": [
+        22
+      ],
+      "note": "False positive: the archive is looked up among SiteBackup.data_archives, the files that exist in the backups directory; params[:name] only selects one of them and never builds a path. Flagged since SiteBackup moved from app/services into app/models."
+    }
+  ],
+  "brakeman_version": "8.0.6"
+}

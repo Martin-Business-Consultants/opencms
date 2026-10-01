@@ -1,0 +1,127 @@
+<% @page_title = "Set up the business" %>
+<%= parent_page "Marketer’s report", marketing_path %>
+<% profile = @profile %>
+<% derived = @derived || {} %>
+<% can_write = Current.user.can?("settings:write") %>
+<%# A type other than the saved one starts from what it derives; the saved type keeps what was saved. %>
+<% keywords = @fresh || profile.tracked_keywords.empty? ? derived[:keywords] : profile.tracked_keywords %>
+<% map_keywords = @fresh || profile.map_keywords.empty? ? derived[:map_keywords] : profile.map_keywords %>
+<% directories = @fresh || profile.citation_directories.empty? ? derived[:directories] : profile.citation_directories %>
+
+<div class="reports-page flex flex-column gap txt-align-start">
+  <%= render "layouts/shared/page_header", title: @page_title,
+        description: "Pick the kind of business, confirm the details, and review what the template derives. It fills the same settings as Settings › Reporting." %>
+
+  <section class="panel shadow flex flex-column gap-half">
+    <h2 class="txt-medium font-weight-bold margin-none">1. The kind of business</h2>
+    <%= form_with url: marketing_setup_path, method: :get, class: "flex align-end gap flex-wrap" do |form| %>
+      <%= settings_field "Business type" do %>
+        <%= form.select :type, @templates.map { [it.name, it.key] }, { selected: @template&.key, include_blank: "Choose…" }, class: "input input--select" %>
+      <% end %>
+      <%= settings_field "City", hint: "Used to write the keywords." do %>
+        <%= form.text_field :city, value: @city, class: "input" %>
+      <% end %>
+      <%= form.submit "Use this", class: "btn txt-small", name: nil %>
+    <% end %>
+    <% if @template %>
+      <p class="txt-small margin-none"><strong><%= @template.name %></strong> — <%= @template.description %></p>
+      <p class="txt-x-small txt-subtle margin-none">
+        Recommends <%= pluralize(@template.report_kinds.length, "report") %> (about <%= report_money(@template.baseline_cost) %> for a first run of all of them)<% if @template.agents.any? %> and <%= pluralize(@template.agents.length, "agent") %><% end %>.
+      </p>
+    <% else %>
+      <p class="txt-small txt-subtle margin-none">Choose a type to see what it sets up.</p>
+    <% end %>
+  </section>
+
+  <% if @template %>
+    <%= form_with url: marketing_setup_path, method: :patch, scope: :setup do |form| %>
+      <%= tag.fieldset class: "settings-fieldset flex flex-column gap", disabled: !can_write do %>
+        <%= form.hidden_field :business_type, value: @template.key %>
+
+        <section class="panel shadow flex flex-column gap-half">
+          <h2 class="txt-medium font-weight-bold margin-none">2. The business</h2>
+          <div class="settings-fields">
+            <%= settings_field "Business name", hint: "Exactly as it appears on Google." do %>
+              <%= form.text_field :business_name, value: profile.business_name, class: "input full-width" %>
+            <% end %>
+            <%= settings_field "Domain" do %>
+              <%= form.text_field :domain, value: profile.domain, placeholder: "example.com", class: "input full-width" %>
+            <% end %>
+            <%= settings_field "Location", hint: "City,Region,Country." do %>
+              <%= form.text_field :location_name, value: profile.location_name, class: "input full-width" %>
+            <% end %>
+            <%= settings_field "Phone" do %>
+              <%= form.text_field :phone, value: profile.phone, class: "input full-width" %>
+            <% end %>
+            <%= settings_field "Address" do %>
+              <%= form.text_field :address, value: profile.address, class: "input full-width" %>
+            <% end %>
+            <%= settings_field "Google place ID" do %>
+              <%= form.text_field :place_id, value: profile.place_id, class: "input full-width" %>
+            <% end %>
+          </div>
+        </section>
+
+        <section class="panel shadow flex flex-column gap-half">
+          <h2 class="txt-medium font-weight-bold margin-none">3. What to measure</h2>
+          <p class="txt-small txt-subtle margin-none">One per line. <%= @fresh ? "Written from the " + @template.name.downcase + " template for " + @city.to_s + "." : "As saved." %></p>
+          <div class="settings-fields">
+            <%= settings_field "Tracked keywords" do %>
+              <%= form.text_area :tracked_keywords, value: Array(keywords).join("\n"), rows: 8, class: "input full-width" %>
+            <% end %>
+            <%= settings_field "Map keywords", hint: "The few searches the map-pack grid checks." do %>
+              <%= form.text_area :map_keywords, value: Array(map_keywords).join("\n"), rows: 3, class: "input full-width" %>
+            <% end %>
+            <%= settings_field "Citation directories" do %>
+              <%= form.text_area :citation_directories, value: Array(directories).join("\n"), rows: 6, class: "input full-width" %>
+            <% end %>
+            <%= settings_field "Brand terms", hint: "Blank uses the business name." do %>
+              <%= form.text_area :brand_terms, value: profile.brand_terms.join("\n"), rows: 2, class: "input full-width" %>
+            <% end %>
+            <%= settings_field "Map grid size" do %>
+              <%= form.number_field :map_grid_size, value: (@fresh ? derived[:map_grid_size] : profile.map_grid_size), class: "input" %>
+            <% end %>
+            <%= settings_field "Map spacing (km)" do %>
+              <%= form.number_field :map_spacing_km, value: (@fresh ? derived[:map_spacing_km] : profile.map_spacing_km), step: 0.1, class: "input" %>
+            <% end %>
+          </div>
+        </section>
+
+        <section class="panel shadow flex flex-column gap-half">
+          <h2 class="txt-medium font-weight-bold margin-none">4. Targets</h2>
+          <p class="txt-small txt-subtle margin-none">What “good” is for this business. Scores on the Marketer’s report are measured against these.</p>
+          <div class="settings-fields">
+            <% Marketing::Targets::DEFINITIONS.each do |key, (target_label, _direction, _fallback)| %>
+              <%# herb:key key %>
+              <%= settings_field target_label do %>
+                <%= number_field_tag "setup[targets][" + key + "]", (@fresh ? derived.dig(:targets, key) : @targets[key]), step: "any", class: "input", id: "setup_targets_" + key %>
+              <% end %>
+            <% end %>
+          </div>
+        </section>
+
+        <section class="panel shadow flex flex-column gap-half">
+          <h2 class="txt-medium font-weight-bold margin-none">5. Getting started</h2>
+          <% if @template.content_scaffold.any? %>
+            <%= settings_switch form, :scaffold, "Create draft pages", checked: false,
+                  hint: "Drafts for " + @template.content_scaffold.map { |page| page["title"] }.to_sentence + ". Pages that already exist are left alone." %>
+          <% end %>
+          <%= settings_switch form, :schedule, "Refresh the reports weekly", checked: @schedule_on,
+                hint: "Runs the recommended reports each week under Tools › Schedules. Each run is charged to DataForSEO." %>
+          <% if @configured %>
+            <%= settings_switch form, :run_baseline, "Run every recommended report now", checked: false,
+                  hint: "About " + report_money(@template.baseline_cost) + " from the DataForSEO balance." %>
+          <% else %>
+            <p class="txt-small txt-subtle margin-none">Connect DataForSEO under <%= link_to "Settings › Reporting", settings_reporting_path, class: "txt-link" %> to run the baseline.</p>
+          <% end %>
+        </section>
+
+        <% if can_write %>
+          <div class="flex justify-end">
+            <%= form.submit "Save and set up", class: "btn btn--link" %>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

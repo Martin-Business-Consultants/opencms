@@ -1,0 +1,59 @@
+<% @page_title = "Quote requests" %>
+
+<%= render "layouts/shared/page_header", title: @page_title, description: "“What does this cost?” from the site, newest first." %>
+
+<%= render "layouts/shared/status_links", param: :status, current: @status.to_s, options: commerce_status_links(QuoteRequest::STATUSES, @counts) %>
+
+<% if @quotes.any? %>
+  <% can_delete = Current.user.can?("quotes:delete") %>
+  <% if can_delete %>
+    <%= render "layouts/shared/bulk_deletion", id: "quote_requests_bulk_deletion", path: quote_requests_bulk_deletions_path,
+          noun: "quote request", message: "The requests are removed; invoices drafted from them are kept. This can’t be undone." %>
+  <% end %>
+
+  <section class="panel shadow center index-table" data-controller="select-all">
+    <table class="data-table" data-controller="pagination" data-pagination-paginate-on-intersection-value="true" data-pagination-discard-frame-value="true">
+      <thead>
+        <tr>
+          <% if can_delete %>
+            <th class="data-table__check"><input type="checkbox" aria-label="Select every row" data-select-all-target="all" data-action="select-all#toggle"></th>
+          <% end %>
+          <th>Customer</th>
+          <th>Asking about</th>
+          <th>Status</th>
+          <th class="data-table__number">Invoices</th>
+          <th>Received</th>
+        </tr>
+      </thead>
+      <tbody id="<%= pagination_frame_id_for(:quote_rows, @page.number) %>">
+        <% @quotes.each do |quote| %>
+          <%# herb:key quote.id %>
+          <tr id="<%= dom_id(quote) %>" data-filter-target="item">
+            <% if can_delete %>
+              <td class="data-table__check"><input type="checkbox" data-select-all-target="box" data-action="select-all#sync" name="ids[]" value="<%= quote.id %>" form="quote_requests_bulk_deletion" aria-label="Select quote request <%= quote.id %>"></td>
+            <% end %>
+            <td>
+              <%= link_to quote.customer_name, quote_request_path(quote), class: "txt-ink font-weight-bold" %>
+              <div class="txt-x-small txt-subtle"><%= [quote.company, quote.customer_email || quote.customer_phone].compact_blank.join(" · ") %></div>
+            </td>
+            <td class="txt-subtle"><%= quote.summary %></td>
+            <td><%= status_tag quote.status, highlight: quote.status == "new" %></td>
+            <td class="data-table__number"><%= quote.invoices.size %></td>
+            <td class="txt-subtle txt-small"><%= time_ago_tag quote.created_at %></td>
+          </tr>
+        <% end %>
+        <%= table_next_page_row :quote_rows, @page, columns: can_delete ? 6 : 5 %>
+      </tbody>
+    </table>
+  </section>
+<% else %>
+  <div class="panel panel--centered center flex flex-column gap-half">
+    <% if @status %>
+      <p class="txt-medium margin-none">No <%= @status %> quote requests.</p>
+      <%= link_to "Show all", quote_requests_path, class: "txt-link" %>
+    <% else %>
+      <p class="txt-medium margin-none">No quote requests yet.</p>
+      <p class="txt-small txt-subtle margin-none">They arrive when the site’s “Request a quote” button posts to <code>/api/quote_requests</code>.</p>
+    <% end %>
+  </div>
+<% end %>

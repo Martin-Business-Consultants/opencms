@@ -1,0 +1,87 @@
+<%# locals: (invoice:) %>
+<%# Amounts are typed as people read them ("$2,200.00") and stored as cents;
+    totals are worked out on save (Invoice#recompute_totals). %>
+<%= render "layouts/shared/errors", record: invoice %>
+
+<% trash = invoice.persisted? && invoice.draft? && Current.user.can?("invoices:delete") %>
+<%= form_with model: invoice, id: "invoice_form", class: "content-form commerce-form" do |form| %>
+  <%= form.hidden_field :quote_request_id %>
+  <%= hidden_field_tag "invoice[lines_sent]", "1", id: nil %>
+
+  <div class="content-form__main flex flex-column gap">
+  <section class="editor-box">
+    <h2 class="editor-box__header">Bill to</h2>
+    <div class="editor-box__body flex flex-column gap">
+    <div class="commerce-fields">
+      <label class="flex flex-column gap-half"><span class="txt-small font-weight-bold">Name</span><%= form.text_field :customer_name, class: "input full-width", required: true, autofocus: invoice.new_record? && invoice.customer_name.blank? %></label>
+      <label class="flex flex-column gap-half"><span class="txt-small font-weight-bold">Company</span><%= form.text_field :company, class: "input full-width" %></label>
+      <label class="flex flex-column gap-half"><span class="txt-small font-weight-bold">Email <span class="font-weight-normal txt-subtle">(where the invoice is sent)</span></span><%= form.email_field :customer_email, class: "input full-width" %></label>
+      <label class="flex flex-column gap-half"><span class="txt-small font-weight-bold">Phone</span><%= form.telephone_field :customer_phone, class: "input full-width" %></label>
+    </div>
+    <label class="flex flex-column gap-half"><span class="txt-small font-weight-bold">Billing address</span><%= form.text_area :billing_address, rows: 2, class: "input full-width" %></label>
+    </div>
+  </section>
+
+  <section class="editor-box schema-editor" data-controller="schema-editor">
+    <h2 class="editor-box__header">Lines</h2>
+    <div class="editor-box__body flex flex-column gap">
+    <div class="schema-list flex flex-column gap-half" data-prefix="invoice[line_items]">
+      <ol class="schema-list__fields invoice-lines flex flex-column gap-half">
+        <% lines = invoice.line_items.presence || [{ "quantity" => 1 }] %>
+        <% lines.each_with_index do |line, index| %>
+          <%# herb:key index %>
+          <%= render "invoices/line", line: line, currency: invoice.currency, key: "l" + index.to_s %>
+        <% end %>
+      </ol>
+      <div>
+        <button type="button" class="btn txt-small" data-action="schema-editor#add">
+          <%= icon_tag "add" %>
+          <span>Add line</span>
+        </button>
+      </div>
+    </div>
+    <template data-schema-editor-target="template">
+      <%= render "invoices/line", line: { "quantity" => 1 }, currency: invoice.currency, key: "__KEY__" %>
+    </template>
+    <div class="commerce-fields">
+      <label class="flex flex-column gap-half"><span class="txt-small font-weight-bold">Tax</span><%= text_field_tag "invoice[tax]", money_input_value(invoice.tax_cents, invoice.currency), id: "invoice_tax", class: "input full-width", inputmode: "decimal", placeholder: "0.00" %></label>
+      <label class="flex flex-column gap-half"><span class="txt-small font-weight-bold">Shipping</span><%= text_field_tag "invoice[shipping]", money_input_value(invoice.shipping_cents, invoice.currency), id: "invoice_shipping", class: "input full-width", inputmode: "decimal", placeholder: "0.00" %></label>
+      <label class="flex flex-column gap-half"><span class="txt-small font-weight-bold">Currency</span><%= form.text_field :currency, class: "input full-width", maxlength: 3 %></label>
+    </div>
+    </div>
+    <% if invoice.persisted? %>
+      <p class="editor-box__status">Total as saved: <%= invoice.formatted(invoice.total_cents) %>. Saving works it out again from the lines.</p>
+    <% end %>
+  </section>
+  </div>
+
+  <aside class="content-form__aside flex flex-column gap">
+    <% facts = [ [ "receipt", "Status", invoice.status.to_s.humanize ] ] %>
+    <% facts << [ "document", "Number", invoice.number ] if invoice.number.present? %>
+    <% facts << [ "chart", "Total", invoice.formatted(invoice.total_cents) ] if invoice.persisted? %>
+    <%= render "layouts/shared/save_box", key: "invoice-save", title: "Invoice", lines: facts,
+          button: (invoice.new_record? || invoice.draft? ? "Save Draft" : "Update"),
+          trash_name: "draft " + invoice.number.to_s, trash_path: (invoice_path(invoice) if trash), trash_form: ("invoice_trash_form" if trash),
+          trash_label: "Delete draft" %>
+
+  <%= postbox "invoice-terms", "Payment and terms" do %>
+    <div class="flex flex-column gap">
+    <label class="flex flex-column gap-half">
+      <span class="txt-small font-weight-bold">Payment link</span>
+      <%= form.url_field :payment_link, class: "input full-width", placeholder: "https://buy.stripe.com/…" %>
+      <span class="txt-x-small txt-subtle">Whatever your processor issued — a Stripe payment link, a Square checkout, a PayPal.me URL. The CMS never takes the money itself.</span>
+    </label>
+    <div class="commerce-fields">
+      <label class="flex flex-column gap-half"><span class="txt-small font-weight-bold">Issued</span><%= date_input form, :issued_on, class: "input full-width" %></label>
+      <label class="flex flex-column gap-half"><span class="txt-small font-weight-bold">Due</span><%= date_input form, :due_on, class: "input full-width" %></label>
+    </div>
+    <label class="flex flex-column gap-half"><span class="txt-small font-weight-bold">Notes <span class="font-weight-normal txt-subtle">(shown to the customer)</span></span><%= form.text_area :notes, rows: 3, class: "input full-width" %></label>
+    <label class="flex flex-column gap-half"><span class="txt-small font-weight-bold">Terms</span><%= form.text_area :terms, rows: 3, class: "input full-width" %></label>
+    </div>
+  <% end %>
+  </aside>
+<% end %>
+<% if trash %>
+  <%= render "layouts/shared/delete_form", id: "invoice_trash_form", path: invoice_path(invoice) %>
+<% end %>
+<%= render "content_form/postbox_state" %>

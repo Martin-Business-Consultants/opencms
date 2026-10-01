@@ -1,0 +1,117 @@
+@layer components {
+  /* The review queues side by side: approvals' columns, and a finding's
+     review beside the findings list. */
+  .approvals {
+    display: grid;
+    gap: var(--block-space);
+    grid-template-columns: repeat(auto-fit, minmax(28ch, 1fr));
+  }
+
+  .approvals__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--block-space);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .approvals__list > li + li {
+    border-block-start: 1px solid var(--color-ink-lightest);
+    padding-block-start: var(--block-space);
+  }
+
+  .gap-quarter { gap: calc(var(--block-space-half) / 2); }
+}
+
+@layer components {
+  /* A revision's before/after, per field. */
+  .revision-diff__pair {
+    display: grid;
+    gap: var(--block-space-half);
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .revision-diff__value {
+    border-radius: var(--radius);
+    font-family: var(--font-mono);
+    font-size: var(--text-x-small);
+    margin: 0;
+    padding: var(--block-space-half);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .revision-diff__value--add { background-color: oklch(var(--lch-green-lightest)); color: oklch(var(--lch-green-darker)); }
+  .revision-diff__value--del { background-color: oklch(var(--lch-red-lightest)); color: oklch(var(--lch-red-darker)); }
+
+  .revision-diff__line {
+    white-space: pre-wrap;
+  }
+
+  .revision-diff__warning {
+    background-color: oklch(var(--lch-yellow-lightest));
+  }
+}
+
+@layer components {
+  /* A finding under review: the queue narrows beside it. */
+  .findings--reviewing {
+    grid-template-columns: minmax(28ch, 1fr) 2fr;
+  }
+
+  @media (max-width: 800px) {
+    .findings--reviewing { grid-template-columns: 1fr; }
+  }
+
+  .findings__current {
+    background-color: var(--color-selected);
+    border-radius: var(--radius);
+    padding: var(--block-space-half);
+  }
+}
+
+@layer components {
+  /* A sitemap row's "Quick edit", as WordPress's lists have it: the last row
+     action, opening the row's sitemap settings in place on a line of its own. */
+  /* Inline, so a closed Quick edit sits on the actions' line after its "|". */
+  .quick-edit > summary {
+    display: inline;
+    list-style: none;
+
+    &::-webkit-details-marker { display: none; }
+  }
+
+  /* Open, it takes a line of its own under the other actions, without the
+     separator it had beside them. */
+  .row-actions > .quick-edit[open] {
+    flex-basis: 100%;
+
+    &::before { content: none; }
+  }
+
+  .row-actions:has(.quick-edit[open]) {
+    visibility: visible;
+  }
+
+  .quick-edit__form {
+    align-items: end;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--block-space-half);
+    margin-block-start: var(--block-space-half);
+  }
+
+  .quick-edit__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25em;
+  }
+
+  .quick-edit__check {
+    align-items: center;
+    display: flex;
+    gap: 0.35em;
+    min-block-size: 2.2em;
+  }
+}

@@ -1,0 +1,12 @@
+<% @page_title = "Revision" %>
+<%= parent_page "Revisions", collection_entry_versions_path(@collection.slug, @entry.slug) %>
+<% content_for :page_actions do %>
+  <%= link_to "All revisions", collection_entry_versions_path(@collection.slug, @entry.slug), class: "btn txt-small" %>
+<% end %>
+<%= render "layouts/shared/page_header", title: "Compare a revision of “" + @entry.title.to_s + "”" %>
+<section class="panel flex flex-column gap txt-align-start">
+  <%= render "versions/comparison", version: @version,
+        restore_path: collection_entry_version_restoration_path(@collection.slug, @entry.slug, @version),
+        can_restore: Current.user.can?("entries:write"),
+        gated: @entry.status == "published" && !Current.user.can?("entries:publish") %>
+</section>

@@ -1,0 +1,98 @@
+# Rebuild and deploy the site when the CMS publishes.
+#
+# The CMS's GitHub deploy provider (Settings › Deploy, with the repo and a
+# token in Settings › GitHub) sends a `repository_dispatch` of type
+# `cms-publish` to this repo whenever content changes. This workflow listens
+# for it, builds the Astro site against the CMS's API, and deploys it.
+#
+# Copy it into the site repo as .github/workflows/cms-publish.yml, then set the
+# repository secrets it reads:
+#
+#   CMS_BASE_URL    https://<site>.librepublish.com
+#   CMS_API_TOKEN   the site's read-only service token (Settings › Service
+#                   tokens, "Production site" role)
+#
+# and pick ONE deploy step at the bottom (Cloudflare Pages, Netlify or GitHub
+# Pages), deleting the placeholder.
+name: CMS publish
+
+run-name: >-
+  ${{ github.event_name == 'repository_dispatch'
+      && format('CMS publish: {0}', github.event.client_payload.reason || 'content changed')
+      || format('Build: {0}', github.event_name) }}
+
+on:
+  repository_dispatch:
+    types: [cms-publish]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Publishing several pages in a row sends several events; only the newest
+# build matters, so an older one still running is cancelled.
+concurrency:
+  group: cms-publish
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          CMS_BASE_URL: ${{ secrets.CMS_BASE_URL }}
+          CMS_API_TOKEN: ${{ secrets.CMS_API_TOKEN }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    # For GitHub Pages, also add at the job level:
+    #   permissions: { pages: write, id-token: write }
+    #   environment: { name: github-pages }
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist
+
+      # Placeholder: replace this step with one of the three below.
+      - name: Deploy (choose a host)
+        run: |
+          echo "::notice::Built dist/. Choose a deploy step in .github/workflows/cms-publish.yml to publish it."
+
+      # ── Cloudflare Pages ── secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+      # - uses: cloudflare/wrangler-action@v3
+      #   with:
+      #     apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      #     accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      #     command: pages deploy dist --project-name=<your-pages-project>
+
+      # ── Netlify ── secrets: NETLIFY_AUTH_TOKEN, NETLIFY_SITE_ID
+      # - run: npx --yes netlify-cli deploy --prod --dir=dist
+      #   env:
+      #     NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      #     NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+
+      # ── GitHub Pages ── (see the permissions note on this job)
+      # - uses: actions/upload-pages-artifact@v3
+      #   with:
+      #     path: dist
+      # - uses: actions/deploy-pages@v4

@@ -1,0 +1,94 @@
+/* A little depth for the staff app, using Fizzy's own tokens: form panels get the same
+/* border and shadow as every other panel, and the rich text editor reads as a field. Public pages (sign in, approvals) stay as flat as Fizzy's. */
+@layer components {
+  body:not(.public) .panel--centered {
+    --panel-border-size: 1px;
+
+    box-shadow: var(--shadow);
+  }
+
+  lexxy-editor.lexxy-content {
+    border: 1px solid var(--color-ink-medium);
+    border-radius: var(--radius);
+    padding: 0 0.8em 0.5em;
+
+    &:focus-within {
+      outline: var(--focus-ring-size) solid var(--focus-ring-color);
+      outline-offset: -1px;
+    }
+
+    lexxy-toolbar {
+      border-block-end: 1px solid var(--color-ink-lighter);
+      inline-size: calc(100% + 1.6em);
+      margin-inline: -0.8em;
+      max-inline-size: none;
+      padding-inline: 0.4em;
+    }
+
+    .lexxy-editor__content {
+      min-block-size: 6lh;
+    }
+  }
+
+  /* Status labels, tinted by meaning. Fizzy's lightest and darkest steps swap in dark mode,
+  /* so the same pairs stay soft in both themes. */
+  .status-tag--positive { background-color: oklch(var(--lch-green-lightest)); color: oklch(var(--lch-green-darker)); }
+  .status-tag--negative { background-color: oklch(var(--lch-red-lightest)); color: oklch(var(--lch-red-darker)); }
+  .status-tag--waiting { background-color: oklch(var(--lch-yellow-lightest)); color: oklch(var(--lch-yellow-darker)); }
+  .status-tag--progress { background-color: oklch(var(--lch-blue-lightest)); color: oklch(var(--lch-blue-darker)); }
+  .status-tag--neutral { background-color: var(--color-ink-lightest); color: var(--color-ink-dark); }
+}
+
+/* A faint cool page tint in light mode lets white panels lift off the page. Dark mode keeps
+/* Fizzy's canvas, where borders do the work. The admin has its own grey frame
+/* around a white card (--admin-canvas, admin.css). */
+:root:not([data-theme="dark"]) body:not(.public, .admin) {
+  background-color: color-mix(in oklch, var(--color-canvas) 55%, var(--scheme-tint, oklch(var(--lch-blue-lightest))));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) body:not(.public, .admin) {
+    background-color: var(--color-canvas);
+  }
+}
+
+/* The ref prefix field on Settings > Names is a few characters wide. */
+@layer components {
+  .names-prefix {
+    flex: 0 0 5em;
+  }
+}
+
+@layer components {
+  /* An index page's filter and New button share one row. */
+  .index-toolbar {
+    inline-size: 100%;
+
+    .index-toolbar__filters {
+      flex: 1 1 auto;
+      min-inline-size: 0;
+
+      /* The pills keep the same space between them as the view toggle and New button. */
+      .filters {
+        gap: var(--inline-space);
+        justify-content: flex-start;
+      }
+    }
+
+    .quick-filter > button {
+      block-size: 2.5rem;
+    }
+  }
+}
+
+/* "Add a note", "Log time", "Add a todo" and the like: a button that opens a form. Space
+/* below the button, and between it and the form once open. */
+@layer components {
+  details:has(> summary.btn) {
+    margin-block-end: var(--block-space-half);
+  }
+
+  details[open] > summary.btn {
+    margin-block-end: var(--block-space);
+  }
+}

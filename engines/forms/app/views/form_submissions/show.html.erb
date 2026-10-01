@@ -1,0 +1,52 @@
+<% @page_title = @form.title + " #" + @submission.id.to_s %>
+<%= parent_page @form.title, form_path(@form.slug) %>
+
+<%= render "layouts/shared/page_header", title: @form.title %> #<%= @submission.id %>
+
+<section class="panel shadow settings-page txt-align-start flex flex-column gap">
+  <div class="flex align-center justify-space-between gap">
+    <div class="flex flex-column gap-half">
+      <p class="txt-small txt-subtle margin-none">Received <%= time_ago_tag @submission.created_at %><%= " from " + @submission.ip if @submission.ip.present? %></p>
+    </div>
+    <% if Current.user.can?("submissions:delete") %>
+      <%= render "layouts/shared/delete_dialog", name: "this submission", path: form_submission_path(@form.slug, @submission),
+            message: "The submission and its files are deleted. This can’t be undone." %>
+    <% end %>
+  </div>
+
+  <dl class="submission-data">
+    <% @submission.data.to_h.each do |key, value| %>
+      <%# herb:key key %>
+      <dt class="txt-small font-weight-bold"><%= submission_label(@form, key) %></dt>
+      <dd class="txt-small"><%= submission_value(value) %></dd>
+    <% end %>
+  </dl>
+
+  <% if @submission.files.attached? %>
+    <section class="flex flex-column gap-half">
+      <h2 class="txt-medium font-weight-bold margin-none">Files</h2>
+      <ul class="margin-none flex flex-column gap-half">
+        <% @submission.files.each do |file| %>
+          <%# herb:key file.id %>
+          <li class="txt-small">
+            <%= link_to file.filename.to_s, rails_blob_path(file, disposition: "attachment"), class: "txt-link" %>
+            <span class="txt-subtle"><%= number_to_human_size(file.byte_size) %><%= " · " + file.metadata["field"].to_s if file.metadata["field"].present? %></span>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <% if @submission.meta.present? %>
+    <details>
+      <summary class="txt-small txt-subtle">Request details</summary>
+      <dl class="submission-data margin-block-start">
+        <% @submission.meta.to_h.each do |key, value| %>
+          <%# herb:key key %>
+          <dt class="txt-x-small font-weight-bold font-mono"><%= key %></dt>
+          <dd class="txt-x-small font-mono"><%= value.is_a?(Hash) || value.is_a?(Array) ? value.to_json : value.to_s %></dd>
+        <% end %>
+      </dl>
+    </details>
+  <% end %>
+</section>

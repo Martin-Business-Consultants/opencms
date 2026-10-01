@@ -1,0 +1,14 @@
+<%# locals: (scope:, item:, refs:, title: nil) %>
+<li class="content-list__item flex align-center gap-half" data-sortable-list-target="item">
+  <span class="content-handle" title="Drag to reorder" data-action="mousedown->sortable-list#grab touchstart->sortable-list#grab">⠿</span>
+  <% if refs %>
+    <%= hidden_field_tag scope.name, item, id: nil %>
+    <span class="flex flex-column min-width-0 flex-item-grow">
+      <span class="txt-small overflow-ellipsis"><%= title.presence || item %></span>
+      <span class="txt-x-small txt-subtle font-mono overflow-ellipsis"><%= item %></span>
+    </span>
+  <% else %>
+    <%= text_field_tag scope.name, (item == "__VALUE__" ? nil : item), id: nil, class: "input flex-item-grow", autocomplete: "off", aria: { label: "Item" } %>
+  <% end %>
+  <%= render "content_form/row_moves", noun: "item" %>
+</li>

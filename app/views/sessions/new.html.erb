@@ -1,0 +1,32 @@
+<% @page_title = "Log in" %>
+
+<div class="panel panel--centered center flex flex-column gap-half">
+  <h1 class="txt-x-large font-weight-black margin-none">Log in to your account</h1>
+  <p class="txt-small txt-subtle margin-none">Enter your email and password below to log in.</p>
+
+  <%= form_with url: sign_in_path, class: "flex flex-column gap txt-medium margin-block-start", data: { controller: "form" } do |form| %>
+    <label class="flex flex-column gap-half txt-align-start">
+      <span class="txt-small font-weight-bold">Email address</span>
+      <%= form.email_field :email, required: true, autofocus: true, autocomplete: "email", class: "input full-width", placeholder: "email@example.com", value: params[:email] %>
+    </label>
+
+    <label class="flex flex-column gap-half txt-align-start">
+      <span class="flex justify-space-between gap txt-small">
+        <span class="font-weight-bold">Password</span>
+        <%= link_to "Forgot password?", new_identity_password_reset_path, class: "txt-link" %>
+      </span>
+      <%= form.password_field :password, required: true, autocomplete: "current-password", class: "input full-width", placeholder: "Password" %>
+    </label>
+
+    <button type="submit" class="btn btn--link center" data-form-target="submit">
+      <span>Log in</span>
+      <%= icon_tag "arrow-right" %>
+    </button>
+  <% end %>
+
+  <% unless User.exists? %>
+    <p class="txt-small txt-subtle margin-block-start">
+      New install? <%= link_to "Create the owner account", sign_up_path, class: "txt-link" %>
+    </p>
+  <% end %>
+</div>

@@ -1,0 +1,43 @@
+<%# locals: (versions:, page:, show_path:) %>
+<%# A record's saved versions, newest first. show_path: a lambda from a version
+    to its page. %>
+<% if versions.any? %>
+  <section class="panel shadow center index-table">
+    <table class="data-table" data-controller="pagination" data-pagination-paginate-on-intersection-value="true" data-pagination-discard-frame-value="true">
+      <thead>
+        <tr>
+          <th>Saved</th>
+          <th>By</th>
+          <th>Differs from now</th>
+        </tr>
+      </thead>
+      <tbody id="<%= pagination_frame_id_for(:version_rows, page.number) %>">
+        <% versions.each do |version| %>
+          <%# herb:key version.id %>
+          <% changed = version.changes_from_current[:fields].map { it[:key] } %>
+          <tr id="<%= dom_id(version) %>" data-filter-target="item">
+            <td>
+              <%= link_to show_path.call(version), class: "txt-ink font-weight-bold" do %>
+                <%= site_time_tag version.created_at %>
+              <% end %>
+              <%= render "layouts/shared/row_links", links: [ [ "Compare", show_path.call(version) ] ] %>
+            </td>
+            <td class="txt-subtle"><%= version.author&.name.presence || version.author&.email || "—" %></td>
+            <td class="txt-small">
+              <% if changed.empty? %>
+                <span class="txt-subtle">Same as now</span>
+              <% else %>
+                <%= changed.map(&:humanize).to_sentence %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+        <%= table_next_page_row :version_rows, page, columns: 3 %>
+      </tbody>
+    </table>
+  </section>
+<% else %>
+  <div class="panel panel--centered center">
+    <p class="txt-medium margin-none">No saved versions yet. One is kept each time the content changes.</p>
+  </div>
+<% end %>

@@ -1,0 +1,57 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Clones an install's plugins into plugins/ for the Docker build, before
+# bundling (docs/plugins.md). A Kamal install, Hoster's included, clones the
+# repository fresh for every deploy, so plugins installed with
+# `plugins:install` would not survive it; this list is how they do.
+#
+# The list is the CMS_PLUGINS builder secret: git URLs, each optionally with
+# #<tag or branch>, separated by spaces, commas or newlines. A secret rather
+# than a build arg so a private plugin's URL can carry a token without it
+# landing in the image. Empty or "none" installs nothing.
+#
+#   CMS_PLUGINS="https://github.com/org/cms-seo#v1.2.0 https://x-access-token:TOKEN@github.com/org/private-plugin"
+#   bin/fetch-plugins                    # reads CMS_PLUGINS, or /run/secrets/CMS_PLUGINS in a build
+#   bin/fetch-plugins --list "url#ref"   # the same, from the argument
+require "fileutils"
+
+APP_ROOT = File.expand_path("..", __dir__)
+SECRET_FILE = "/run/secrets/CMS_PLUGINS"
+
+def plugin_list
+  if ARGV.first == "--list"
+    ARGV[1].to_s
+  elsif File.exist?(SECRET_FILE)
+    File.read(SECRET_FILE)
+  else
+    ENV["CMS_PLUGINS"].to_s
+  end
+end
+
+# The URL without its credentials, for the log.
+def redact(url) = url.sub(%r{//[^/@]+@}, "//")
+
+entries = plugin_list.split(/[\s,]+/).reject { it.empty? || it == "none" }
+if entries.empty?
+  puts "No plugins listed in CMS_PLUGINS."
+  exit
+end
+
+entries.each do |entry|
+  url, ref = entry.split("#", 2)
+  name = File.basename(url.sub(/\.git\z/, ""))
+  abort "Can't tell a plugin name from #{redact(url)}." if name.empty? || name.start_with?(".")
+  directory = File.join(APP_ROOT, "plugins", name)
+  abort "Two plugins named #{name} in CMS_PLUGINS." if File.exist?(directory)
+
+  puts "Fetching #{name} from #{redact(url)}#{" at #{ref}" if ref}"
+  branch = ref ? ["--branch", ref] : []
+  # The URL may carry a token, so git's own output (which can echo it) is kept out of the build log.
+  unless system("git", "clone", "--quiet", "--depth", "1", *branch, url, directory, err: File::NULL, out: File::NULL)
+    abort "Couldn't clone #{redact(url)}#{" at #{ref}" if ref}: check the URL, the ref and, for a private repository, its token."
+  end
+  # No history, and no remote URL holding a token, in the image.
+  FileUtils.rm_rf File.join(directory, ".git")
+  abort "#{name} isn't a CMS plugin: no gemspec at its top level." if Dir.glob(File.join(directory, "*.gemspec")).empty?
+end

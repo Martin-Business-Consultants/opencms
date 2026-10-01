@@ -1,0 +1,59 @@
+<%# locals: (user:) %>
+<%# A person's account, laid out like the editors: who they are and their
+    password in the wider column; their role, whether their email is
+    verified, and saving (or removing them) in the narrower one. %>
+<% removable = user.persisted? && Current.user.can?("users:delete") && user != Current.user %>
+<%= render "layouts/shared/errors", record: user %>
+
+<%= form_with model: user, id: "user_form", class: "content-form content-form--thirds",
+      data: { controller: "form", action: "keydown.esc->form#cancel" } do |form| %>
+  <div class="content-form__main flex flex-column gap">
+    <%= postbox "user-account", "Account" do %>
+      <div class="flex flex-column gap">
+        <%= settings_field "Name" do %>
+          <%= form.text_field :name, required: true, class: "input full-width", autofocus: user.new_record?, autocomplete: "off", placeholder: "Full name" %>
+        <% end %>
+        <%= settings_field "Email" do %>
+          <%= form.email_field :email, required: true, class: "input full-width", autocomplete: "off", placeholder: "email@example.com" %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%= postbox "user-password", user.new_record? ? "Password" : "Change password" do %>
+      <div class="flex flex-column gap">
+        <%= settings_field (user.new_record? ? "Password" : "New password") do %>
+          <%= form.password_field :password, required: user.new_record?, class: "input full-width", autocomplete: "new-password",
+                placeholder: user.new_record? ? "At least 8 characters" : "Leave blank to keep the current one" %>
+        <% end %>
+        <%= settings_field "Confirm password" do %>
+          <%= form.password_field :password_confirmation, required: user.new_record?, class: "input full-width", autocomplete: "new-password" %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <aside class="content-form__aside flex flex-column gap">
+    <% settings = capture do %>
+      <div class="flex flex-column gap">
+        <%= settings_field "Role" do %>
+          <%= form.select :role_id, Role.ordered.map { |role| [role.name, role.id] }, { include_blank: "No role" }, class: "input input--select full-width" %>
+        <% end %>
+        <label class="flex align-center gap-half txt-small">
+          <%= form.check_box :verified %>
+          <span>Email is verified</span>
+        </label>
+      </div>
+    <% end %>
+    <%= render "layouts/shared/save_box", key: "user-save", title: (user.new_record? ? "Add user" : "Save"),
+          button: (user.new_record? ? "Add user" : "Save changes"),
+          lines: (user.persisted? ? [ [ "calendar", "Added", time_ago_tag(user.created_at) ] ] : nil), extra: settings,
+          trash_name: user.name, trash_path: (user_path(user) if removable), trash_form: ("user_delete_form" if removable),
+          trash_message: "They can no longer sign in to this workspace." %>
+  </aside>
+
+  <%= link_to "Cancel and go back", users_path, data: { form_target: "cancel" }, hidden: true %>
+<% end %>
+<% if removable %>
+  <%= render "layouts/shared/delete_form", id: "user_delete_form", path: user_path(user) %>
+<% end %>
+<%= render "content_form/postbox_state" %>

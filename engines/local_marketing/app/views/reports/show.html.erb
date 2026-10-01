@@ -1,0 +1,107 @@
+<% @page_title = @report.title %>
+<%= parent_page "Reports", reports_path %>
+<% can_run = Current.user.can?("reports:run") %>
+<% has_kind_partial = report_kind_handles(@report.kind).any? %>
+
+<%# A report still being pulled refreshes itself until it finishes. %>
+<%= tag.div class: "reports-page flex flex-column gap txt-align-start",
+      data: ({ controller: "refresh", refresh_interval_value: 5 } if @report.queued? || @report.running?) do %>
+  <% content_for :page_actions do %>
+    <% if can_run %>
+      <%= button_to "Run again", run_reports_path(kind: @report.kind), class: "btn txt-small" %>
+      <%= render "layouts/shared/delete_dialog", name: "this snapshot", path: report_path(@report),
+            message: "It stops counting in the trends built from this report." %>
+    <% end %>
+  <% end %>
+  <%= render "layouts/shared/page_header", title: @page_title, description: @report.description %>
+
+  <section class="panel shadow flex flex-column gap-half">
+    <% if @report.complete? %>
+      <p class="margin-none">
+        Measured <%= l(@report.created_at, format: :long) %><% if @report.duration %>, in <%= pluralize(@report.duration.round, "second") %><% end %>,
+        for <%= report_money(@report.cost) %><% if @report.requested_by %> — run by <%= @report.requested_by.email %><% end %>.
+      </p>
+    <% elsif @report.failed? %>
+      <p class="margin-none txt-negative">This run failed: <%= @report.error %></p>
+    <% else %>
+      <p class="margin-none">Running now (<%= @report.status %> since <%= time_ago_tag @report.created_at %>). This page refreshes itself until it’s done.</p>
+    <% end %>
+    <% if @definition %>
+      <p class="txt-small txt-subtle margin-none">Refreshed <%= @definition.cadence %> · about <%= report_money(@definition.estimated_cost) %> a run.</p>
+    <% end %>
+  </section>
+
+  <% if @report.complete? %>
+    <% if @metrics.any? %>
+      <section class="panel shadow center index-table">
+        <h2 class="txt-medium font-weight-bold margin-none">Headline figures</h2>
+        <table class="data-table">
+          <thead>
+            <tr><th>Figure</th><th class="data-table__number">Now</th><th class="data-table__number">Run before</th><th>Change</th></tr>
+          </thead>
+          <tbody>
+            <% @metrics.each do |metric| %>
+              <%# herb:key metric[:label] %>
+              <tr>
+                <td><%= metric[:label] %></td>
+                <td class="data-table__number"><strong><%= report_value(metric[:now]) %></strong></td>
+                <td class="data-table__number"><%= report_value(metric[:previous]) %></td>
+                <td><%= report_change(metric) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+        <% unless @previous %>
+          <p class="txt-x-small txt-subtle margin-none">This is the first snapshot, so there is nothing to compare with yet.</p>
+        <% end %>
+      </section>
+    <% end %>
+
+    <% warnings = Array(@report.data["warnings"]) %>
+    <% if warnings.any? %>
+      <section class="panel shadow flex flex-column gap-half">
+        <h2 class="txt-medium font-weight-bold margin-none">What this run couldn’t do</h2>
+        <ul class="margin-none">
+          <% warnings.each do |warning| %>
+            <%# herb:key warning %>
+            <li class="txt-small"><%= warning %></li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+
+    <% case @report.kind %>
+    <% when "citations" %>
+      <%= render "reports/kinds/citations", report: @report, extra: @extra %>
+    <% when "site_audit" %>
+      <%= render "reports/kinds/site_audit", report: @report, extra: @extra %>
+    <% end %>
+
+    <%= render "reports/data", data: @report.data, except: (has_kind_partial ? report_kind_handles(@report.kind) : []) %>
+  <% end %>
+
+  <% if @history.length > 1 %>
+    <section class="panel shadow center index-table">
+      <h2 class="txt-medium font-weight-bold margin-none">Snapshots in this window</h2>
+      <table class="data-table">
+        <thead><tr><th>When</th><th>Status</th><th class="data-table__number">Cost</th></tr></thead>
+        <tbody>
+          <% @history.each do |snapshot| %>
+            <%# herb:key snapshot.id %>
+            <tr>
+              <td>
+                <% if snapshot == @report %>
+                  <strong><%= l(snapshot.created_at, format: :long) %></strong> (this one)
+                <% else %>
+                  <%= link_to l(snapshot.created_at, format: :long), report_path(snapshot), class: "txt-link" %>
+                <% end %>
+              </td>
+              <td><%= status_tag snapshot.status %></td>
+              <td class="data-table__number"><%= report_money(snapshot.cost) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </section>
+  <% end %>
+<% end %>

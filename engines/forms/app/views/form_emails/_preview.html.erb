@@ -1,0 +1,24 @@
+<%# locals: (email:) %>
+<%# Preview: the editor's form, as it is now (saved or not), drawn for a
+    made-up submission into a half-width sheet's frame. The button posts the
+    form there (form_emails/previews) rather than saving it. %>
+<div class="display-contents" data-controller="dialog" data-dialog-modal-value="true" data-action="keydown.esc->dialog#close:stop">
+  <button type="submit" class="btn txt-small" formaction="<%= form_email_preview_path(form_slug: email.form.slug, email_kind: email.kind) %>"
+          formtarget="form_email_preview_frame" formnovalidate data-turbo="false" data-action="dialog#open">Preview</button>
+  <dialog class="dialog dialog--sheet dialog--sheet-half panel fill-white shadow gap flex-column txt-align-start form-email-preview"
+          data-dialog-target="dialog" aria-label="Preview" closedby="any">
+    <header class="flex align-center justify-space-between gap">
+      <h2 class="txt-large font-weight-bold margin-none">Preview</h2>
+      <button type="button" class="btn txt-small" data-action="dialog#close">Close</button>
+    </header>
+    <p class="txt-x-small txt-subtle margin-none">
+      For a made-up submission.
+      <% if email.site_template_current? %>
+        In the site’s template, as it’s sent now.
+      <% else %>
+        In the CMS’s layout; the site’s own design shows once its build has made a template of these blocks.
+      <% end %>
+    </p>
+    <iframe name="form_email_preview_frame" class="form-email-preview__frame" title="Email preview"></iframe>
+  </dialog>
+</div>

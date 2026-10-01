@@ -1,0 +1,35 @@
+<%# locals: (name:, path:, message: nil, trigger_class: nil, keys: nil, trigger_text: nil, form: nil) %>
+<%# Fizzy's delete: a trash button opening a modal that names what goes and asks once.
+    trigger_text: a text link instead of the button (a list table's row actions).
+    form: the id of a delete form rendered elsewhere (layouts/shared/delete_form),
+    for a dialog that sits inside another form; a form can't nest, and a
+    nested one's _method=delete would join the outer form. %>
+<% title = "Delete " + name + "?" %>
+<div class="display-contents" data-controller="dialog" data-dialog-modal-value="true" data-action="keydown.esc->dialog#close:stop">
+  <% if trigger_text %>
+    <button type="button" class="<%= class_names("row-actions__link row-actions__link--danger", trigger_class) %>" title="<%= title %>" data-action="dialog#open"><%= trigger_text %></button>
+  <% else %>
+    <button type="button" class="<%= class_names("btn btn--circle borderless txt-negative", trigger_class) %>" title="<%= title %>" data-keys="<%= keys %>" data-action="dialog#open">
+      <%= icon_tag "trash" %>
+      <span class="for-screen-reader"><%= title %></span>
+    </button>
+  <% end %>
+  <dialog class="dialog dialog--action panel fill-white shadow gap flex-column txt-align-start" data-dialog-target="dialog">
+    <h3 class="txt-large font-weight-bold margin-none"><%= title %></h3>
+    <p class="txt-medium margin-block-half"><%= message || "This can’t be undone." %></p>
+    <div class="flex gap-half justify-center margin-block-start">
+      <button type="button" class="btn" data-action="dialog#close">Cancel</button>
+      <% if form %>
+        <button type="submit" form="<%= form %>" class="btn txt-negative">
+          <%= icon_tag "trash" %>
+          <span>Delete</span>
+        </button>
+      <% else %>
+        <%= button_to path, method: :delete, class: "btn txt-negative", data: { turbo_frame: "_top" } do %>
+          <%= icon_tag "trash" %>
+          <span>Delete</span>
+        <% end %>
+      <% end %>
+    </div>
+  </dialog>
+</div>

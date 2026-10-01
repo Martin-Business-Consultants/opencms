@@ -1,0 +1,19 @@
+<% @page_title = "Site health" %>
+<%= parent_page "Docs", docs_path %>
+<%= render "layouts/shared/page_header", title: "Site health",
+      description: "Whether the site is in good order: the business's details, the same everywhere; tracking and consent; spam protection; what search engines need; the pages a site must have; backups and rebuilds. Checked against the site as it is now." %>
+
+<div class="content-form content-form--thirds">
+  <div class="content-form__main flex flex-column gap">
+    <%= render "docs/checklist", checks: @checks, groups: SiteHealth::GROUPS, key: "site-health" %>
+  </div>
+  <aside class="content-form__aside flex flex-column gap">
+    <%= postbox "site-health-summary", "In good order?" do %>
+      <p class="txt-medium font-weight-bold margin-none">
+        <%= @summary[:ready] ? "Everything checks out" : "#{pluralize(@summary[:failing], "thing")} to fix" %>
+      </p>
+      <p class="txt-small txt-subtle margin-none"><%= @summary[:passing] %> of <%= @summary[:total] %> checks pass. The ones marked ? are yours to judge. Launching? <%= link_to "Before going live", go_live_docs_path, class: "txt-link" %> is the other list.</p>
+    <% end %>
+    <%= render "docs/nav", guides: @guides, current: :site_health %>
+  </aside>
+</div>
