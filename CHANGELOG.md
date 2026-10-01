@@ -8,6 +8,8 @@ out.
 
 ## Unreleased
 
+## 1.1.0
+
 ### Added
 - **Open source**, under the Functional Source License (FSL-1.1-MIT,
   `LICENSE.md`).
